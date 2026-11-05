@@ -1,0 +1,49 @@
+diff --git a/lib/index.cjs b/lib/index.cjs
+index 25a1adb75a90166d699ce7d7a694749c3fc3bd9d..76e8e43d338f4560edc07f4e5beb31e1b4c783c7 100644
+--- a/lib/index.cjs
++++ b/lib/index.cjs
+@@ -4839,4 +4839,18 @@ function trimTrailingZeroes3(value) {
+   teraToGas,
+   yoctoToNear
+ });
++var utils = {
++  serialize: {
++    base_decode: baseDecode,
++    base_encode: baseEncode
++  },
++  key_pair: {
++    KeyType
++  },
++  format: {
++    formatNearAmount,
++    parseNearAmount
++  }
++};
++exports.utils = utils;
+ //# sourceMappingURL=index.cjs.map
+\ No newline at end of file
+diff --git a/lib/index.js b/lib/index.js
+index ea94c9b5fa25f444fabd69a9fcc5e05bf8b7b75c..2f567728581c12fabdf2abe43d2eb365192bc8e2 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -4904,4 +4904,20 @@ export {
+   teraToGas,
+   yoctoToNear
+ };
++var utils = {
++  serialize: {
++    base_decode: baseDecode,
++    base_encode: baseEncode
++  },
++  key_pair: {
++    KeyType
++  },
++  format: {
++    formatNearAmount,
++    parseNearAmount
++  }
++};
++export {
++  utils
++};
+ //# sourceMappingURL=index.js.map

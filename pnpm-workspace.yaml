@@ -7,3 +7,5 @@ allowBuilds:
   near-sdk-js: true
   secp256k1: true
   sharp: true
+patchedDependencies:
+  near-api-js@7.4.0: patches/near-api-js@7.4.0.patch

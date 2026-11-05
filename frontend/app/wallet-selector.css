@@ -1819,6 +1819,7 @@ input:checked+.nws-slider:before {
     }
 
     .single-wallet.wallet-connect,
+    .single-wallet.meteor-wallet,
     .single-wallet.my-near-wallet {
         word-break: break-word;
     }
