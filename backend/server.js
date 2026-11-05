@@ -11,6 +11,11 @@ import { fileURLToPath } from "url";
 
 import db from "./model/model.js";
 import auth from "./controllers/AuthControllers.js";
+import vaults from "./controllers/VaultControllers.js";
+import trades from "./controllers/TradeControllers.js";
+import market from "./controllers/MarketControllers.js";
+import { seedInitialVaultsAndCards } from "./services/CollectorCryptService.js";
+import a2aSwarm from "./services/A2ASwarmService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,7 +42,7 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 // Global Rate Limiter
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 1000,
+    max: 2000,
     message: { error: "Too many requests from this IP, please try again after 15 minutes" }
 });
 app.use(limiter);
@@ -51,17 +56,21 @@ const io = new Server(httpServer, {
     }
 });
 
+a2aSwarm.setSocket(io);
+
 io.on("connection", (socket) => {
-    console.log(`⚡ Client connected to Socket.IO: ${socket.id}`);
+    console.log(`⚡ Client connected to VaultDeck Live Floor: ${socket.id}`);
 
     socket.emit("connected", {
-        message: "Connected to Poke Agent Socket Server",
+        message: "Connected to VaultDeck A2A Swarm Exchange",
         socketId: socket.id,
+        network: "NEAR Testnet",
         timestamp: new Date().toISOString()
     });
 
-    socket.on("ping", () => {
-        socket.emit("pong", { timestamp: Date.now() });
+    socket.on("trigger_a2a_cycle", async () => {
+        console.log(`🤖 Manual A2A Cycle triggered by socket client: ${socket.id}`);
+        await a2aSwarm.executeNegotiationCycle();
     });
 
     socket.on("disconnect", (reason) => {
@@ -69,40 +78,49 @@ io.on("connection", (socket) => {
     });
 });
 
-// Database sync
-db.sequelize.sync({ alter: true }).catch((err) => {
-    console.warn("⚠️ Database sync notice:", err.message);
-});
+// Database sync and initial seed
+db.sequelize.sync({ alter: true })
+    .then(async () => {
+        console.log("🗄️ Database synchronized successfully.");
+        await seedInitialVaultsAndCards();
+    })
+    .catch((err) => {
+        console.warn("⚠️ Database sync notice:", err.message);
+    });
 
 // Request logger
 const logger = (req, res, next) => {
-    if (!req.path.includes("file") && !req.path.includes("uploads")) {
+    if (!req.path.includes("file") && !req.path.includes("uploads") && !req.path.includes("svg")) {
         console.log("request to ------>", req.method, req.path);
     }
     next();
 };
 app.use(logger);
 
-// Health check / root route
+// Root route
 app.get("/", (req, res) => {
     res.json({
-        status: "online",
-        service: "poke-agent-backend",
+        service: "VaultDeck • Autonomous Merchant Vaults Protocol",
+        chain: "NEAR Protocol (Track 10: NFTs as Accounts)",
         version: "1.0.0",
-        timestamp: new Date().toISOString(),
         endpoints: {
-            auth: "/auth",
+            vaults: "/vaults",
+            trades: "/trades",
+            market: "/market",
             health: "/health"
         }
     });
 });
 
 app.get("/health", (req, res) => {
-    res.json({ status: "ok", uptime: process.uptime() });
+    res.json({ status: "ok", uptime: process.uptime(), network: "NEAR Testnet" });
 });
 
 // Routes
 app.use("/auth", auth);
+app.use("/vaults", vaults);
+app.use("/trades", trades);
+app.use("/market", market);
 
 // Static uploads
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
@@ -114,8 +132,8 @@ app.use((err, req, res, next) => {
 });
 
 httpServer.listen(port, () => {
-    console.log(`🚀 Poke Agent Backend running on port ${port}`);
-    console.log(`📡 Socket.IO initialized on ws://localhost:${port}`);
+    console.log(`🚀 VaultDeck Protocol Backend running on port ${port}`);
+    console.log(`📡 A2A Swarm Live Exchange ws://localhost:${port}`);
 });
 
 export { io, app, httpServer };

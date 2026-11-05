@@ -1,6 +1,9 @@
 import dbConfig from "../db.config.js";
 import { Sequelize } from "sequelize";
 import User from "./user.js";
+import Vault from "./vault.js";
+import Card from "./card.js";
+import Trade from "./trade.js";
 
 const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
     host: dbConfig.HOST,
@@ -26,5 +29,15 @@ db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
 db.user = User(sequelize);
+db.vault = Vault(sequelize);
+db.card = Card(sequelize);
+db.trade = Trade(sequelize);
+
+// Relationships
+db.vault.hasMany(db.card, { foreignKey: "vault_id", as: "inventory" });
+db.card.belongsTo(db.vault, { foreignKey: "vault_id", as: "vault" });
+
+db.vault.hasMany(db.trade, { foreignKey: "vault_a_id", as: "trades_as_a" });
+db.vault.hasMany(db.trade, { foreignKey: "vault_b_id", as: "trades_as_b" });
 
 export default db;

@@ -1,240 +1,358 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getSocket } from "@/lib/socket";
+import { useEffect, useState, useCallback } from "react";
+import Navbar from "@/components/Navbar";
+import VaultCard from "@/components/VaultCard";
+import CardSlab from "@/components/CardSlab";
+import TradingFloorTerminal from "@/components/TradingFloorTerminal";
+import MintVaultModal from "@/components/MintVaultModal";
+import TransferVaultModal from "@/components/TransferVaultModal";
+import VaultDetailModal from "@/components/VaultDetailModal";
+import ArchitectureSpecs from "@/components/ArchitectureSpecs";
 import api from "@/lib/api";
+import { getSocket } from "@/lib/socket";
 import { 
-  Server, 
+  Coins, 
   Layers, 
-  Activity, 
-  CheckCircle2, 
-  XCircle, 
+  ShieldCheck, 
+  TrendingUp, 
+  Cpu, 
   Zap, 
-  Terminal,
-  ShieldCheck,
-  RefreshCw
+  Sparkles,
+  ArrowRightLeft
 } from "lucide-react";
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState("vaults");
+  const [vaults, setVaults] = useState([]);
+  const [cards, setCards] = useState([]);
+  const [trades, setTrades] = useState([]);
+  const [stats, setStats] = useState(null);
   const [socketStatus, setSocketStatus] = useState("connecting");
-  const [socketId, setSocketId] = useState(null);
-  const [apiStatus, setApiStatus] = useState({ checking: true, ok: false, data: null });
-  const [pingLatency, setPingLatency] = useState(null);
+  const [liveEvents, setLiveEvents] = useState([]);
+  const [isTriggering, setIsTriggering] = useState(false);
 
-  const checkApi = async () => {
-    setApiStatus((prev) => ({ ...prev, checking: true }));
+  // Modals
+  const [isMintOpen, setIsMintOpen] = useState(false);
+  const [transferVault, setTransferVault] = useState(null);
+  const [inspectVault, setInspectVault] = useState(null);
+
+  // Fetch initial data
+  const loadData = useCallback(async () => {
     try {
-      const res = await api.get("/health");
-      setApiStatus({ checking: false, ok: true, data: res.data });
+      const [vaultsRes, cardsRes, tradesRes, statsRes] = await Promise.all([
+        api.get("/vaults"),
+        api.get("/market/cards"),
+        api.get("/trades/history"),
+        api.get("/market/stats"),
+      ]);
+
+      setVaults(vaultsRes.data?.vaults || []);
+      setCards(cardsRes.data?.cards || []);
+      setTrades(tradesRes.data?.trades || []);
+      setStats(statsRes.data || null);
     } catch (err) {
-      setApiStatus({ checking: false, ok: false, data: { error: err.message } });
+      console.error("Failed to load platform data:", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    checkApi();
+    loadData();
 
     const socket = getSocket();
 
-    const onConnect = () => {
-      setSocketStatus("connected");
-      setSocketId(socket.id);
+    const onConnect = () => setSocketStatus("connected");
+    const onDisconnect = () => setSocketStatus("disconnected");
+
+    const onMatchFound = (data) => {
+      setLiveEvents((prev) => [
+        {
+          type: "match",
+          speaker: "A2A MATCH ENGINE",
+          message: `🎯 Target Match: ${data.vaultA.name} [${data.vaultA.sub_account}] matched with ${data.vaultB.name} [${data.vaultB.sub_account}]. Initializing 3-round negotiation...`,
+          timestamp: Date.now(),
+        },
+        ...prev.slice(0, 40),
+      ]);
     };
 
-    const onDisconnect = () => {
-      setSocketStatus("disconnected");
-      setSocketId(null);
+    const onRoundUpdate = (data) => {
+      setLiveEvents((prev) => [
+        {
+          type: "round",
+          speaker: `ROUND ${data.round} • ${data.log.speaker}`,
+          message: data.log.message,
+          timestamp: Date.now(),
+        },
+        ...prev.slice(0, 40),
+      ]);
     };
 
-    const onConnectedMsg = (data) => {
-      if (data?.socketId) setSocketId(data.socketId);
+    const onTradeSettled = (data) => {
+      setLiveEvents((prev) => [
+        {
+          type: "settled",
+          speaker: "NEAR ATOMIC SETTLEMENT",
+          message: `✅ Deals Settled! Cards & USDC swapped atomically in Internal Ledger. Both Merchant NFTs evolved on-chain.`,
+          details: { txHash: data.trade?.tx_hash },
+          timestamp: Date.now(),
+        },
+        ...prev.slice(0, 40),
+      ]);
+      loadData();
     };
 
-    const onPong = (data) => {
-      if (data?.timestamp) {
-        setPingLatency(Date.now() - data.timestamp);
-      }
+    const onTradeRejected = (data) => {
+      setLiveEvents((prev) => [
+        {
+          type: "rejected",
+          speaker: "ON-CHAIN GUARDRAIL",
+          message: `⚠️ Trade aborted by guardrails between ${data.vaultA} and ${data.vaultB}. Zero loss incurred.`,
+          timestamp: Date.now(),
+        },
+        ...prev.slice(0, 40),
+      ]);
+      loadData();
     };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-    socket.on("connected", onConnectedMsg);
-    socket.on("pong", onPong);
+    socket.on("a2a_match_found", onMatchFound);
+    socket.on("a2a_round_update", onRoundUpdate);
+    socket.on("a2a_trade_settled", onTradeSettled);
+    socket.on("a2a_trade_rejected", onTradeRejected);
 
-    if (socket.connected) {
-      setSocketStatus("connected");
-      setSocketId(socket.id);
-    }
+    if (socket.connected) setSocketStatus("connected");
 
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
-      socket.off("connected", onConnectedMsg);
-      socket.off("pong", onPong);
+      socket.off("a2a_match_found", onMatchFound);
+      socket.off("a2a_round_update", onRoundUpdate);
+      socket.off("a2a_trade_settled", onTradeSettled);
+      socket.off("a2a_trade_rejected", onTradeRejected);
     };
-  }, []);
+  }, [loadData]);
 
-  const sendPing = () => {
-    const socket = getSocket();
-    if (socket.connected) {
-      socket.emit("ping");
+  const handleTriggerSwarm = async () => {
+    setIsTriggering(true);
+    try {
+      await api.post("/trades/trigger-swarm");
+    } catch (err) {
+      console.error("Trigger swarm error:", err);
+    } finally {
+      setTimeout(() => setIsTriggering(false), 800);
     }
   };
 
   return (
-    <main className="min-h-screen flex flex-col justify-between p-6 md:p-12 max-w-6xl mx-auto w-full">
-      {/* Background ambient lighting */}
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+      {/* Ambient Lighting */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-indigo-500/20 via-purple-500/10 to-transparent blur-[140px]" />
-        <div className="absolute bottom-0 right-10 w-[450px] h-[250px] bg-cyan-500/10 blur-[120px]" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-indigo-600/15 via-cyan-600/10 to-transparent blur-[160px]" />
+        <div className="absolute top-1/2 right-10 w-[500px] h-[300px] bg-purple-600/10 blur-[140px]" />
       </div>
 
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-slate-800/80 pb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <Zap className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white">Poke Agent</h1>
-            <p className="text-xs text-slate-400">pnpm Monorepo • Next.js & Express ESM</p>
-          </div>
-        </div>
+      {/* Top Navbar */}
+      <Navbar
+        stats={stats}
+        onOpenMint={() => setIsMintOpen(true)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
 
-        <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
-            socketStatus === "connected"
-              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-              : "bg-amber-500/10 text-amber-400 border-amber-500/30"
-          }`}>
-            <span className={`w-2 h-2 rounded-full ${
-              socketStatus === "connected" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
-            }`} />
-            Socket: {socketStatus}
-          </span>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="my-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Backend Card */}
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 backdrop-blur-xl shadow-xl flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <Server className="w-5 h-5 text-indigo-400" />
-                <h2 className="text-base font-semibold text-white">Express Backend</h2>
+      {/* Main Content Area */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+        {/* Protocol Hero & Metrics Header */}
+        <section className="mb-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-800/80">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  NEAR Hackathon Track 10: NFTs as Accounts
+                </span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  NEP-171 & NEP-177 Dynamic
+                </span>
               </div>
-              <button 
-                onClick={checkApi} 
-                className="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1 transition"
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white font-mono">
+                VaultDeck Protocol
+              </h1>
+              <p className="text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                Autonomous Merchant Vault NFTs on NEAR. Each NFT owns its own sub-account (<code>vault-&lt;id&gt;.market.near</code>), 
+                USDC cash, PSA Pokémon slabs, and trades peer-to-peer via A2A Barter.
+              </p>
+            </div>
+
+            {/* Quick Action Button */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleTriggerSwarm}
+                disabled={isTriggering}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-mono font-bold flex items-center gap-2 shadow-lg shadow-indigo-500/20 transition active:scale-95 disabled:opacity-50"
               >
-                <RefreshCw className={`w-3 h-3 ${apiStatus.checking ? "animate-spin" : ""}`} />
-                Test API
+                <Zap className={`w-4 h-4 ${isTriggering ? "animate-spin" : ""}`} />
+                {isTriggering ? "Agents Negotiating..." : "Trigger A2A Swarm"}
               </button>
             </div>
+          </div>
 
-            <p className="text-xs text-slate-400 mb-4">
-              ES Modules mimarisinde, PostgreSQL & Sequelize ORM, JWT authentication ve Socket.IO altyapısı hazır.
-            </p>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                <span className="text-slate-400">API Health (/health):</span>
-                <span className="flex items-center gap-1 font-mono">
-                  {apiStatus.checking ? (
-                    <span className="text-slate-400">Kontrol ediliyor...</span>
-                  ) : apiStatus.ok ? (
-                    <span className="text-emerald-400 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Online (200 OK)</span>
-                  ) : (
-                    <span className="text-rose-400 flex items-center gap-1"><XCircle className="w-3.5 h-3.5" /> Offline (Port: 5001)</span>
-                  )}
-                </span>
+          {/* Metric Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
+              <div className="text-[10px] font-mono uppercase text-slate-400">Total Protocol AUM</div>
+              <div className="text-xl font-black text-cyan-400 font-mono mt-1">
+                ${stats ? Number(stats.total_aum_usdc).toLocaleString() : "..."} USDC
               </div>
+              <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                Cash + Graded Slabs
+              </div>
+            </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                <span className="text-slate-400">Socket.IO Durumu:</span>
-                <span className="font-mono text-slate-300">
-                  {socketId ? `${socketId.substring(0, 12)}...` : "Bağlantı bekleniyor"}
-                </span>
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
+              <div className="text-[10px] font-mono uppercase text-slate-400">Merchant Vaults</div>
+              <div className="text-xl font-black text-white font-mono mt-1">
+                {stats ? stats.total_vaults : "..."} Sub-Accounts
+              </div>
+              <div className="text-[10px] text-emerald-400 font-mono mt-0.5">
+                100% Active Agents
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
+              <div className="text-[10px] font-mono uppercase text-slate-400">RWA Slabs in Custody</div>
+              <div className="text-xl font-black text-amber-400 font-mono mt-1">
+                {stats ? stats.total_cards : "..."} PSA Slabs
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                Brink's / Collector Crypt
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
+              <div className="text-[10px] font-mono uppercase text-slate-400">Settled A2A Trades</div>
+              <div className="text-xl font-black text-emerald-400 font-mono mt-1">
+                {stats ? stats.total_completed_trades : "..."} Deals
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                Vol: ${stats ? Number(stats.total_volume_usdc).toLocaleString() : "0"} USDC
               </div>
             </div>
           </div>
+        </section>
 
-          <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
-            <span className="text-xs text-slate-400">Port: <code className="text-indigo-400 font-mono">5001</code></span>
-            <button
-              onClick={sendPing}
-              disabled={socketStatus !== "connected"}
-              className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium transition"
-            >
-              Socket Ping Gönder {pingLatency !== null && `(${pingLatency}ms)`}
-            </button>
-          </div>
-        </div>
-
-        {/* Frontend Card */}
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 backdrop-blur-xl shadow-xl flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2.5 mb-4">
-              <Layers className="w-5 h-5 text-cyan-400" />
-              <h2 className="text-base font-semibold text-white">Next.js Frontend</h2>
-            </div>
-
-            <p className="text-xs text-slate-400 mb-4">
-              Next.js App Router, Tailwind CSS v4, Lucide Icons, Axios ve Socket.IO Client ile yapılandırıldı.
-            </p>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                <span className="text-slate-400">Monorepo Yöneticisi:</span>
-                <span className="font-mono text-cyan-300 font-medium">pnpm (Workspaces)</span>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                <span className="text-slate-400">Stil Motoru:</span>
-                <span className="font-mono text-slate-300">Tailwind CSS v4</span>
+        {/* Tab 1: Merchant Vaults (Business-in-a-Box) */}
+        {activeTab === "vaults" && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-indigo-400" />
+                  Autonomous Merchant Vaults (Business-in-a-Box)
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Each NFT holds its own treasury, cards, and AI trading logic. Transferring the NFT transfers the entire business.
+                </p>
               </div>
             </div>
-          </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
-            <span className="text-xs text-slate-400">Port: <code className="text-cyan-400 font-mono">3000</code></span>
-            <span className="text-xs text-slate-400 font-mono">@/* path alias aktif</span>
-          </div>
-        </div>
-      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {vaults.map((vault) => (
+                <VaultCard
+                  key={vault.id}
+                  vault={vault}
+                  onInspect={(v) => setInspectVault(v)}
+                  onTransfer={(v) => setTransferVault(v)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
-      {/* Terminal / Quick Run Helper */}
-      <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800/90 font-mono text-xs">
-        <div className="flex items-center gap-2 text-slate-400 mb-2">
-          <Terminal className="w-4 h-4 text-purple-400" />
-          <span>Geliştirme Komutları (Kök dizinden):</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-slate-300 mt-2">
-          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
-            <div className="text-[10px] text-slate-500 uppercase">Her ikisini aynı anda çalıştır</div>
-            <code className="text-indigo-400 font-bold">pnpm dev</code>
-          </div>
-          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
-            <div className="text-[10px] text-slate-500 uppercase">Sadece Backend</div>
-            <code className="text-indigo-400 font-bold">pnpm dev:backend</code>
-          </div>
-          <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
-            <div className="text-[10px] text-slate-500 uppercase">Sadece Frontend</div>
-            <code className="text-indigo-400 font-bold">pnpm dev:frontend</code>
-          </div>
-        </div>
-      </div>
+        {/* Tab 2: Live A2A Trading Floor */}
+        {activeTab === "trading-floor" && (
+          <section className="space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
+                <Zap className="w-5 h-5 text-cyan-400" />
+                A2A (Agent-to-Agent) Swarm Trading Floor
+              </h2>
+              <p className="text-xs text-slate-400">
+                Stateless RAM worker loads agents for 2-second barter negotiation cycles and settles deals atomically on NEAR.
+              </p>
+            </div>
+
+            <TradingFloorTerminal
+              socketStatus={socketStatus}
+              onTriggerCycle={handleTriggerSwarm}
+              isTriggering={isTriggering}
+              liveEvents={liveEvents}
+              tradeHistory={trades}
+            />
+          </section>
+        )}
+
+        {/* Tab 3: RWA Slabs (Collector Crypt) */}
+        {activeTab === "rwa-cards" && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-400" />
+                  Collector Crypt RWA Pokémon Slabs (Solana ➔ NEAR)
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Physical graded cards held in Brink's vaults, mirrored to NEAR Merchant Vaults with authentic PSA certification numbers.
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Helius DAS API Verified
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {cards.map((card) => (
+                <CardSlab key={card.id || card.card_id} card={card} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Tab 4: Architecture & Audit Specs */}
+        {activeTab === "architecture" && <ArchitectureSpecs />}
+      </main>
+
+      {/* Modals */}
+      <MintVaultModal
+        isOpen={isMintOpen}
+        onClose={() => setIsMintOpen(false)}
+        onSuccess={() => loadData()}
+      />
+
+      <TransferVaultModal
+        vault={transferVault}
+        isOpen={!!transferVault}
+        onClose={() => setTransferVault(null)}
+        onSuccess={() => loadData()}
+      />
+
+      <VaultDetailModal
+        vault={inspectVault}
+        isOpen={!!inspectVault}
+        onClose={() => setInspectVault(null)}
+      />
 
       {/* Footer */}
-      <footer className="mt-8 pt-4 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-500">
-        <div className="flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-500" />
-          <span>Poke Agent Monorepo Kurulumu Tamamlandı</span>
+      <footer className="border-t border-slate-800/80 bg-slate-950/80 py-6 text-xs text-slate-500 font-mono">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>VaultDeck Protocol • NEAR Hackathon Track 10 Submission</span>
+          </div>
+          <div>Autonomous Merchant Vault NFTs as Accounts (NEP-171 / NEP-177)</div>
         </div>
-        <span>Node.js v22 • pnpm v12</span>
       </footer>
-    </main>
+    </div>
   );
 }
