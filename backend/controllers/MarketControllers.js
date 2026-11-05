@@ -1,7 +1,28 @@
 import express from "express";
 import db from "../model/model.js";
+import nearService from "../services/NearService.js";
 
 const router = express.Router();
+
+// GET live NEAR testnet network status from RPC
+router.get("/near-status", async (req, res) => {
+    try {
+        const status = await nearService.getNetworkStatus();
+        res.json(status);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Verify testnet account
+router.get("/verify-account/:accountId", async (req, res) => {
+    try {
+        const result = await nearService.verifyAccountExists(req.params.accountId);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // GET all RWA cards (inventory of all vaults or market)
 router.get("/cards", async (req, res) => {

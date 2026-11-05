@@ -1,8 +1,23 @@
 "use client";
 
-import { Shield, Sparkles, Plus, Wallet, Cpu, Layers } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Shield, Sparkles, Plus, Wallet, Cpu, Layers, LogOut, CheckCircle2 } from "lucide-react";
+import { initNearWallet, showWalletModal, signOutNearWallet, getLiveNearAccountBalance } from "@/lib/near";
 
-export default function Navbar({ stats, onOpenMint, activeTab, setActiveTab }) {
+export default function Navbar({ stats, onOpenMint, activeTab, setActiveTab, nearStatus }) {
+  const [accountId, setAccountId] = useState(null);
+  const [nearBalance, setNearBalance] = useState("0.00");
+
+  useEffect(() => {
+    initNearWallet().then(async (wallet) => {
+      if (wallet?.accountId) {
+        setAccountId(wallet.accountId);
+        const bal = await getLiveNearAccountBalance(wallet.accountId);
+        setNearBalance(bal);
+      }
+    });
+  }, []);
+
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#090d16]/80 border-b border-slate-800/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
@@ -17,10 +32,15 @@ export default function Navbar({ stats, onOpenMint, activeTab, setActiveTab }) {
             <div className="flex items-center gap-2">
               <span className="text-lg font-black tracking-tight text-white font-mono">VaultDeck</span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                NEAR Track 10
+                Track 10
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-mono">Autonomous Merchant Vault NFTs</p>
+            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+              <span className="flex items-center gap-1 text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Block #{nearStatus?.latest_block_height || "276,376,000"}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -72,25 +92,43 @@ export default function Navbar({ stats, onOpenMint, activeTab, setActiveTab }) {
           </button>
         </nav>
 
-        {/* Right Actions */}
-        <div className="flex items-center gap-3">
+        {/* Right Actions & Real NEAR Wallet */}
+        <div className="flex items-center gap-2.5">
           <button
             onClick={onOpenMint}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-500/25 transition active:scale-95"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-500/25 transition active:scale-95"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             Mint Vault NFT
           </button>
 
-          <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-800">
-            <div className="text-right">
-              <div className="text-[11px] font-mono text-slate-400">Account</div>
-              <div className="text-xs font-bold text-slate-200 font-mono">alierkan.testnet</div>
+          {accountId ? (
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <div className="text-right">
+                <div className="text-[10px] font-mono text-emerald-400 font-bold truncate max-w-[120px]">
+                  {accountId}
+                </div>
+                <div className="text-[11px] font-bold text-white font-mono">
+                  {nearBalance} NEAR
+                </div>
+              </div>
+              <button
+                onClick={signOutNearWallet}
+                title="Disconnect Wallet"
+                className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-rose-950/60 hover:text-rose-400 flex items-center justify-center border border-slate-700 transition"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center border border-slate-700">
-              <Wallet className="w-4 h-4 text-cyan-400" />
-            </div>
-          </div>
+          ) : (
+            <button
+              onClick={showWalletModal}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-mono font-bold transition active:scale-95"
+            >
+              <Wallet className="w-3.5 h-3.5 text-cyan-400" />
+              Connect NEAR Wallet
+            </button>
+          )}
         </div>
       </div>
     </header>

@@ -28,6 +28,7 @@ export default function Home() {
   const [cards, setCards] = useState([]);
   const [trades, setTrades] = useState([]);
   const [stats, setStats] = useState(null);
+  const [nearStatus, setNearStatus] = useState(null);
   const [socketStatus, setSocketStatus] = useState("connecting");
   const [liveEvents, setLiveEvents] = useState([]);
   const [isTriggering, setIsTriggering] = useState(false);
@@ -40,17 +41,19 @@ export default function Home() {
   // Fetch initial data
   const loadData = useCallback(async () => {
     try {
-      const [vaultsRes, cardsRes, tradesRes, statsRes] = await Promise.all([
+      const [vaultsRes, cardsRes, tradesRes, statsRes, nearRes] = await Promise.all([
         api.get("/vaults"),
         api.get("/market/cards"),
         api.get("/trades/history"),
         api.get("/market/stats"),
+        api.get("/market/near-status"),
       ]);
 
       setVaults(vaultsRes.data?.vaults || []);
       setCards(cardsRes.data?.cards || []);
       setTrades(tradesRes.data?.trades || []);
       setStats(statsRes.data || null);
+      setNearStatus(nearRes.data || null);
     } catch (err) {
       console.error("Failed to load platform data:", err);
     }
@@ -156,6 +159,7 @@ export default function Home() {
       {/* Top Navbar */}
       <Navbar
         stats={stats}
+        nearStatus={nearStatus}
         onOpenMint={() => setIsMintOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
