@@ -1,6 +1,7 @@
 import express from "express";
 import db from "../model/model.js";
 import nearService from "../services/NearService.js";
+import { getCollectorCryptInventory, bridgeCollectorCryptCardToNearVault } from "../services/CollectorCryptService.js";
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.get("/verify-account/:accountId", async (req, res) => {
     }
 });
 
-// GET all RWA cards (inventory of all vaults or market)
+// GET all RWA cards currently held in NEAR Merchant Vaults
 router.get("/cards", async (req, res) => {
     try {
         const cards = await db.card.findAll({
@@ -34,6 +35,67 @@ router.get("/cards", async (req, res) => {
         res.json({ cards });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// GET authentic Collector Crypt inventory (Solana Brink's Vault) with filtering & search
+router.get("/collector-crypt", (req, res) => {
+    try {
+        let cards = getCollectorCryptInventory();
+        const { search, category, grade, sortBy } = req.query;
+
+        if (search) {
+            const q = search.toLowerCase();
+            cards = cards.filter(c => 
+                c.name?.toLowerCase().includes(q) || 
+                c.category?.toLowerCase().includes(q) ||
+                c.id?.toLowerCase().includes(q)
+            );
+        }
+
+        if (category && category !== "ALL") {
+            cards = cards.filter(c => c.category?.toLowerCase() === category.toLowerCase());
+        }
+
+        if (grade && grade !== "ALL") {
+            cards = cards.filter(c => c.grade?.toLowerCase().includes(grade.toLowerCase()));
+        }
+
+        if (sortBy === "price_desc") {
+            cards = [...cards].sort((a, b) => (b.insuredUsd || b.costUsd || 0) - (a.insuredUsd || a.costUsd || 0));
+        } else if (sortBy === "price_asc") {
+            cards = [...cards].sort((a, b) => (a.insuredUsd || a.costUsd || 0) - (b.insuredUsd || b.costUsd || 0));
+        } else if (sortBy === "rareness") {
+            cards = [...cards].sort((a, b) => (b.rareness || 0) - (a.rareness || 0));
+        } else if (sortBy === "return") {
+            cards = [...cards].sort((a, b) => (b.returnPct || 0) - (a.returnPct || 0));
+        }
+
+        res.json({
+            total: cards.length,
+            custody: "Brink's Vault & PSA (Collector Crypt)",
+            chain_origin: "Solana Mainnet",
+            bridge_destination: "NEAR Protocol (Track 10: NFTs as Accounts)",
+            cards
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Bridge Collector Crypt Card to a NEAR Merchant Vault
+router.post("/collector-crypt/bridge", async (req, res) => {
+    try {
+        const { card_id, vault_id, owner_account } = req.body;
+        if (!card_id || !vault_id) {
+            return res.status(400).json({ error: "card_id and vault_id are required" });
+        }
+
+        const result = await bridgeCollectorCryptCardToNearVault(card_id, vault_id, owner_account || "alierkan.testnet");
+        res.json(result);
+    } catch (err) {
+        console.error("Bridge card error:", err);
+        res.status(400).json({ error: err.message });
     }
 });
 

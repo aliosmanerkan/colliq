@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import VaultCard from "@/components/VaultCard";
 import CardSlab from "@/components/CardSlab";
+import CollectorCryptCatalog from "@/components/CollectorCryptCatalog";
 import TradingFloorTerminal from "@/components/TradingFloorTerminal";
 import MintVaultModal from "@/components/MintVaultModal";
 import TransferVaultModal from "@/components/TransferVaultModal";
@@ -299,28 +300,10 @@ export default function Home() {
 
         {/* Tab 3: RWA Slabs (Collector Crypt) */}
         {activeTab === "rwa-cards" && (
-          <section className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-amber-400" />
-                  Collector Crypt RWA Pokémon Slabs (Solana ➔ NEAR)
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Physical graded cards held in Brink's vaults, mirrored to NEAR Merchant Vaults with authentic PSA certification numbers.
-                </p>
-              </div>
-              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                Helius DAS API Verified
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {cards.map((card) => (
-                <CardSlab key={card.id || card.card_id} card={card} />
-              ))}
-            </div>
-          </section>
+          <CollectorCryptCatalog
+            vaults={vaults}
+            onCardBridged={() => loadData()}
+          />
         )}
 
         {/* Tab 4: Architecture & Audit Specs */}
