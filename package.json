@@ -1,5 +1,5 @@
 {
-  "name": "poke-agent-monorepo",
+  "name": "vaultdeck-monorepo",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -7,8 +7,9 @@
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,blue\" \"pnpm --filter backend dev\" \"pnpm --filter frontend dev\"",
     "dev:backend": "pnpm --filter backend dev",
     "dev:frontend": "pnpm --filter frontend dev",
-    "build": "pnpm --filter frontend build",
-    "start": "pnpm --filter backend start"
+    "build:contract": "pnpm --filter contract build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build": "pnpm --filter frontend build"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

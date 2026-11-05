@@ -16,6 +16,7 @@ import trades from "./controllers/TradeControllers.js";
 import market from "./controllers/MarketControllers.js";
 import { seedInitialVaultsAndCards } from "./services/CollectorCryptService.js";
 import a2aSwarm from "./services/A2ASwarmService.js";
+import negotiationEngine from "./src/agents/negotiationEngine.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +58,7 @@ const io = new Server(httpServer, {
 });
 
 a2aSwarm.setSocket(io);
+negotiationEngine.setSocket(io);
 
 io.on("connection", (socket) => {
     console.log(`⚡ Client connected to VaultDeck Live Floor: ${socket.id}`);

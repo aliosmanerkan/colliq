@@ -76,7 +76,18 @@ export default function TradingFloorTerminal({ socketStatus, onTriggerCycle, isT
                   <span className="font-bold uppercase tracking-wider text-cyan-400">
                     {evt.speaker || evt.type}
                   </span>
-                  <span>{new Date(evt.timestamp).toLocaleTimeString()}</span>
+                  <div className="flex items-center gap-2">
+                    {evt.decision && (
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                        evt.decision === "ACCEPT" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40" :
+                        evt.decision === "COUNTER" ? "bg-amber-500/20 text-amber-400 border border-amber-500/40" :
+                        "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                      }`}>
+                        {evt.decision}
+                      </span>
+                    )}
+                    <span>{new Date(evt.timestamp).toLocaleTimeString()}</span>
+                  </div>
                 </div>
                 <p className="leading-relaxed whitespace-pre-wrap">{evt.message}</p>
                 {evt.details && (

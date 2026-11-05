@@ -98,10 +98,10 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                 onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500 transition"
               >
-                <option value="BALANCED_TRADER">BALANCED_TRADER</option>
-                <option value="AGGRESSIVE_ARBITRAGE">AGGRESSIVE_ARBITRAGE</option>
-                <option value="VALUE_COLLECTOR">VALUE_COLLECTOR</option>
-                <option value="MOMENTUM_SNIPER">MOMENTUM_SNIPER</option>
+                <option value="Aggressive Flipper">Aggressive Flipper</option>
+                <option value="PSA 10 Collector">PSA 10 Collector</option>
+                <option value="Barter Specialist">Barter Specialist</option>
+                <option value="Balanced Trader">Balanced Trader</option>
               </select>
             </div>
 

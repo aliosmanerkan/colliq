@@ -1,6 +1,9 @@
 packages:
   - 'frontend'
   - 'backend'
+  - 'contract'
 allowBuilds:
+  esbuild: true
+  near-sdk-js: true
   secp256k1: true
   sharp: true

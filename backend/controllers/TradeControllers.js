@@ -1,18 +1,33 @@
 import express from "express";
 import db from "../model/model.js";
 import a2aSwarm from "../services/A2ASwarmService.js";
+import negotiationEngine from "../src/agents/negotiationEngine.ts";
 
 const router = express.Router();
 
-// Trigger an A2A trade cycle
+// Trigger an A2A trade cycle (stateless 5-round negotiation loop)
 router.post("/trigger-swarm", async (req, res) => {
     try {
-        const result = await a2aSwarm.executeNegotiationCycle();
+        const vaults = await db.vault.findAll({
+            where: { is_locked: false },
+            include: [{ model: db.card, as: "inventory" }]
+        });
+
+        const eligible = vaults.filter(v => v.inventory && v.inventory.length > 0);
+        if (eligible.length >= 2) {
+            const shuffled = eligible.sort(() => 0.5 - Math.random());
+            const result = await negotiationEngine.runNegotiationRoom(shuffled[0], shuffled[1]);
+            return res.json({ status: "SWARM_EXECUTED", engine: "negotiationEngine.ts", result });
+        }
+
+        const fallbackResult = await a2aSwarm.executeNegotiationCycle();
         res.json({
             status: "SWARM_EXECUTED",
-            result
+            engine: "a2aSwarmService.js",
+            result: fallbackResult
         });
     } catch (err) {
+        console.error("Trade swarm error:", err);
         res.status(500).json({ error: err.message });
     }
 });

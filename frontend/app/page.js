@@ -86,6 +86,7 @@ export default function Home() {
           type: "round",
           speaker: `ROUND ${data.round} • ${data.log.speaker}`,
           message: data.log.message,
+          decision: data.log.decision || (data.log.turn ? data.log.turn.decision : null),
           timestamp: Date.now(),
         },
         ...prev.slice(0, 40),

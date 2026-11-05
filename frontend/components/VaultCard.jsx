@@ -10,10 +10,12 @@ export default function VaultCard({ vault, onInspect, onTransfer }) {
 
   // Tier styling
   const tierBadges = {
-    ROOKIE: { label: "ROOKIE TRADER", bg: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
-    CERTIFIED_MERCHANT: { label: "CERTIFIED MERCHANT", bg: "bg-purple-500/10 text-purple-400 border-purple-500/30" },
+    Rookie: { label: "ROOKIE", bg: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
+    Shark: { label: "SHARK", bg: "bg-purple-500/10 text-purple-400 border-purple-500/30" },
+    "Whale Vault": { label: "WHALE VAULT", bg: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
+    ROOKIE: { label: "ROOKIE", bg: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
+    CERTIFIED_MERCHANT: { label: "SHARK", bg: "bg-purple-500/10 text-purple-400 border-purple-500/30" },
     WHALE_VAULT: { label: "WHALE VAULT", bg: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
-    LEGENDARY_DECK: { label: "LEGENDARY DECK", bg: "bg-pink-500/10 text-pink-400 border-pink-500/30" },
   };
 
   const badge = tierBadges[vault.tier] || tierBadges.ROOKIE;
@@ -113,7 +115,7 @@ export default function VaultCard({ vault, onInspect, onTransfer }) {
           className="py-2 px-3 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-300 text-xs font-semibold flex items-center gap-1.5 transition"
         >
           <Send className="w-3.5 h-3.5" />
-          Transfer Box
+          Buy / Transfer Vault
         </button>
       </div>
     </div>
