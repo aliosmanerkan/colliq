@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "@near-wallet-selector/modal-ui/styles.css";
 
 :root {
   --background: #090d16;
