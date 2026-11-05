@@ -65,6 +65,10 @@ export class NearService {
         };
     }
 
+    generateAgentFunctionCallKey(subAccount) {
+        return this.generateAgentKeyPair();
+    }
+
     // ZOMBIE KEY WIPE: Revokes old AI Function-Call Access Key & assigns a fresh cryptographic ed25519 key
     async executeZombieKeyWipe(vaultId, newOwnerAccount) {
         const vault = await db.vault.findOne({ where: { id: vaultId } });

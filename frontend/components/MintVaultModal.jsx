@@ -1,19 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { X, Cpu, ShieldCheck, Sparkles, Coins } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Cpu, ShieldCheck, Sparkles, Coins, Wallet } from "lucide-react";
 import api from "@/lib/api";
+import { initNearWallet } from "@/lib/near";
 
 export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     name: "",
-    strategy: "BALANCED_TRADER",
+    strategy: "Balanced Trader",
     usdc_deposit: "1000",
     guardrail_max_spend: "350",
     bio: "",
   });
+  const [connectedAccount, setConnectedAccount] = useState("alierkan.testnet");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      initNearWallet().then((w) => {
+        if (w?.accountId) {
+          setConnectedAccount(w.accountId);
+        }
+      });
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -25,7 +37,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
     try {
       const res = await api.post("/vaults/mint", {
         name: formData.name,
-        owner_account: "alierkan.testnet",
+        owner_account: connectedAccount || "alierkan.testnet",
         usdc_deposit: parseFloat(formData.usdc_deposit),
         strategy: formData.strategy,
         guardrail_max_spend: parseFloat(formData.guardrail_max_spend),
@@ -74,6 +86,15 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div className="flex items-center gap-2 text-xs">
+              <Wallet className="w-4 h-4 text-cyan-400" />
+              <span className="text-slate-400 font-mono">Owner Account:</span>
+              <span className="font-mono font-bold text-emerald-400">{connectedAccount}</span>
+            </div>
+            <span className="text-[10px] font-mono text-slate-500 uppercase">NEAR Testnet</span>
+          </div>
+
           <div>
             <label className="block text-xs font-mono font-semibold text-slate-300 mb-1">
               Vault Merchant Name
