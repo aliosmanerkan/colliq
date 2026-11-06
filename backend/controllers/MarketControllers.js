@@ -99,6 +99,65 @@ router.post("/collector-crypt/bridge", async (req, res) => {
     }
 });
 
+// Direct Buy with Personal Account (Manuel Alım)
+router.post("/buy-direct", async (req, res) => {
+    try {
+        const { card_id, buyer_account } = req.body;
+        if (!card_id || !buyer_account) {
+            return res.status(400).json({ error: "card_id and buyer_account are required" });
+        }
+
+        const ccCards = getCollectorCryptInventory();
+        const ccCard = ccCards.find(c => c.id === card_id);
+
+        let finalCard;
+        if (ccCard) {
+            const certNum = ccCard.id.substring(0, 8).toUpperCase();
+            const cardPrice = ccCard.insuredUsd || ccCard.costUsd || 50.0;
+            finalCard = await db.card.create({
+                card_id: `cc-rwa-${ccCard.id.substring(0, 12)}`,
+                vault_id: null,
+                owner_account: buyer_account,
+                psa_cert_number: certNum,
+                solana_mint: ccCard.id,
+                name: ccCard.name,
+                category: ccCard.category || "Pokemon",
+                set_name: ccCard.name.split("PSA")[0]?.trim() || "Collector Crypt Vault",
+                grade: ccCard.grade || "PSA 10 GEM MT",
+                rareness_score: ccCard.rareness || 80,
+                oracle_fair_value_usdc: cardPrice,
+                last_sale_usdc: ccCard.costUsd || cardPrice,
+                image_url: ccCard.imageUrl,
+                barcode: `CC-${certNum}-PSA`,
+                population_higher: ccCard.population?.higher || 0,
+                is_locked: false
+            });
+        } else {
+            const existingCard = await db.card.findOne({ where: { card_id } });
+            if (!existingCard) return res.status(404).json({ error: "Card not found" });
+            if (existingCard.is_locked) return res.status(400).json({ error: "Card is locked in active trade" });
+
+            existingCard.owner_account = buyer_account;
+            existingCard.vault_id = null;
+            await existingCard.save();
+            finalCard = existingCard;
+        }
+
+        const networkInfo = await nearService.getNetworkStatus();
+
+        res.json({
+            status: "SUCCESS_BOUGHT",
+            message: `Card successfully purchased directly by ${buyer_account}`,
+            card: finalCard,
+            tx_hash: `0x${networkInfo.latest_block_hash?.substring(0, 32) || "4JpW2Z"}`,
+            block: networkInfo.latest_block_height
+        });
+    } catch (err) {
+        console.error("Direct buy error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Protocol level metrics (AUM, Total Volume, Active Vaults)
 router.get("/stats", async (req, res) => {
     try {

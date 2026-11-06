@@ -139,4 +139,51 @@ router.post("/:id/transfer", async (req, res) => {
     }
 });
 
+// AGENT SNIPES / BUYS A CARD FROM THE MARKETPLACE
+router.post("/:id/snipe", async (req, res) => {
+    try {
+        const { card_id } = req.body;
+        const vault = await db.vault.findOne({ where: { id: req.params.id } });
+        if (!vault) return res.status(404).json({ error: "Vault not found" });
+
+        const { bridgeCollectorCryptCardToNearVault } = await import("../services/CollectorCryptService.js");
+        const result = await bridgeCollectorCryptCardToNearVault(card_id, vault.id, vault.sub_account);
+
+        res.json({
+            status: "SNIPED_BY_AGENT",
+            message: `Agent ${vault.name} (${vault.sub_account}) successfully acquired card!`,
+            ...result
+        });
+    } catch (err) {
+        console.error("Agent snipe error:", err);
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// WITHDRAW CARD FROM VAULT TO PERSONAL WALLET
+router.post("/:id/withdraw-card", async (req, res) => {
+    try {
+        const { card_id, destination_account } = req.body;
+        const vault = await db.vault.findOne({ where: { id: req.params.id } });
+        if (!vault) return res.status(404).json({ error: "Vault not found" });
+        if (vault.is_locked) return res.status(400).json({ error: "Vault is locked" });
+
+        const card = await db.card.findOne({ where: { card_id, vault_id: vault.id } });
+        if (!card) return res.status(404).json({ error: "Card not in this vault" });
+
+        card.vault_id = null;
+        card.owner_account = destination_account || vault.owner_account;
+        await card.save();
+
+        res.json({
+            status: "WITHDRAWN",
+            message: `Card withdrawn from ${vault.sub_account} to ${card.owner_account}`,
+            card
+        });
+    } catch (err) {
+        console.error("Withdraw card error:", err);
+        res.status(400).json({ error: err.message });
+    }
+});
+
 export default router;
