@@ -117,7 +117,7 @@ export default function Navbar({ stats, onOpenMint, activeTab, setActiveTab, nea
             className="hidden sm:inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold shadow-sm transition active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>+ Deploy Agent</span>
+            <span>Deploy Agent</span>
           </button>
 
           {/* Account Widget */}
@@ -211,7 +211,7 @@ export default function Navbar({ stats, onOpenMint, activeTab, setActiveTab, nea
             className="w-full py-2.5 rounded-full bg-white text-black text-xs font-semibold flex items-center justify-center gap-2 shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Deploy Agent</span>
+            <span>Deploy Agent</span>
           </button>
         </div>
       )}

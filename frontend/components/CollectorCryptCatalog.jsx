@@ -475,7 +475,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                       }}
                       className="px-4 py-2 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs transition"
                     >
-                      + Deploy New Agent Now
+                      Deploy New Agent
                     </button>
                   </div>
                 )}

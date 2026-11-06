@@ -16,11 +16,12 @@ import {
   Zap, 
   Plus, 
   Search, 
-  ArrowRight,
-  ShieldCheck,
-  RefreshCw,
-  Layers,
-  Sparkles
+  ArrowRight, 
+  ShieldCheck, 
+  RefreshCw, 
+  Layers, 
+  Sparkles,
+  Bot
 } from "lucide-react";
 
 export default function Home() {
@@ -197,143 +198,154 @@ export default function Home() {
       />
 
       {/* Main Viewport */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 w-full flex-1">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full flex-1">
         
-        {/* Apple Keynote Hero */}
-        <section className="mb-16 sm:mb-20 text-center sm:text-left flex flex-col items-center sm:items-start">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900/90 border border-neutral-800 text-xs font-medium text-neutral-300 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span>NEAR Track 10 • NFTs as Accounts</span>
-            <span className="text-neutral-600">•</span>
-            <span className="text-neutral-400">Agentic Pokémon Card Marketplace</span>
-          </div>
-
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-semibold tracking-tight text-white max-w-4xl leading-[1.08]">
-            Card Marketplace & Autonomous AI Agents.
-          </h1>
-
-          <p className="text-lg sm:text-xl text-neutral-400 font-normal max-w-3xl mt-4 leading-relaxed">
-            Buy verified physical PSA 10 slabs directly or mint a custom <strong className="text-white">Trading Agent (NEAR Sub-Account)</strong> that hunts and snipes cards on your terms 24/7.
-          </p>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-3 mt-8">
-            <button
-              onClick={() => setActiveTab("marketplace")}
-              className={`px-6 py-3 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-2 transition active:scale-95 shadow-sm ${
-                activeTab === "marketplace"
-                  ? "bg-white text-black"
-                  : "bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-800"
-              }`}
-            >
-              <span>🛍️ Marketplace</span>
-            </button>
-
-            <button
-              onClick={() => setIsMintOpen(true)}
-              className="px-6 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition active:scale-95 shadow-lg shadow-cyan-500/20"
-            >
-              <Plus className="w-4 h-4 text-white" />
-              <span>+ Deploy Agent</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("trading-floor")}
-              className="px-6 py-3 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs sm:text-sm font-medium flex items-center gap-2 transition active:scale-95"
-            >
-              <Zap className="w-4 h-4 text-emerald-400" />
-              <span>⚡ Live Trading Floor</span>
-            </button>
-          </div>
-
-          {/* Apple Bento Grid Metrics */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12 w-full text-left">
-            {/* Box 1 */}
-            <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
-              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Protocol Volume</div>
-              <div className="text-2xl sm:text-3xl font-semibold text-white font-mono mt-3">
-                ${stats ? Number(stats.total_aum_usdc).toLocaleString() : "..."} <span className="text-xs text-neutral-500 font-normal">USDC</span>
-              </div>
-              <div className="text-xs text-neutral-400 mt-2">
-                USDC cash reserves + PSA slab custody
-              </div>
-            </div>
-
-            {/* Box 2 */}
-            <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
-              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Active Trading Agents</div>
-              <div className="text-2xl sm:text-3xl font-semibold text-white font-mono mt-3">
-                {stats ? stats.total_vaults : "..."} <span className="text-xs text-neutral-500 font-normal">Sub-Accounts</span>
-              </div>
-              <div className="text-xs text-emerald-400 mt-2 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                24/7 Autonomous Hunter Agents
-              </div>
-            </div>
-
-            {/* Box 3 */}
-            <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
-              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Brink's Physical Vault</div>
-              <div className="text-2xl sm:text-3xl font-semibold text-white font-mono mt-3">
-                {stats ? stats.total_cards : "..."} <span className="text-xs text-neutral-500 font-normal">Slabs</span>
-              </div>
-              <div className="text-xs text-neutral-400 mt-2">
-                Sealed PSA 10/9 RWA Certifications
-              </div>
-            </div>
-
-            {/* Box 4 */}
-            <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
-              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Settled Trades</div>
-              <div className="text-2xl sm:text-3xl font-semibold text-emerald-400 font-mono mt-3">
-                {stats ? stats.total_completed_trades : "..."} <span className="text-xs text-neutral-500 font-normal">Swaps & Snipes</span>
-              </div>
-              <div className="text-xs text-neutral-400 mt-2">
-                Volume: ${stats ? Number(stats.total_volume_usdc).toLocaleString() : "0"} USDC
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Tab 1: CARD MARKETPLACE (DEFAULT TAB) */}
         {activeTab === "marketplace" && (
-          <CollectorCryptCatalog
-            vaults={vaults}
-            onCardBridged={() => loadData()}
-            onOpenMint={() => setIsMintOpen(true)}
-          />
+          <div className="space-y-10">
+            {/* Apple Keynote Hero */}
+            <section className="text-center sm:text-left flex flex-col items-center sm:items-start">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900/90 border border-neutral-800 text-xs font-medium text-neutral-300 mb-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>NEAR Track 10 • NFTs as Accounts</span>
+                <span className="text-neutral-600">•</span>
+                <span className="text-neutral-400">Agentic Pokémon Card Marketplace</span>
+              </div>
+
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-semibold tracking-tight text-white max-w-4xl leading-[1.08]">
+                Card Marketplace & Autonomous AI Agents.
+              </h1>
+
+              <p className="text-lg sm:text-xl text-neutral-400 font-normal max-w-3xl mt-4 leading-relaxed">
+                Buy verified physical PSA 10 slabs directly or mint a custom <strong className="text-white">Trading Agent (NEAR Sub-Account)</strong> that hunts and snipes cards on your terms 24/7.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 mt-8">
+                <button
+                  onClick={() => setIsMintOpen(true)}
+                  className="px-6 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition active:scale-95 shadow-lg shadow-cyan-500/20"
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                  <span>Deploy Agent</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("my-agents")}
+                  className="px-6 py-3 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs sm:text-sm font-medium flex items-center gap-2 transition active:scale-95"
+                >
+                  <Bot className="w-4 h-4 text-neutral-400" />
+                  <span>My Agents</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("trading-floor")}
+                  className="px-6 py-3 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs sm:text-sm font-medium flex items-center gap-2 transition active:scale-95"
+                >
+                  <Zap className="w-4 h-4 text-emerald-400" />
+                  <span>Live Trading Floor</span>
+                </button>
+              </div>
+
+              {/* Apple Bento Grid Metrics */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12 w-full text-left">
+                {/* Box 1 */}
+                <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
+                  <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Protocol Volume</div>
+                  <div className="text-2xl sm:text-3xl font-semibold text-white font-mono mt-3">
+                    ${stats ? Number(stats.total_aum_usdc).toLocaleString() : "..."} <span className="text-xs text-neutral-500 font-normal">USDC</span>
+                  </div>
+                  <div className="text-xs text-neutral-400 mt-2">
+                    USDC cash reserves + PSA slab custody
+                  </div>
+                </div>
+
+                {/* Box 2 */}
+                <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
+                  <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Active Trading Agents</div>
+                  <div className="text-2xl sm:text-3xl font-semibold text-white font-mono mt-3">
+                    {stats ? stats.total_vaults : "..."} <span className="text-xs text-neutral-500 font-normal">Sub-Accounts</span>
+                  </div>
+                  <div className="text-xs text-emerald-400 mt-2 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    24/7 Autonomous Hunter Agents
+                  </div>
+                </div>
+
+                {/* Box 3 */}
+                <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
+                  <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Brink's Physical Vault</div>
+                  <div className="text-2xl sm:text-3xl font-semibold text-white font-mono mt-3">
+                    {stats ? stats.total_cards : "..."} <span className="text-xs text-neutral-500 font-normal">Slabs</span>
+                  </div>
+                  <div className="text-xs text-neutral-400 mt-2">
+                    Sealed PSA 10/9 RWA Certifications
+                  </div>
+                </div>
+
+                {/* Box 4 */}
+                <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
+                  <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Settled Trades</div>
+                  <div className="text-2xl sm:text-3xl font-semibold text-emerald-400 font-mono mt-3">
+                    {stats ? stats.total_completed_trades : "..."} <span className="text-xs text-neutral-500 font-normal">Swaps & Snipes</span>
+                  </div>
+                  <div className="text-xs text-neutral-400 mt-2">
+                    Volume: ${stats ? Number(stats.total_volume_usdc).toLocaleString() : "0"} USDC
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <CollectorCryptCatalog
+              vaults={vaults}
+              onCardBridged={() => loadData()}
+              onOpenMint={() => setIsMintOpen(true)}
+            />
+          </div>
         )}
 
-        {/* Tab 2: AJANLARIM & KASALAR (MY AGENTS) */}
+        {/* Tab 2: MY AGENTS */}
         {activeTab === "my-agents" && (
-          <section className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
-              <div>
-                <h2 className="text-xl font-semibold text-white tracking-tight flex items-center gap-2">
-                  <span>🤖 My Autonomous Agents & Vaults</span>
-                </h2>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  Autonomous trading accounts on NEAR Protocol. Each agent owns its own sub-account treasury, hunts target cards, and manages physical slab inventory.
+          <section className="space-y-8 animate-in fade-in duration-200">
+            {/* Dedicated My Agents Banner */}
+            <div className="p-8 sm:p-10 rounded-[32px] bg-[#0c0c0e] border border-white/[0.08] shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs font-medium text-neutral-300">
+                  <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>NEAR Track 10 • NFTs as Accounts</span>
+                </div>
+                <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight text-white font-sans">
+                  My Autonomous Trading Agents
+                </h1>
+                <p className="text-sm text-neutral-400 max-w-2xl leading-relaxed">
+                  Manage your deployed NEAR Sub-Accounts (`vault-&lt;id&gt;.vaultdeck.testnet`). Each agent holds its own treasury, hunts target cards, and manages physical slab inventory autonomously.
                 </p>
+              </div>
+
+              <button
+                onClick={() => setIsMintOpen(true)}
+                className="px-6 py-3 rounded-full bg-white hover:bg-neutral-200 text-black text-xs sm:text-sm font-semibold flex items-center gap-2 transition active:scale-95 shadow-sm shrink-0"
+              >
+                <Plus className="w-4 h-4 text-black" />
+                <span>Deploy New Agent</span>
+              </button>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+              <div className="text-sm font-medium text-neutral-400">
+                Active Agents ({filteredVaults.length})
               </div>
 
               {/* Controls */}
               <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => setIsMintOpen(true)}
-                  className="px-4 py-2 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Deploy Agent</span>
-                </button>
-
                 <div className="relative">
                   <input
                     type="text"
                     placeholder="Search agents..."
                     value={vaultSearch}
                     onChange={(e) => setVaultSearch(e.target.value)}
-                    className="pl-9 pr-4 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-white/[0.3] font-sans w-44"
+                    className="pl-9 pr-4 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-white/[0.3] font-sans w-48"
                   />
                   <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-3 top-2.5" />
                 </div>
@@ -353,18 +365,28 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
+
+                <select
+                  value={vaultSort}
+                  onChange={(e) => setVaultSort(e.target.value)}
+                  className="px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-white focus:outline-none focus:border-white/[0.3]"
+                >
+                  <option value="pnl_desc">Highest Return</option>
+                  <option value="aum_desc">Highest Treasury</option>
+                  <option value="trades_desc">Most Trades</option>
+                </select>
               </div>
             </div>
 
             {/* Grid */}
             {filteredVaults.length === 0 ? (
-              <div className="py-24 text-center text-xs text-neutral-500 bg-[#0c0c0e] rounded-[32px] border border-white/[0.08] space-y-3">
+              <div className="py-24 text-center text-xs text-neutral-500 bg-[#0c0c0e] rounded-[32px] border border-white/[0.08] space-y-4">
                 <p>No active trading agents found.</p>
                 <button
                   onClick={() => setIsMintOpen(true)}
-                  className="px-5 py-2.5 rounded-full bg-white text-black text-xs font-semibold transition"
+                  className="px-6 py-2.5 rounded-full bg-white text-black text-xs font-semibold transition"
                 >
-                  + Deploy Your First Agent
+                  Deploy Your First Agent
                 </button>
               </div>
             ) : (
@@ -382,13 +404,13 @@ export default function Home() {
           </section>
         )}
 
-        {/* Tab 3: CANLI BORSA MASASI (TRADING FLOOR) */}
+        {/* Tab 3: LIVE TRADING FLOOR */}
         {activeTab === "trading-floor" && (
-          <section className="space-y-6">
+          <section className="space-y-6 animate-in fade-in duration-200">
             <div className="flex items-center justify-between pb-2">
               <div>
                 <h2 className="text-xl font-semibold text-white tracking-tight flex items-center gap-2">
-                  <span>⚡ Live A2A Trading Floor</span>
+                  <span>Live A2A Trading Floor</span>
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 </h2>
                 <p className="text-xs text-neutral-400 mt-0.5">
@@ -416,7 +438,11 @@ export default function Home() {
         )}
 
         {/* Tab 4: HOW IT WORKS & SPECS */}
-        {activeTab === "architecture" && <ArchitectureSpecs />}
+        {activeTab === "architecture" && (
+          <div className="animate-in fade-in duration-200">
+            <ArchitectureSpecs />
+          </div>
+        )}
       </main>
 
       {/* Modals */}
