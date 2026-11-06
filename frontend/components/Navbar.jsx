@@ -25,13 +25,36 @@ export default function Navbar({ stats, onOpenMint, activeTab, setActiveTab, nea
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    let subscription = null;
+
     initNearWallet().then(async (wallet) => {
-      if (wallet?.accountId) {
-        setAccountId(wallet.accountId);
-        const bal = await getLiveNearAccountBalance(wallet.accountId);
-        setNearBalance(bal);
+      if (!wallet) return;
+
+      const syncAccount = async (accId) => {
+        setAccountId(accId);
+        if (accId) {
+          const bal = await getLiveNearAccountBalance(accId);
+          setNearBalance(bal);
+        } else {
+          setNearBalance("0.00");
+        }
+      };
+
+      if (wallet.accountId) {
+        await syncAccount(wallet.accountId);
+      }
+
+      if (wallet.selector) {
+        subscription = wallet.selector.store.observable.subscribe(async (state) => {
+          const activeAccount = state.accounts.find((a) => a.active)?.accountId || state.accounts[0]?.accountId || null;
+          await syncAccount(activeAccount);
+        });
       }
     });
+
+    return () => {
+      if (subscription?.unsubscribe) subscription.unsubscribe();
+    };
   }, []);
 
   const handleCopyAccount = (e) => {

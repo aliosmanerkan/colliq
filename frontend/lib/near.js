@@ -8,14 +8,14 @@ import * as nearAPI from "near-api-js";
 let selectorInstance = null;
 let modalInstance = null;
 
-export const CONTRACT_ID = process.env.NEXT_PUBLIC_NEAR_CONTRACT_ID || "vaultdeck.testnet";
+export const CONTRACT_ID = process.env.NEXT_PUBLIC_NEAR_CONTRACT_ID || "";
 export const NETWORK_ID = process.env.NEXT_PUBLIC_NEAR_NETWORK || "testnet";
 
 export async function initNearWallet() {
   if (typeof window === "undefined") return null;
   if (selectorInstance) {
     const state = selectorInstance.store.getState();
-    const accountId = state.accounts.find((acc) => acc.active)?.accountId || null;
+    const accountId = state.accounts.find((acc) => acc.active)?.accountId || state.accounts[0]?.accountId || null;
     return { selector: selectorInstance, modal: modalInstance, accountId };
   }
 
@@ -25,12 +25,18 @@ export async function initNearWallet() {
       modules: [setupMeteorWallet()],
     });
 
-    modalInstance = setupModal(selectorInstance, {
-      contractId: CONTRACT_ID,
-    });
+    const modalOptions = {
+      theme: "dark",
+      description: "Connect your Meteor Wallet to trade on VaultDeck",
+    };
+    if (CONTRACT_ID) {
+      modalOptions.contractId = CONTRACT_ID;
+    }
+
+    modalInstance = setupModal(selectorInstance, modalOptions);
 
     const state = selectorInstance.store.getState();
-    const accountId = state.accounts.find((acc) => acc.active)?.accountId || null;
+    const accountId = state.accounts.find((acc) => acc.active)?.accountId || state.accounts[0]?.accountId || null;
 
     return { selector: selectorInstance, modal: modalInstance, accountId };
   } catch (err) {
