@@ -390,7 +390,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
               <div>
                 <h3 className="text-base font-semibold text-white flex items-center gap-2">
                   <Bot className="w-4 h-4 text-cyan-400" />
-                  Deploy Agent to Snipe
+                  Assign Agent to Snipe
                 </h3>
                 <p className="text-xs text-neutral-400 mt-0.5">
                   Your autonomous agent acquires this slab using its internal sub-account treasury
@@ -475,7 +475,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                       }}
                       className="px-4 py-2 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs transition"
                     >
-                      Deploy New Agent
+                      Mint New Agent
                     </button>
                   </div>
                 )}

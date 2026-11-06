@@ -79,6 +79,7 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
             id: vault.id,
             name: vault.name,
             sub_account: vault.sub_account,
+            usdc_balance: vault.usdc_balance,
             new_usdc_balance: vault.usdc_balance
         },
         solana_mint: ccCard.id,

@@ -68,7 +68,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
         
         <div className="flex items-center justify-between pb-5 border-b border-neutral-900 mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-white tracking-tight">Deploy Autonomous Trading Agent</h2>
+            <h2 className="text-xl font-semibold text-white tracking-tight">Mint Autonomous Trading Agent</h2>
             <p className="text-xs text-neutral-400 mt-0.5">Creates dedicated NEAR Sub-Account (vault-&lt;id&gt;.vaultdeck.testnet)</p>
           </div>
           <button
@@ -99,12 +99,12 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
 
           <div>
             <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-              Vault Name
+              Agent Name
             </label>
             <input
               type="text"
               required
-              placeholder="e.g. Cerulean Vintage Syndicate"
+              placeholder="e.g. Cerulean Sniper Agent"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-2.5 rounded-2xl bg-neutral-950 border border-neutral-800 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-white/[0.3] transition font-sans"
@@ -196,7 +196,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
               disabled={loading}
               className="px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold transition active:scale-95 disabled:opacity-50 shadow-sm"
             >
-              {loading ? "Minting..." : "Mint Vault"}
+              {loading ? "Minting..." : "Mint Agent ($0.01 Gas)"}
             </button>
           </div>
         </form>
