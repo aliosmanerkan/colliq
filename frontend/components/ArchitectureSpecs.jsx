@@ -17,31 +17,31 @@ export default function ArchitectureSpecs() {
       num: "01",
       title: "NFTs as Accounts (Sub-Accounts)",
       badge: "Track 10 Core",
-      desc: "Her NFT mint edildiğinde vault-<id>.market.near şeklinde hafif bir NEAR alt hesabı oluşturulur. Kısıtlı bir Function-Call Access Key ile AI Agent'a bağlanarak bütçesi ve yetkileri sınırlandırılır."
+      desc: "Minting each Merchant Vault NFT automatically deploys a lightweight NEAR sub-account (e.g. vault-<id>.market.near). A scoped Function-Call Access Key is bound to the AI agent, restricting its capabilities to authorized trades only (no withdrawals)."
     },
     {
       num: "02",
       title: "Dynamic On-Chain SVG (NEP-171 / 177)",
       badge: "Pure Blockchain State",
-      desc: "Agent başarılı takaslar yaptıkça NFT'nin on-chain ekstra metadatası ve Dinamik SVG görseli (Tier rozeti, Net Kâr/PnL, İşlem Sayısı, Envanter Değeri) blokzincir üzerinde canlı evrimleşir."
+      desc: "As trading agents complete barter deals, the NFT's on-chain metadata and pure Base64 SVG (Tier badge, Net PnL, Settled Trades, and Slabs Value) dynamically evolve directly from smart contract state."
     },
     {
       num: "03",
       title: "Collector Crypt & Brink's Custody",
       badge: "Zero Fake Assets",
-      desc: "Rastgele resim yüklemek kontrat seviyesinde engellenmiştir. Solana üzerindeki Collector Crypt kasalarındaki gerçek Pokémon kartları Helius DAS API ile çekilerek PSA sertifikasıyla mühürlenir."
+      desc: "Arbitrary image uploads are strictly forbidden at the contract level. Verified physical Pokémon slabs stored in Brink's vaults on Solana Mainnet are synced via Helius DAS API and sealed with authentic PSA certifications."
     },
     {
       num: "04",
       title: "Stateless Event-Driven Swarm",
       badge: "10,000+ Agents",
-      desc: "10.000 Docker container yerine PostgreSQL'de duran JSON durum satırları. Eşleşme anında Node.js worker sadece ilgili 2 agent'ı 2 saniyeliğine RAM'e yükler, 3 turluk müzakereyi bitirip uyutur."
+      desc: "Instead of running 10,000 heavy Docker containers, agents exist as lightweight JSON states in PostgreSQL. Ephemeral Node.js workers load matched agents into RAM for 2-second negotiations, then return to sleep."
     },
     {
       num: "05",
       title: "Zombie Key Wipe Security Patch",
       badge: "Audit Proof",
-      desc: "is_locked Mutex ile kasanın boşaltılıp satılması engellenir. nft_transfer anında eski sahibin AI anahtarı silinir (Zombie Key Wipe). On-chain guardrail'lar prompt injection saldırılarını bloklar."
+      desc: "An is_locked Mutex prevents front-running empty-vault sales. Upon nft_transfer, the previous owner's AI agent key is revoked instantly (Zombie Key Wipe). On-chain slippage guardrails block prompt injection attacks."
     }
   ];
 

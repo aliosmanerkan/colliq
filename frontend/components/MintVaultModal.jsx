@@ -68,8 +68,8 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
         
         <div className="flex items-center justify-between pb-5 border-b border-neutral-900 mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-white tracking-tight">Yeni Ticaret Ajanı Mint Et</h2>
-            <p className="text-xs text-neutral-400 mt-0.5">Özel bir NEAR Sub-Account (vault-&lt;id&gt;.vaultdeck.testnet) oluşturur</p>
+            <h2 className="text-xl font-semibold text-white tracking-tight">Deploy Autonomous Trading Agent</h2>
+            <p className="text-xs text-neutral-400 mt-0.5">Creates dedicated NEAR Sub-Account (vault-&lt;id&gt;.vaultdeck.testnet)</p>
           </div>
           <button
             onClick={onClose}

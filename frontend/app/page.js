@@ -209,11 +209,11 @@ export default function Home() {
           </div>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-semibold tracking-tight text-white max-w-4xl leading-[1.08]">
-            Koleksiyon Kartları Pazaryeri & Otonom AI Ajanları.
+            Card Marketplace & Autonomous AI Agents.
           </h1>
 
           <p className="text-lg sm:text-xl text-neutral-400 font-normal max-w-3xl mt-4 leading-relaxed">
-            Brink's kasalı gerçek PSA 10 Pokémon kartlarını doğrudan satın alın veya kendi kurallarınızı koyduğunuz bir <strong className="text-white">Ticaret Ajanı (NEAR Sub-Account)</strong> mint edip sizin yerinize kart avlatın.
+            Buy verified physical PSA 10 slabs directly or mint a custom <strong className="text-white">Trading Agent (NEAR Sub-Account)</strong> that hunts and snipes cards on your terms 24/7.
           </p>
 
           {/* Action Buttons */}
@@ -226,7 +226,7 @@ export default function Home() {
                   : "bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-800"
               }`}
             >
-              <span>🛍️ Kart Pazaryeri</span>
+              <span>🛍️ Marketplace</span>
             </button>
 
             <button
@@ -234,7 +234,7 @@ export default function Home() {
               className="px-6 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition active:scale-95 shadow-lg shadow-cyan-500/20"
             >
               <Plus className="w-4 h-4 text-white" />
-              <span>+ Yeni Ajan Kur (Deploy Agent)</span>
+              <span>+ Deploy Agent</span>
             </button>
 
             <button
@@ -242,7 +242,7 @@ export default function Home() {
               className="px-6 py-3 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs sm:text-sm font-medium flex items-center gap-2 transition active:scale-95"
             >
               <Zap className="w-4 h-4 text-emerald-400" />
-              <span>⚡ Canlı Borsa Masası</span>
+              <span>⚡ Live Trading Floor</span>
             </button>
           </div>
 
@@ -250,52 +250,52 @@ export default function Home() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12 w-full text-left">
             {/* Box 1 */}
             <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
-              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Pazaryeri Hacmi</div>
+              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Protocol Volume</div>
               <div className="text-2xl sm:text-3xl font-semibold text-white font-mono mt-3">
                 ${stats ? Number(stats.total_aum_usdc).toLocaleString() : "..."} <span className="text-xs text-neutral-500 font-normal">USDC</span>
               </div>
               <div className="text-xs text-neutral-400 mt-2">
-                USDC nakit rezervleri + PSA kart kasası
+                USDC cash reserves + PSA slab custody
               </div>
             </div>
 
             {/* Box 2 */}
             <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
-              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Aktif Ticaret Ajanları</div>
+              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Active Trading Agents</div>
               <div className="text-2xl sm:text-3xl font-semibold text-white font-mono mt-3">
-                {stats ? stats.total_vaults : "..."} <span className="text-xs text-neutral-500 font-normal">Sub-Account</span>
+                {stats ? stats.total_vaults : "..."} <span className="text-xs text-neutral-500 font-normal">Sub-Accounts</span>
               </div>
               <div className="text-xs text-emerald-400 mt-2 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                7/24 Otonom Avcı Ajanlar
+                24/7 Autonomous Hunter Agents
               </div>
             </div>
 
             {/* Box 3 */}
             <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
-              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Brink's Fiziksel Kasa</div>
+              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Brink's Physical Vault</div>
               <div className="text-2xl sm:text-3xl font-semibold text-white font-mono mt-3">
                 {stats ? stats.total_cards : "..."} <span className="text-xs text-neutral-500 font-normal">Slabs</span>
               </div>
               <div className="text-xs text-neutral-400 mt-2">
-                Mühürlü PSA 10/9 RWA Sertifikaları
+                Sealed PSA 10/9 RWA Certifications
               </div>
             </div>
 
             {/* Box 4 */}
             <div className="p-6 sm:p-7 rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-xl flex flex-col justify-between">
-              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Tamamlanan İşlemler</div>
+              <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Settled Trades</div>
               <div className="text-2xl sm:text-3xl font-semibold text-emerald-400 font-mono mt-3">
-                {stats ? stats.total_completed_trades : "..."} <span className="text-xs text-neutral-500 font-normal">Takas / Alım</span>
+                {stats ? stats.total_completed_trades : "..."} <span className="text-xs text-neutral-500 font-normal">Swaps & Snipes</span>
               </div>
               <div className="text-xs text-neutral-400 mt-2">
-                Hacim: ${stats ? Number(stats.total_volume_usdc).toLocaleString() : "0"} USDC
+                Volume: ${stats ? Number(stats.total_volume_usdc).toLocaleString() : "0"} USDC
               </div>
             </div>
           </div>
         </section>
 
-        {/* Tab 1: KART PAZARYERİ (MARKETPLACE - DEFAULT TAB) */}
+        {/* Tab 1: CARD MARKETPLACE (DEFAULT TAB) */}
         {activeTab === "marketplace" && (
           <CollectorCryptCatalog
             vaults={vaults}
@@ -310,10 +310,10 @@ export default function Home() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
               <div>
                 <h2 className="text-xl font-semibold text-white tracking-tight flex items-center gap-2">
-                  <span>🤖 Ajanlarım & Otonom Kasalar</span>
+                  <span>🤖 My Autonomous Agents & Vaults</span>
                 </h2>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  Kendi NEAR Sub-Account'una sahip, bütçesini tutan ve belirlediğiniz kurallarla kart avlayan ticaret ajanlarınız.
+                  Autonomous trading accounts on NEAR Protocol. Each agent owns its own sub-account treasury, hunts target cards, and manages physical slab inventory.
                 </p>
               </div>
 
@@ -324,13 +324,13 @@ export default function Home() {
                   className="px-4 py-2 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Yeni Ajan Kur</span>
+                  <span>Deploy Agent</span>
                 </button>
 
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Ajan ara..."
+                    placeholder="Search agents..."
                     value={vaultSearch}
                     onChange={(e) => setVaultSearch(e.target.value)}
                     className="pl-9 pr-4 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-white/[0.3] font-sans w-44"
@@ -359,12 +359,12 @@ export default function Home() {
             {/* Grid */}
             {filteredVaults.length === 0 ? (
               <div className="py-24 text-center text-xs text-neutral-500 bg-[#0c0c0e] rounded-[32px] border border-white/[0.08] space-y-3">
-                <p>Henüz aktif bir ticaret ajanınız bulunmuyor.</p>
+                <p>No active trading agents found.</p>
                 <button
                   onClick={() => setIsMintOpen(true)}
                   className="px-5 py-2.5 rounded-full bg-white text-black text-xs font-semibold transition"
                 >
-                  + İlk Ajanını Şimdi Kur
+                  + Deploy Your First Agent
                 </button>
               </div>
             ) : (
@@ -388,11 +388,11 @@ export default function Home() {
             <div className="flex items-center justify-between pb-2">
               <div>
                 <h2 className="text-xl font-semibold text-white tracking-tight flex items-center gap-2">
-                  <span>⚡ Canlı A2A Borsa Masası</span>
+                  <span>⚡ Live A2A Trading Floor</span>
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 </h2>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  Ajanların pazaryerinde birbirleriyle yaptığı al-sat pazarlıklarını ve anlık kart avlarını canlı izleyin.
+                  Watch autonomous AI agents negotiate peer-to-peer barter deals and snipe target slabs in real-time.
                 </p>
               </div>
 
@@ -401,7 +401,7 @@ export default function Home() {
                 className="px-3.5 py-1.5 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs text-neutral-300 flex items-center gap-1.5 transition"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Yenile</span>
+                <span>Refresh</span>
               </button>
             </div>
 
@@ -415,7 +415,7 @@ export default function Home() {
           </section>
         )}
 
-        {/* Tab 4: NASIL ÇALIŞIR & SPECS */}
+        {/* Tab 4: HOW IT WORKS & SPECS */}
         {activeTab === "architecture" && <ArchitectureSpecs />}
       </main>
 

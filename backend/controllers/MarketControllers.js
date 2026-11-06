@@ -99,7 +99,7 @@ router.post("/collector-crypt/bridge", async (req, res) => {
     }
 });
 
-// Direct Buy with Personal Account (Manuel Alım)
+// Direct Buy with Personal Account (Manual Purchase)
 router.post("/buy-direct", async (req, res) => {
     try {
         const { card_id, buyer_account } = req.body;
