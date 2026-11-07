@@ -1,6 +1,7 @@
 "use client";
 
 import { Flame, ShieldCheck, Sparkles } from "lucide-react";
+import { usdToNear } from "@/lib/near";
 
 export default function CardSlab({ card, compact = false }) {
   if (!card) return null;
@@ -60,6 +61,9 @@ export default function CardSlab({ card, compact = false }) {
           <div className="text-[10px] text-neutral-500 uppercase tracking-wider font-medium">Fair Value</div>
           <div className="text-sm font-semibold text-white font-mono mt-0.5">
             ${Number(card.oracle_fair_value_usdc || 0).toLocaleString()} <span className="text-xs text-neutral-500 font-normal">USDC</span>
+          </div>
+          <div className="text-[11px] font-mono text-emerald-400 font-medium">
+            ≈ {usdToNear(card.oracle_fair_value_usdc || 0)} NEAR
           </div>
         </div>
 

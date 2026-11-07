@@ -59,3 +59,8 @@ body {
 .apple-pill-btn:active {
   transform: scale(0.97);
 }
+
+.font-display {
+  font-family: var(--font-display), -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  letter-spacing: -0.01em;
+}

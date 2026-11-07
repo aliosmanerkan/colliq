@@ -13,10 +13,18 @@ import {
   Bot,
   Wallet,
   Coins,
-  Cpu
+  Cpu,
+  ExternalLink,
+  Loader2
 } from "lucide-react";
 import api from "@/lib/api";
-import { initNearWallet } from "@/lib/near";
+import { 
+  initNearWallet, 
+  showWalletModal, 
+  usdToNear, 
+  executeNearPayment, 
+  getLiveNearAccountBalance 
+} from "@/lib/near";
 
 export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMint }) {
   const [cards, setCards] = useState([]);
@@ -24,16 +32,26 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("ALL");
   const [sortBy, setSortBy] = useState("price_desc");
+  const [visibleCount, setVisibleCount] = useState(48);
 
-  // Connected Wallet Account
-  const [connectedAccount, setConnectedAccount] = useState("alierkan.testnet");
+  // Connected Wallet Account & Live NEAR Balance
+  const [connectedAccount, setConnectedAccount] = useState(null);
+  const [liveNearBalance, setLiveNearBalance] = useState("0.00");
 
-  // Modals
+  // Modals: Buy with NEAR (Primary On-Chain Flow)
+  const [selectedCardForNearBuy, setSelectedCardForNearBuy] = useState(null);
+  const [nearBuyLoading, setNearBuyLoading] = useState(false);
+  const [nearBuyStep, setNearBuyStep] = useState("idle"); // "idle" | "awaiting_wallet" | "confirming" | "success"
+  const [nearBuyResult, setNearBuyResult] = useState(null);
+  const [nearBuyError, setNearBuyError] = useState("");
+
+  // Modals: Direct Buy (Sandbox)
   const [selectedCardForDirectBuy, setSelectedCardForDirectBuy] = useState(null);
   const [buyLoading, setBuyLoading] = useState(false);
   const [buyResult, setBuyResult] = useState(null);
   const [buyError, setBuyError] = useState("");
 
+  // Modals: Assign to Agent (Snipe)
   const [selectedCardForAgent, setSelectedCardForAgent] = useState(null);
   const [targetVaultId, setTargetVaultId] = useState("");
   const [agentLoading, setAgentLoading] = useState(false);
@@ -41,9 +59,31 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
   const [agentError, setAgentError] = useState("");
 
   useEffect(() => {
-    initNearWallet().then((w) => {
-      if (w?.accountId) setConnectedAccount(w.accountId);
+    let subscription = null;
+    initNearWallet().then(async (w) => {
+      if (!w) return;
+      if (w.accountId) {
+        setConnectedAccount(w.accountId);
+        const bal = await getLiveNearAccountBalance(w.accountId);
+        setLiveNearBalance(bal);
+      }
+      if (w.selector) {
+        subscription = w.selector.store.observable.subscribe(async (state) => {
+          const active = state.accounts.find((a) => a.active)?.accountId || state.accounts[0]?.accountId || null;
+          setConnectedAccount(active);
+          if (active) {
+            const bal = await getLiveNearAccountBalance(active);
+            setLiveNearBalance(bal);
+          } else {
+            setLiveNearBalance("0.00");
+          }
+        });
+      }
     });
+
+    return () => {
+      if (subscription?.unsubscribe) subscription.unsubscribe();
+    };
   }, []);
 
   const fetchCcCards = async () => {
@@ -61,15 +101,76 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
   };
 
   useEffect(() => {
+    setVisibleCount(48);
     fetchCcCards();
   }, [category, sortBy]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    setVisibleCount(48);
     fetchCcCards();
   };
 
-  // 1. DIRECT PURCHASE (Personal Buy)
+  // 1. BUY WITH NEAR VIA METEOR WALLET (On-Chain Settlement)
+  const handleBuyWithNear = async () => {
+    if (!selectedCardForNearBuy) return;
+
+    // Check if wallet is connected
+    const wallet = await initNearWallet();
+    const accId = wallet?.accountId || connectedAccount;
+    if (!accId) {
+      await showWalletModal();
+      return;
+    }
+
+    const price = selectedCardForNearBuy.insuredUsd || selectedCardForNearBuy.costUsd || 0;
+    const nearAmount = usdToNear(price);
+
+    setNearBuyLoading(true);
+    setNearBuyError("");
+    setNearBuyStep("awaiting_wallet");
+
+    try {
+      // Step A: Trigger Meteor Wallet on NEAR Testnet
+      const paymentRes = await executeNearPayment({
+        receiverId: "market.testnet",
+        amountNear: nearAmount,
+      });
+
+      setNearBuyStep("confirming");
+
+      // Step B: Settle the card ownership to buyer's account
+      const res = await api.post("/market/buy-direct", {
+        card_id: selectedCardForNearBuy.id,
+        buyer_account: accId,
+        payment_method: "NEAR",
+        near_amount: nearAmount,
+        tx_hash: paymentRes.txHash,
+      });
+
+      // Step C: Refresh live balance
+      const newBal = await getLiveNearAccountBalance(accId);
+      setLiveNearBalance(newBal);
+
+      setNearBuyResult({
+        ...res.data,
+        nearAmount,
+        txHash: paymentRes.txHash,
+        explorerUrl: `https://testnet.nearblocks.io/txns/${paymentRes.txHash}`,
+      });
+      setNearBuyStep("success");
+
+      if (onCardBridged) onCardBridged();
+    } catch (err) {
+      console.error("NEAR purchase error:", err);
+      setNearBuyError(err.message || "NEAR purchase transaction was rejected or failed");
+      setNearBuyStep("idle");
+    } finally {
+      setNearBuyLoading(false);
+    }
+  };
+
+  // 2. DIRECT PURCHASE (Sandbox Instant Buy)
   const handleDirectBuy = async () => {
     if (!selectedCardForDirectBuy) return;
     setBuyLoading(true);
@@ -79,6 +180,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
       const res = await api.post("/market/buy-direct", {
         card_id: selectedCardForDirectBuy.id,
         buyer_account: connectedAccount || "alierkan.testnet",
+        payment_method: "USDC",
       });
 
       setBuyResult(res.data);
@@ -90,7 +192,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
     }
   };
 
-  // 2. ASSIGN TO AGENT (Snipe)
+  // 3. ASSIGN TO AGENT (Snipe)
   const handleAgentSnipe = async (e) => {
     e.preventDefault();
     if (!targetVaultId || !selectedCardForAgent) return;
@@ -196,8 +298,9 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
           No slabs found matching your filter criteria.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {cards.map((card) => {
+        <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {cards.slice(0, visibleCount).map((card) => {
             const price = card.insuredUsd || card.costUsd || 0;
 
             return (
@@ -240,27 +343,37 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                   </div>
 
                   {/* Pricing Box */}
-                  <div className="mt-3.5 p-3 rounded-2xl bg-neutral-950 border border-neutral-900 space-y-1">
+                  <div className="mt-3.5 p-3 rounded-2xl bg-neutral-950 border border-neutral-900 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-neutral-500">Fair Value:</span>
-                      <span className="text-sm font-semibold text-white font-mono">${price} USDC</span>
+                      <span className="text-sm font-semibold text-white font-mono">${price.toLocaleString()} USDC</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-neutral-900 font-mono">
+                      <span className="text-neutral-500">NEAR Price:</span>
+                      <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-emerald-400" />
+                        {usdToNear(price)} NEAR
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* DUAL ACTION BUTTONS: BUY NOW & ASSIGN TO AGENT */}
+                {/* ACTION BUTTONS: BUY WITH NEAR, ASSIGN TO AGENT & SANDBOX */}
                 <div className="mt-4 pt-3.5 border-t border-neutral-900 space-y-2">
-                  {/* Action 1: Buy Now */}
+                  {/* Action 1: Buy with NEAR (Primary Button) */}
                   <button
                     onClick={() => {
-                      setSelectedCardForDirectBuy(card);
-                      setBuyResult(null);
-                      setBuyError("");
+                      setSelectedCardForNearBuy(card);
+                      setNearBuyResult(null);
+                      setNearBuyError("");
+                      setNearBuyStep("idle");
                     }}
-                    className="w-full py-2.5 px-4 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 shadow-sm"
+                    className="w-full py-2.5 px-4 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 shadow-md group/btn"
                   >
-                    <ShoppingBag className="w-3.5 h-3.5" />
-                    <span>Buy Now (${price} USDC)</span>
+                    <div className="w-4 h-4 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-bold font-mono">
+                      N
+                    </div>
+                    <span>Buy with NEAR ({usdToNear(price)} N)</span>
                   </button>
 
                   {/* Action 2: Assign to Agent */}
@@ -276,10 +389,250 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                     <Bot className="w-3.5 h-3.5 text-cyan-400" />
                     <span>Assign to Agent (Snipe)</span>
                   </button>
+
+                  {/* Action 3: Instant Buy with USDC (Sandbox) */}
+                  <div className="text-center pt-0.5">
+                    <button
+                      onClick={() => {
+                        setSelectedCardForDirectBuy(card);
+                        setBuyResult(null);
+                        setBuyError("");
+                      }}
+                      className="text-[10px] text-neutral-500 hover:text-neutral-300 transition"
+                    >
+                      Instant Buy with USDC (Sandbox)
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
+        </div>
+
+        {cards.length > visibleCount && (
+          <div className="pt-10 pb-4 flex flex-col items-center justify-center gap-3">
+            <div className="text-xs text-neutral-500 font-mono">
+              Showing {Math.min(visibleCount, cards.length)} of {cards.length.toLocaleString()} Physical Slabs
+            </div>
+            <button
+              onClick={() => setVisibleCount((prev) => prev + 48)}
+              className="px-8 py-3 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold shadow-lg transition active:scale-95"
+            >
+              Load More Slabs (+48)
+            </button>
+          </div>
+        )}
+      </div>
+    )}
+
+      {/* MODAL 0: BUY WITH NEAR (ON-CHAIN METEOR WALLET) */}
+      {selectedCardForNearBuy && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-3xl animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-[32px] bg-[#0c0c0e] border border-emerald-500/30 p-6 sm:p-8 shadow-2xl overflow-hidden">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-900 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <span className="font-mono font-bold text-emerald-400 text-sm">NEAR</span>
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-white">Buy Slab with NEAR</h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    Live On-Chain Settlement via Meteor Wallet
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (!nearBuyLoading) setSelectedCardForNearBuy(null);
+                }}
+                disabled={nearBuyLoading}
+                className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center transition disabled:opacity-40"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content Switcher */}
+            {nearBuyResult ? (
+              /* Success State */
+              <div className="space-y-4 animate-in zoom-in-95 duration-200">
+                <div className="p-6 rounded-2xl bg-neutral-950 border border-emerald-500/40 text-emerald-400 text-xs space-y-3">
+                  <div className="flex items-center gap-2.5 font-semibold text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    <span>Transaction Confirmed on NEAR Testnet!</span>
+                  </div>
+
+                  <p className="text-neutral-300">
+                    You paid <span className="text-white font-mono font-semibold">{nearBuyResult.nearAmount} NEAR</span> for{" "}
+                    <span className="text-white font-semibold">{selectedCardForNearBuy.name}</span>. The physical slab is now assigned to your account.
+                  </p>
+
+                  <div className="p-3.5 rounded-2xl bg-[#0c0c0e] border border-neutral-900 font-mono text-[11px] text-neutral-400 space-y-1.5 mt-2">
+                    <div className="text-neutral-300 font-semibold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>On-Chain Provenance Record</span>
+                    </div>
+                    <div>• Buyer Account: <span className="text-emerald-400">{connectedAccount}</span></div>
+                    <div>• Payment Settled: <span className="text-white">{nearBuyResult.nearAmount} NEAR</span></div>
+                    <div className="flex items-center gap-1.5 pt-1 border-t border-neutral-900">
+                      <span>• Explorer TX:</span>
+                      <a
+                        href={nearBuyResult.explorerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-cyan-400 hover:underline flex items-center gap-1 truncate"
+                      >
+                        <span className="truncate">{nearBuyResult.txHash}</span>
+                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setSelectedCardForNearBuy(null);
+                    setNearBuyResult(null);
+                  }}
+                  className="w-full py-3 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold transition active:scale-95 shadow-md"
+                >
+                  Done & View in Inventory
+                </button>
+              </div>
+            ) : (
+              /* Payment Preview & Confirmation */
+              <div className="space-y-4">
+                {nearBuyError && (
+                  <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300">
+                    {nearBuyError}
+                  </div>
+                )}
+
+                {/* Card Slab Details */}
+                <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 flex items-center gap-3.5">
+                  <img
+                    src={selectedCardForNearBuy.imageUrl}
+                    alt=""
+                    className="w-16 h-20 object-contain rounded-xl bg-black p-1 border border-neutral-800"
+                  />
+                  <div className="truncate flex-1">
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-900 text-[10px] font-mono text-neutral-300 mb-1">
+                      <span>{selectedCardForNearBuy.grade || "PSA 10"}</span>
+                      <span className="text-neutral-600">•</span>
+                      <span>{selectedCardForNearBuy.category || "TCG"}</span>
+                    </div>
+                    <div className="text-xs font-semibold text-white truncate" title={selectedCardForNearBuy.name}>
+                      {selectedCardForNearBuy.name}
+                    </div>
+                    <div className="flex items-baseline gap-2 mt-1 font-mono">
+                      <span className="text-base font-bold text-emerald-400">
+                        {usdToNear(selectedCardForNearBuy.insuredUsd || selectedCardForNearBuy.costUsd || 0)} NEAR
+                      </span>
+                      <span className="text-xs text-neutral-500">
+                        (${Number(selectedCardForNearBuy.insuredUsd || selectedCardForNearBuy.costUsd || 0).toLocaleString()} USDC)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Breakdown */}
+                <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 text-xs space-y-2.5">
+                  <div className="flex items-center justify-between text-neutral-400">
+                    <span className="flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5 text-neutral-400" />
+                      Signer Account:
+                    </span>
+                    <span className="font-mono text-white font-medium">
+                      {connectedAccount || "Not Connected"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-neutral-400">
+                    <span>Live Wallet Balance:</span>
+                    <span className="font-mono text-emerald-400 font-semibold">
+                      {liveNearBalance} NEAR
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-neutral-400">
+                    <span>Protocol Treasury:</span>
+                    <span className="font-mono text-neutral-300">market.testnet</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-neutral-400">
+                    <span>Testnet Exchange Rate:</span>
+                    <span className="font-mono text-neutral-500">1 NEAR = $50 USD</span>
+                  </div>
+
+                  <div className="pt-2 border-t border-neutral-900 flex items-center justify-between font-semibold">
+                    <span className="text-white">Amount to Pay:</span>
+                    <span className="text-base font-mono text-emerald-400">
+                      {usdToNear(selectedCardForNearBuy.insuredUsd || selectedCardForNearBuy.costUsd || 0)} NEAR
+                    </span>
+                  </div>
+                </div>
+
+                {/* Status Indicator during wallet prompt */}
+                {nearBuyStep === "awaiting_wallet" && (
+                  <div className="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2.5 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                    <span>Please approve the transaction in your Meteor Wallet extension...</span>
+                  </div>
+                )}
+
+                {nearBuyStep === "confirming" && (
+                  <div className="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 text-xs text-cyan-300 flex items-center gap-2.5 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                    <span>Verifying transaction & minting slab ownership on NEAR...</span>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCardForNearBuy(null)}
+                    disabled={nearBuyLoading}
+                    className="px-4 py-2.5 rounded-full bg-neutral-900 hover:bg-neutral-800 text-xs font-medium text-neutral-300 transition disabled:opacity-40"
+                  >
+                    Cancel
+                  </button>
+
+                  {!connectedAccount ? (
+                    <button
+                      type="button"
+                      onClick={showWalletModal}
+                      className="px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold transition"
+                    >
+                      Connect Meteor Wallet
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleBuyWithNear}
+                      disabled={nearBuyLoading}
+                      className="px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold flex items-center gap-2 transition active:scale-95 disabled:opacity-50 shadow-md"
+                    >
+                      {nearBuyLoading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Approve & Pay with Meteor</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       )}
 
@@ -315,8 +668,13 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                   <p className="text-neutral-300">
                     <span className="text-white font-semibold">{selectedCardForDirectBuy.name}</span> has been acquired and added to your wallet account.
                   </p>
-                  <div className="text-[10px] text-neutral-500 font-mono break-all pt-2 border-t border-neutral-900">
-                    Transaction Hash: {buyResult.tx_hash} • Block #{buyResult.block}
+                  <div className="p-3 rounded-2xl bg-[#0c0c0e] border border-neutral-900 font-mono text-[10px] text-neutral-400 space-y-1 mt-2">
+                    <div className="text-neutral-300 font-semibold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Brink's Sealed RWA Custody</span>
+                    </div>
+                    <div>• PSA Cert: <span className="text-emerald-400">#{selectedCardForDirectBuy.grade}</span></div>
+                    <div className="truncate">• Transaction: <span className="text-white">{buyResult.tx_hash}</span></div>
                   </div>
                 </div>
 
@@ -414,6 +772,15 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                   <p className="text-neutral-300">
                     <span className="text-white font-semibold">{selectedCardForAgent.name}</span> has been acquired and stored in your agent's sub-account vault.
                   </p>
+                  <div className="p-3.5 rounded-2xl bg-[#0c0c0e] border border-neutral-900 font-mono text-[10px] text-neutral-400 space-y-1.5 mt-2">
+                    <div className="text-neutral-300 font-semibold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>NEAR Chain Signatures (MPC) Holding Key</span>
+                    </div>
+                    <div className="truncate">• Solana Holding Key: <span className="text-white">{agentResult.solana_holding_address || "SolVault7x9Q..."}</span></div>
+                    <div>• Custody: <span className="text-neutral-300">{agentResult.vault_custody || "Brink's Vaults"}</span></div>
+                    <div className="truncate">• Settlement TX: <span className="text-neutral-400">{agentResult.tx_hash}</span></div>
+                  </div>
                 </div>
 
                 <button

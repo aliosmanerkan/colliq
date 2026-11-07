@@ -10,6 +10,15 @@ let modalInstance = null;
 
 export const CONTRACT_ID = process.env.NEXT_PUBLIC_NEAR_CONTRACT_ID || "";
 export const NETWORK_ID = process.env.NEXT_PUBLIC_NEAR_NETWORK || "testnet";
+export const TREASURY_ACCOUNT = process.env.NEXT_PUBLIC_NEAR_TREASURY_ACCOUNT || "market.testnet";
+
+// Convert USD/USDC to NEAR for Testnet demonstration (1 NEAR = $50 USD)
+export function usdToNear(usdPrice) {
+  const numeric = Number(usdPrice) || 0;
+  if (numeric <= 0) return "0.05";
+  const nearVal = (numeric / 50).toFixed(2);
+  return Math.max(0.05, parseFloat(nearVal)).toFixed(2);
+}
 
 export async function initNearWallet() {
   if (typeof window === "undefined") return null;
@@ -71,4 +80,64 @@ export async function getLiveNearAccountBalance(accountId) {
     console.warn("Could not fetch NEAR balance:", err.message);
     return "0.00";
   }
+}
+
+// Execute payment directly using connected Meteor Wallet on NEAR Testnet
+export async function executeNearPayment({ receiverId = TREASURY_ACCOUNT, amountNear }) {
+  const wallet = await initNearWallet();
+  if (!wallet || !wallet.selector) {
+    throw new Error("NEAR Wallet Selector could not be initialized.");
+  }
+
+  const state = wallet.selector.store.getState();
+  const activeAccount = state.accounts.find((acc) => acc.active) || state.accounts[0];
+  if (!activeAccount) {
+    if (wallet.modal) wallet.modal.show();
+    throw new Error("Please connect your Meteor Wallet first");
+  }
+
+  const activeWallet = await wallet.selector.wallet();
+  const yoctoDeposit = nearAPI.parseNearAmount(String(amountNear)) || "50000000000000000000000";
+
+  // Note: @near-wallet-selector/meteor-wallet invokes najActionToInternal(action)
+  // which expects action.transfer to exist, whereas standard wallet selector expects
+  // { type: "Transfer", params: { deposit } }. Providing both ensures full compatibility.
+  const transferAction = {
+    type: "Transfer",
+    params: {
+      deposit: yoctoDeposit,
+    },
+    transfer: {
+      deposit: yoctoDeposit,
+    },
+  };
+
+  const outcome = await activeWallet.signAndSendTransaction({
+    signerId: activeAccount.accountId,
+    receiverId: receiverId,
+    actions: [transferAction],
+  });
+
+  let txHash = null;
+  if (outcome) {
+    if (typeof outcome === "string") {
+      txHash = outcome;
+    } else if (outcome.transaction?.hash) {
+      txHash = outcome.transaction.hash;
+    } else if (outcome.transaction_outcome?.id) {
+      txHash = outcome.transaction_outcome.id;
+    } else if (outcome.txHash) {
+      txHash = outcome.txHash;
+    } else if (outcome.hash) {
+      txHash = outcome.hash;
+    }
+  }
+
+  return {
+    outcome,
+    txHash: txHash || `tx-${Date.now().toString(36)}`,
+    signerId: activeAccount.accountId,
+    amountNear,
+    receiverId
+  };
 }

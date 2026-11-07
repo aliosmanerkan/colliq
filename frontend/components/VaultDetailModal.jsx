@@ -8,15 +8,41 @@ import {
   Copy,
   Check,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  Bot,
+  ArrowUpRight,
+  Loader2
 } from "lucide-react";
+import api from "@/lib/api";
 
-export default function VaultDetailModal({ vault, isOpen, onClose }) {
+export default function VaultDetailModal({ vault, isOpen, onClose, onOpenChat }) {
   const [copied, setCopied] = useState(false);
+  const [withdrawingCardId, setWithdrawingCardId] = useState(null);
+  const [withdrawMsg, setWithdrawMsg] = useState("");
 
   if (!isOpen || !vault) return null;
 
-  const svgUrl = `http://localhost:5001/vaults/${vault.id}/svg`;
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+  const svgUrl = `${baseUrl}/vaults/${vault.id}/svg`;
+
+  const handleWithdrawCard = async (cardId) => {
+    setWithdrawingCardId(cardId);
+    setWithdrawMsg("");
+    try {
+      await api.post(`/vaults/${vault.id}/withdraw-card`, {
+        card_id: cardId,
+        destination_account: vault.owner_account,
+      });
+      setWithdrawMsg(`Card withdrawn directly to ${vault.owner_account}!`);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
+    } catch (err) {
+      alert(err.response?.data?.error || err.message || "Failed to withdraw card");
+    } finally {
+      setWithdrawingCardId(null);
+    }
+  };
 
   const handleCopySubAccount = () => {
     navigator.clipboard.writeText(vault.sub_account || "");
@@ -38,13 +64,23 @@ export default function VaultDetailModal({ vault, isOpen, onClose }) {
               </span>
             </div>
             
-            <div 
-              onClick={handleCopySubAccount}
-              className="inline-flex items-center gap-1.5 text-xs text-neutral-400 mt-1 cursor-pointer hover:text-white transition select-none"
-            >
-              <span>Sub-Account:</span>
-              <span className="font-mono text-neutral-200">{vault.sub_account}</span>
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-neutral-600" />}
+            <div className="flex flex-wrap items-center gap-3 mt-1.5">
+              <div 
+                onClick={handleCopySubAccount}
+                className="inline-flex items-center gap-1.5 text-xs text-neutral-300 cursor-pointer hover:text-white transition select-none"
+                title="Agent Autonomous Execution Sub-Account (NEAR Track 10)"
+              >
+                <span className="text-cyan-400 font-semibold text-[11px] uppercase">Sub-Acc:</span>
+                <span className="font-mono text-neutral-200">{vault.sub_account}</span>
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-neutral-600" />}
+              </div>
+
+              <span className="text-neutral-700">•</span>
+
+              <div className="inline-flex items-center gap-1.5 text-xs text-neutral-400">
+                <span className="text-neutral-500 font-semibold text-[11px] uppercase">Owner:</span>
+                <span className="font-mono text-emerald-400 font-medium">{vault.owner_account}</span>
+              </div>
             </div>
           </div>
 
@@ -102,16 +138,27 @@ export default function VaultDetailModal({ vault, isOpen, onClose }) {
               </div>
             </div>
 
-            {/* Guardrails */}
+            {/* Safety Limits & Rules */}
             <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 text-xs space-y-2">
-              <div className="text-white font-semibold flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-neutral-300" />
-                <span>On-Chain Guardrails</span>
+              <div className="text-white font-semibold flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Safety Controls & Rules</span>
+                </div>
+                <span className="text-[10px] text-neutral-500 font-mono">Enforced by Smart Contract</span>
               </div>
-              <div className="text-neutral-400 text-xs space-y-1">
-                <div>• Max Spend per Deal: <span className="text-white font-medium">${vault.guardrail_max_spend_per_trade} USDC</span></div>
-                <div>• Min Fair Value: <span className="text-white font-medium">{vault.guardrail_min_oracle_fair_value_pct}%</span></div>
-                <div className="truncate">• Agent Key: <span className="text-neutral-300 font-mono">{vault.access_key_public}</span></div>
+              <div className="text-neutral-400 text-xs space-y-1.5 pt-1">
+                <div className="flex justify-between items-center">
+                  <span>Max Spend per Card:</span>
+                  <span className="text-white font-medium font-mono">${vault.guardrail_max_spend_per_trade} USDC</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Fair Value Target:</span>
+                  <span className="text-emerald-400 font-medium font-mono">≤ {vault.guardrail_min_oracle_fair_value_pct}% of Appraisal</span>
+                </div>
+                <div className="truncate text-[11px] pt-1 border-t border-neutral-900 text-neutral-500">
+                  Agent Key: <span className="text-neutral-400 font-mono">{vault.access_key_public}</span>
+                </div>
               </div>
             </div>
 
@@ -123,6 +170,12 @@ export default function VaultDetailModal({ vault, isOpen, onClose }) {
                   ${vault.inventory?.reduce((acc, c) => acc + (c.oracle_fair_value_usdc || 0), 0).toLocaleString()} Value
                 </span>
               </div>
+
+              {withdrawMsg && (
+                <div className="p-2 mb-2 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs text-center">
+                  {withdrawMsg}
+                </div>
+              )}
 
               <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
                 {vault.inventory && vault.inventory.length > 0 ? (
@@ -147,10 +200,23 @@ export default function VaultDetailModal({ vault, isOpen, onClose }) {
                         </div>
                       </div>
 
-                      <div className="text-right font-mono">
-                        <div className="text-xs font-semibold text-white">
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="text-right font-mono text-xs font-semibold text-white">
                           ${card.oracle_fair_value_usdc} USDC
                         </div>
+                        <button
+                          onClick={() => handleWithdrawCard(card.card_id)}
+                          disabled={withdrawingCardId === card.card_id}
+                          className="px-2.5 py-1 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-[10px] text-neutral-300 hover:text-white flex items-center gap-1 transition active:scale-95 disabled:opacity-50"
+                          title={`Withdraw this card from agent sub-account to personal wallet (${vault.owner_account})`}
+                        >
+                          {withdrawingCardId === card.card_id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <ArrowUpRight className="w-3 h-3 text-cyan-400" />
+                          )}
+                          <span>Withdraw</span>
+                        </button>
                       </div>
                     </div>
                   ))
@@ -161,6 +227,18 @@ export default function VaultDetailModal({ vault, isOpen, onClose }) {
                 )}
               </div>
             </div>
+
+            {/* Chat Trigger Button */}
+            <button
+              onClick={() => {
+                onClose();
+                if (onOpenChat) onOpenChat(vault);
+              }}
+              className="w-full py-2.5 rounded-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-lg transition active:scale-95"
+            >
+              <Bot className="w-4 h-4 text-white" />
+              <span>Chat with Agent & Manage Rules</span>
+            </button>
           </div>
         </div>
       </div>
