@@ -50,9 +50,33 @@ export class A2ASwarmService {
                 vaultB: { id: vaultB.id, name: vaultB.name, sub_account: vaultB.sub_account }
             });
 
-            // 2. PICK TARGET CARDS FOR BARTER
-            const cardFromA = vaultA.inventory[Math.floor(Math.random() * vaultA.inventory.length)];
-            const cardFromB = vaultB.inventory[Math.floor(Math.random() * vaultB.inventory.length)];
+            // 2. PICK TARGET CARDS FOR BARTER RESPECTING CUSTOM OWNER DIRECTIVES
+            let rulesA = [];
+            try { rulesA = JSON.parse(vaultA.custom_rules || "[]"); } catch {}
+            let rulesB = [];
+            try { rulesB = JSON.parse(vaultB.custom_rules || "[]"); } catch {}
+
+            // Protected grail cards for Vault A (never offer protected slabs)
+            const protectedA = rulesA.filter(r => r.includes("Korumalı") || r.includes("Protected")).map(r => r.toLowerCase());
+            const eligibleInventoryA = vaultA.inventory.filter(c => !protectedA.some(p => p.includes(c.name.toLowerCase().split(" ")[0])));
+            const candidateInventoryA = eligibleInventoryA.length > 0 ? eligibleInventoryA : vaultA.inventory;
+
+            // Target hunt preferences of Vault A (prioritize cards matching owner directive)
+            const huntRulesA = rulesA.filter(r => r.includes("Öncelikli Av") || r.includes("Hunt")).map(r => r.toLowerCase());
+            let targetCardFromB = null;
+            if (huntRulesA.length > 0) {
+                targetCardFromB = vaultB.inventory.find(c => 
+                    huntRulesA.some(h => 
+                        (h.includes("pikachu") && c.name.toLowerCase().includes("pikachu")) ||
+                        (h.includes("charizard") && c.name.toLowerCase().includes("charizard")) ||
+                        (h.includes("one piece") && c.category.toLowerCase().includes("one piece")) ||
+                        (h.includes("basketball") && c.category.toLowerCase().includes("basketball"))
+                    )
+                );
+            }
+
+            const cardFromA = candidateInventoryA[Math.floor(Math.random() * candidateInventoryA.length)];
+            const cardFromB = targetCardFromB || vaultB.inventory[Math.floor(Math.random() * vaultB.inventory.length)];
 
             const fairValA = cardFromA.oracle_fair_value_usdc;
             const fairValB = cardFromB.oracle_fair_value_usdc;
@@ -63,13 +87,15 @@ export class A2ASwarmService {
             let usdcFromA = 0;
             let usdcFromB = 0;
 
+            const directiveNoteA = targetCardFromB ? ` [Hunting Target matched owner directive!]` : "";
+
             // ROUND 1: Vault A initiates offer
             const r1CashOffer = Math.max(0, Math.round(valueDiff * 0.85));
             negotiationLog.push({
                 round: 1,
                 speaker: vaultA.name,
                 speaker_id: vaultA.sub_account,
-                message: `Hey @${vaultB.sub_account}, I noticed your ${cardFromB.name} (${cardFromB.grade}). I offer my ${cardFromA.name} (${cardFromA.grade}) + $${r1CashOffer} USDC. Deal?`,
+                message: `Hey @${vaultB.sub_account}, I noticed your ${cardFromB.name} (${cardFromB.grade}). I offer my ${cardFromA.name} (${cardFromA.grade}) + $${r1CashOffer} USDC.${directiveNoteA} Deal?`,
                 offer: { card_offered: cardFromA.name, card_requested: cardFromB.name, cash_offered_usdc: r1CashOffer }
             });
 

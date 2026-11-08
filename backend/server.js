@@ -1,4 +1,12 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: path.join(__dirname, "../.env") });
+
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -6,8 +14,6 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import path from "path";
-import { fileURLToPath } from "url";
 
 import db from "./model/model.js";
 import auth from "./controllers/AuthControllers.js";
@@ -17,9 +23,7 @@ import market from "./controllers/MarketControllers.js";
 import { seedInitialVaultsAndCards } from "./services/CollectorCryptService.js";
 import a2aSwarm from "./services/A2ASwarmService.js";
 import negotiationEngine from "./src/agents/negotiationEngine.ts";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import agentChatService from "./services/AgentChatService.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -59,6 +63,7 @@ const io = new Server(httpServer, {
 
 a2aSwarm.setSocket(io);
 negotiationEngine.setSocket(io);
+agentChatService.setSocket(io);
 
 io.on("connection", (socket) => {
     console.log(`⚡ Client connected to VaultDeck Live Floor: ${socket.id}`);

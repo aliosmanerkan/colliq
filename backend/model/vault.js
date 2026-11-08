@@ -30,6 +30,12 @@ export default (sequelize) => {
             reputation_score: { type: DataTypes.INTEGER, defaultValue: 100 },
             avatar_color: { type: DataTypes.STRING, defaultValue: "#6366f1" },
             bio: { type: DataTypes.STRING, defaultValue: "Autonomous Merchant Vault trading high-grade PSA slabs." },
+            custom_rules: { type: DataTypes.TEXT, defaultValue: "[]" },
+            system_prompt: { 
+                type: DataTypes.TEXT, 
+                defaultValue: "You are an autonomous AI trading agent managing this NEAR Merchant Vault. Follow your owner's custom directives strictly." 
+            },
+            chat_history: { type: DataTypes.TEXT, defaultValue: "[]" },
         },
         {
             timestamps: true,

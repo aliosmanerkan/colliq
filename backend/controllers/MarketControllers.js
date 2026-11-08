@@ -83,6 +83,22 @@ router.get("/collector-crypt", (req, res) => {
     }
 });
 
+// Buy Collector Crypt Card and secure into a NEAR Merchant Vault
+router.post("/collector-crypt/buy", async (req, res) => {
+    try {
+        const { card_id, vault_id, owner_account } = req.body;
+        if (!card_id || !vault_id) {
+            return res.status(400).json({ error: "card_id and vault_id are required" });
+        }
+
+        const result = await bridgeCollectorCryptCardToNearVault(card_id, vault_id, owner_account || "alierkan.testnet");
+        res.json(result);
+    } catch (err) {
+        console.error("Buy card error:", err);
+        res.status(400).json({ error: err.message });
+    }
+});
+
 // Bridge Collector Crypt Card to a NEAR Merchant Vault
 router.post("/collector-crypt/bridge", async (req, res) => {
     try {
@@ -99,10 +115,10 @@ router.post("/collector-crypt/bridge", async (req, res) => {
     }
 });
 
-// Direct Buy with Personal Account (Manual Purchase)
+// Direct Buy with Personal Account (Manual Purchase with NEAR or USDC)
 router.post("/buy-direct", async (req, res) => {
     try {
-        const { card_id, buyer_account } = req.body;
+        const { card_id, buyer_account, tx_hash, payment_method, near_amount } = req.body;
         if (!card_id || !buyer_account) {
             return res.status(400).json({ error: "card_id and buyer_account are required" });
         }
@@ -114,24 +130,34 @@ router.post("/buy-direct", async (req, res) => {
         if (ccCard) {
             const certNum = ccCard.id.substring(0, 8).toUpperCase();
             const cardPrice = ccCard.insuredUsd || ccCard.costUsd || 50.0;
-            finalCard = await db.card.create({
-                card_id: `cc-rwa-${ccCard.id.substring(0, 12)}`,
-                vault_id: null,
-                owner_account: buyer_account,
-                psa_cert_number: certNum,
-                solana_mint: ccCard.id,
-                name: ccCard.name,
-                category: ccCard.category || "Pokemon",
-                set_name: ccCard.name.split("PSA")[0]?.trim() || "Collector Crypt Vault",
-                grade: ccCard.grade || "PSA 10 GEM MT",
-                rareness_score: ccCard.rareness || 80,
-                oracle_fair_value_usdc: cardPrice,
-                last_sale_usdc: ccCard.costUsd || cardPrice,
-                image_url: ccCard.imageUrl,
-                barcode: `CC-${certNum}-PSA`,
-                population_higher: ccCard.population?.higher || 0,
-                is_locked: false
-            });
+            const existingCard = await db.card.findOne({ where: { solana_mint: ccCard.id } });
+
+            if (existingCard) {
+                existingCard.vault_id = null;
+                existingCard.owner_account = buyer_account;
+                existingCard.is_locked = false;
+                await existingCard.save();
+                finalCard = existingCard;
+            } else {
+                finalCard = await db.card.create({
+                    card_id: `cc-rwa-${ccCard.id.substring(0, 10)}-${Date.now().toString(36)}`,
+                    vault_id: null,
+                    owner_account: buyer_account,
+                    psa_cert_number: certNum,
+                    solana_mint: ccCard.id,
+                    name: ccCard.name,
+                    category: ccCard.category || "Pokemon",
+                    set_name: ccCard.name.split("PSA")[0]?.trim() || "Collector Crypt Vault",
+                    grade: ccCard.grade || "PSA 10 GEM MT",
+                    rareness_score: ccCard.rareness || 80,
+                    oracle_fair_value_usdc: cardPrice,
+                    last_sale_usdc: ccCard.costUsd || cardPrice,
+                    image_url: ccCard.imageUrl,
+                    barcode: `CC-${certNum}-PSA`,
+                    population_higher: ccCard.population?.higher || 0,
+                    is_locked: false
+                });
+            }
         } else {
             const existingCard = await db.card.findOne({ where: { card_id } });
             if (!existingCard) return res.status(404).json({ error: "Card not found" });
@@ -144,13 +170,17 @@ router.post("/buy-direct", async (req, res) => {
         }
 
         const networkInfo = await nearService.getNetworkStatus();
+        const settledTxHash = tx_hash || `0x${networkInfo.latest_block_hash?.substring(0, 32) || "4JpW2Z"}`;
 
         res.json({
             status: "SUCCESS_BOUGHT",
-            message: `Card successfully purchased directly by ${buyer_account}`,
+            message: `Card successfully purchased directly by ${buyer_account} with ${payment_method || "NEAR"}`,
             card: finalCard,
-            tx_hash: `0x${networkInfo.latest_block_hash?.substring(0, 32) || "4JpW2Z"}`,
-            block: networkInfo.latest_block_height
+            tx_hash: settledTxHash,
+            payment_method: payment_method || "NEAR",
+            near_amount: near_amount || null,
+            block: networkInfo.latest_block_height,
+            explorer_url: `https://testnet.nearblocks.io/txns/${settledTxHash}`
         });
     } catch (err) {
         console.error("Direct buy error:", err);
