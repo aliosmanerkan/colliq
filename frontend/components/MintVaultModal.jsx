@@ -173,9 +173,9 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/90 backdrop-blur-xl animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-md animate-in fade-in duration-150">
       <div 
-        className={`relative w-full rounded-2xl bg-[#09090b] border border-neutral-800 shadow-2xl flex flex-col overflow-hidden text-neutral-100 font-sans transition-all duration-300 ease-in-out ${
+        className={`relative w-full rounded-[28px] bg-white border border-neutral-200/80 shadow-2xl flex flex-col overflow-hidden text-neutral-900 font-sans transition-all duration-300 ease-in-out ${
           step === 2 
             ? "max-w-5xl h-[88vh] max-h-[780px]" 
             : "max-w-2xl max-h-[700px]"
@@ -183,81 +183,81 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
       >
         
         {/* Top Header */}
-        <div className="px-6 py-4 border-b border-neutral-800/80 bg-[#0c0c0e] flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 border-b border-neutral-100 bg-[#f8faf9] flex items-center justify-between shrink-0">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-white uppercase tracking-wider">
+              <span className="text-sm font-squada uppercase tracking-wide text-[#053b2a]">
                 Create Merchant Vault
               </span>
-              <span className="text-[10px] font-mono text-neutral-500 bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
+              <span className="text-[10px] font-mono text-[#053b2a] bg-[#a8f0be]/40 px-2 py-0.5 rounded-full border border-[#a8f0be]">
                 NEAR Track 10
               </span>
             </div>
-            <p className="text-[11px] text-neutral-400 mt-0.5">
+            <p className="text-[11px] text-neutral-500 mt-0.5">
               Autonomous NFT Account with Dedicated Sub-Account & MPC Access Key
             </p>
           </div>
 
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-md bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center transition border border-neutral-800"
+            className="w-7 h-7 rounded-full bg-white hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition border border-neutral-200 shadow-sm"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Step Indicator Progress Bar */}
-        <div className="px-6 py-2.5 border-b border-neutral-800/60 bg-[#0c0c0e]/40 flex items-center justify-between text-xs font-medium shrink-0">
+        <div className="px-6 py-2.5 border-b border-neutral-100 bg-[#fbfdfc] flex items-center justify-between text-xs font-medium shrink-0">
           <div className="flex items-center gap-2">
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono ${
-              step === 1 ? "bg-white text-black font-semibold" : step > 1 ? "bg-neutral-800 text-neutral-300" : "bg-neutral-900 text-neutral-600"
+              step === 1 ? "bg-[#073525] text-white font-semibold" : step > 1 ? "bg-[#a8f0be] text-[#053b2a] font-bold" : "bg-neutral-100 text-neutral-400"
             }`}>
-              {step > 1 ? <Check className="w-3 h-3 text-white" /> : "1"}
+              {step > 1 ? <Check className="w-3 h-3 text-[#053b2a]" /> : "1"}
             </span>
-            <span className={step === 1 ? "text-white" : "text-neutral-500"}>1. Capital & Identity</span>
+            <span className={step === 1 ? "text-neutral-900 font-semibold" : "text-neutral-500"}>1. Capital & Identity</span>
           </div>
 
-          <span className="text-neutral-700">───</span>
+          <span className="text-neutral-300">───</span>
 
           <div className="flex items-center gap-2">
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono ${
-              step === 2 ? "bg-white text-black font-semibold" : step > 2 ? "bg-neutral-800 text-neutral-300" : "bg-neutral-900 text-neutral-600"
+              step === 2 ? "bg-[#073525] text-white font-semibold" : step > 2 ? "bg-[#a8f0be] text-[#053b2a] font-bold" : "bg-neutral-100 text-neutral-400"
             }`}>
-              {step > 2 ? <Check className="w-3 h-3 text-white" /> : "2"}
+              {step > 2 ? <Check className="w-3 h-3 text-[#053b2a]" /> : "2"}
             </span>
-            <span className={step === 2 ? "text-white" : "text-neutral-500"}>2. Strategy & Rules (Chat)</span>
+            <span className={step === 2 ? "text-neutral-900 font-semibold" : "text-neutral-500"}>2. Strategy & Rules (Chat)</span>
           </div>
 
-          <span className="text-neutral-700">───</span>
+          <span className="text-neutral-300">───</span>
 
           <div className="flex items-center gap-2">
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono ${
-              step === 3 ? "bg-white text-black font-semibold" : "bg-neutral-900 text-neutral-600"
+              step === 3 ? "bg-[#073525] text-white font-semibold" : "bg-neutral-100 text-neutral-400"
             }`}>
               3
             </span>
-            <span className={step === 3 ? "text-white" : "text-neutral-500"}>3. Review & Deploy</span>
+            <span className={step === 3 ? "text-neutral-900 font-semibold" : "text-neutral-500"}>3. Review & Deploy</span>
           </div>
         </div>
 
         {error && (
-          <div className="px-6 py-2 bg-red-950/40 border-b border-red-900/40 text-xs text-red-300 flex items-center justify-between shrink-0">
+          <div className="px-6 py-2 bg-rose-50 border-b border-rose-200 text-xs text-rose-700 flex items-center justify-between shrink-0">
             <span>{error}</span>
-            <button onClick={() => setError("")} className="text-red-400 hover:text-red-200">
+            <button onClick={() => setError("")} className="text-rose-500 hover:text-rose-700">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
         {/* Step Body Container */}
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden flex flex-col bg-white">
           
           {/* STEP 1: CAPITAL & IDENTITY */}
           {step === 1 && (
             <div className="p-6 space-y-6 overflow-y-auto">
               <div>
-                <h3 className="text-sm font-semibold text-white">Name Your Vault & Allocate Treasury Capital</h3>
-                <p className="text-xs text-neutral-400 mt-1">
+                <h3 className="text-sm font-semibold text-neutral-900">Name Your Vault & Allocate Treasury Capital</h3>
+                <p className="text-xs text-neutral-500 mt-1">
                   Your vault deploys as an independent autonomous sub-account on NEAR Protocol.
                 </p>
               </div>
@@ -265,7 +265,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
               <div className="space-y-4">
                 {/* Vault Name Input */}
                 <div>
-                  <label className="block text-xs font-medium text-neutral-300 mb-1.5">
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
                     Vault Name
                   </label>
                   <input
@@ -275,21 +275,21 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                     placeholder="e.g. Pallet Town Sniper or Charizard Alpha"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500 transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#f8faf9] border border-neutral-200 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#a8f0be] transition"
                   />
                   
                   {/* Collision-Free Sub-Account Capsule */}
-                  <div className="mt-2.5 p-2.5 rounded-xl bg-neutral-950 border border-neutral-800/80 flex items-center justify-between text-xs font-mono">
+                  <div className="mt-2.5 p-2.5 rounded-xl bg-[#f8faf9] border border-neutral-200/80 flex items-center justify-between text-xs font-mono">
                     <div className="flex items-center gap-2 truncate">
-                      <span className="text-[10px] uppercase font-bold text-cyan-400">On-Chain Sub-Account:</span>
-                      <span className="text-white font-medium truncate">
+                      <span className="text-[10px] uppercase font-bold text-[#053b2a]">On-Chain Sub-Account:</span>
+                      <span className="text-neutral-900 font-semibold truncate">
                         {getAgentSlug(name)}-{suffixCode}.vaultdeck.testnet
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSuffixCode(Math.random().toString(36).substring(2, 6))}
-                      className="text-[10px] text-neutral-400 hover:text-white px-2 py-0.5 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 transition shrink-0 ml-2"
+                      className="text-[10px] text-neutral-600 hover:text-neutral-900 px-2 py-0.5 rounded-full bg-white hover:bg-neutral-100 border border-neutral-200 transition shrink-0 ml-2 shadow-sm"
                       title="Shuffle unique tag"
                     >
                       🎲 Tag #{suffixCode}
@@ -299,11 +299,11 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
 
                 {/* Treasury Deposit Input */}
                 <div>
-                  <label className="block text-xs font-medium text-neutral-300 mb-1.5">
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
                     Initial Treasury Capital (USDC Deposit)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-xs text-neutral-500 font-mono">$</span>
+                    <span className="absolute left-3 top-2.5 text-xs text-neutral-400 font-mono">$</span>
                     <input
                       type="number"
                       min="50"
@@ -311,7 +311,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                       required
                       value={usdcDeposit}
                       onChange={(e) => handleDepositChange(e.target.value)}
-                      className="w-full pl-7 pr-4 py-2.5 rounded-lg bg-neutral-950 border border-neutral-800 text-xs font-mono text-white focus:outline-none focus:border-neutral-500 transition"
+                      className="w-full pl-7 pr-4 py-2.5 rounded-xl bg-[#f8faf9] border border-neutral-200 text-xs font-mono text-neutral-900 focus:outline-none focus:border-[#a8f0be] transition"
                     />
                   </div>
 
@@ -326,10 +326,10 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                         key={p.val}
                         type="button"
                         onClick={() => handleDepositChange(p.val)}
-                        className={`px-2.5 py-1 rounded text-[11px] font-mono transition border ${
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-mono transition border ${
                           usdcDeposit === p.val
-                            ? "bg-neutral-800 text-white border-neutral-600"
-                            : "bg-neutral-950 text-neutral-400 border-neutral-800 hover:text-white"
+                            ? "bg-[#073525] text-white border-[#073525]"
+                            : "bg-[#f8faf9] text-neutral-600 border-neutral-200 hover:border-neutral-300"
                         }`}
                       >
                         {p.label}
@@ -341,7 +341,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                 {/* Single-Trade Expenditure Cap */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-medium text-neutral-300">
+                    <label className="text-xs font-medium text-neutral-700">
                       Single-Trade Expenditure Cap
                     </label>
                     <span className="text-[11px] text-neutral-500">
@@ -349,21 +349,21 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                     </span>
                   </div>
                   <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-xs text-neutral-500 font-mono">$</span>
+                    <span className="absolute left-3 top-2.5 text-xs text-neutral-400 font-mono">$</span>
                     <input
                       type="number"
                       min="25"
                       value={maxSpend}
                       onChange={(e) => setMaxSpend(e.target.value)}
-                      className="w-full pl-7 pr-4 py-2.5 rounded-lg bg-neutral-950 border border-neutral-800 text-xs font-mono text-white focus:outline-none focus:border-neutral-500 transition"
+                      className="w-full pl-7 pr-4 py-2.5 rounded-xl bg-[#f8faf9] border border-neutral-200 text-xs font-mono text-neutral-900 focus:outline-none focus:border-[#a8f0be] transition"
                     />
                   </div>
                 </div>
 
                 {/* Owner Info Box */}
-                <div className="p-3 rounded-lg bg-neutral-950 border border-neutral-800/80 text-xs flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-[#f8faf9] border border-neutral-200/80 text-xs flex items-center justify-between">
                   <span className="text-neutral-500">Connected Manager Account:</span>
-                  <span className="font-mono text-neutral-300">{connectedAccount}</span>
+                  <span className="font-mono text-[#053b2a] font-semibold">{connectedAccount}</span>
                 </div>
               </div>
             </div>
@@ -371,34 +371,34 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
 
           {/* STEP 2: STRATEGY & RULES (SPLIT VIEW: CHAT ON LEFT, RULES ON RIGHT) */}
           {step === 2 && (
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden bg-[#09090b]">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden bg-white">
               
               {/* LEFT COLUMN: Clean Chat With Inception Architect (7 cols / ~58%) */}
-              <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-neutral-800 bg-[#09090b] overflow-hidden">
+              <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-neutral-100 bg-white overflow-hidden">
                 
                 {/* Chat Top Sub-Header */}
-                <div className="px-5 py-2.5 border-b border-neutral-800/80 bg-[#0c0c0e]/60 flex items-center justify-between text-xs shrink-0">
+                <div className="px-5 py-2.5 border-b border-neutral-100 bg-[#fbfdfc] flex items-center justify-between text-xs shrink-0">
                   <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span className="font-medium text-white">Inception Architect</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#053b2a]" />
+                    <span className="font-semibold text-neutral-900">Inception Architect</span>
                   </div>
-                  <span className="text-[11px] font-mono text-neutral-400">
+                  <span className="text-[11px] font-mono text-[#053b2a] font-semibold">
                     Treasury: ${usdcDeposit} USDC
                   </span>
                 </div>
 
                 {/* Spacious Chat Message Stream */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs bg-white">
                   {messages.map((m, idx) => (
                     <div
                       key={idx}
                       className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[85%] rounded-xl px-4 py-3 leading-relaxed whitespace-pre-line text-xs ${
+                        className={`max-w-[85%] rounded-2xl px-4 py-3 leading-relaxed whitespace-pre-line text-xs ${
                           m.role === "user"
-                            ? "bg-neutral-200 text-neutral-900 font-medium"
-                            : "bg-[#111114] border border-neutral-800 text-neutral-200"
+                            ? "bg-[#073525] text-white font-medium shadow-sm"
+                            : "bg-[#f8faf9] border border-neutral-200/80 text-neutral-800 shadow-sm"
                         }`}
                       >
                         {m.content}
@@ -407,8 +407,8 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                   ))}
 
                   {aiThinking && (
-                    <div className="flex items-center gap-2 text-xs text-neutral-400 italic py-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse" />
+                    <div className="flex items-center gap-2 text-xs text-neutral-500 italic py-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#053b2a] animate-pulse" />
                       <span>Analyzing risk and compiling directives...</span>
                     </div>
                   )}
@@ -416,7 +416,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                 </div>
 
                 {/* Unified Bottom Chat Input */}
-                <div className="p-3.5 border-t border-neutral-800 bg-[#0c0c0e] shrink-0 space-y-2">
+                <div className="p-3.5 border-t border-neutral-100 bg-[#fbfdfc] shrink-0 space-y-2">
                   {/* Suggestion Chips */}
                   {suggestedChips.length > 0 && (
                     <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -426,7 +426,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                           type="button"
                           disabled={aiThinking}
                           onClick={() => handleSendMessage(chip)}
-                          className="shrink-0 px-2.5 py-1 rounded-md bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[11px] text-neutral-400 hover:text-white transition disabled:opacity-50"
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-white hover:bg-neutral-50 border border-neutral-200 text-[11px] text-neutral-700 hover:text-neutral-900 transition disabled:opacity-50 shadow-sm"
                         >
                           + {chip}
                         </button>
@@ -448,12 +448,12 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                       value={inputValue}
                       disabled={aiThinking}
                       onChange={(e) => setInputValue(e.target.value)}
-                      className="flex-1 px-3.5 py-2.5 rounded-lg bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-600 transition"
+                      className="flex-1 px-3.5 py-2.5 rounded-full bg-white border border-neutral-200 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#a8f0be] transition shadow-sm"
                     />
                     <button
                       type="submit"
                       disabled={!inputValue.trim() || aiThinking}
-                      className="px-4 py-2.5 rounded-lg bg-white hover:bg-neutral-200 disabled:opacity-40 text-black text-xs font-semibold flex items-center gap-1.5 transition"
+                      className="px-4 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
                     >
                       <span>Send</span>
                       <Send className="w-3.5 h-3.5" />
@@ -464,45 +464,45 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
               </div>
 
               {/* RIGHT COLUMN: Dedicated Compiled Directives & Rules Panel (5 cols / ~42%) */}
-              <div className="lg:col-span-5 flex flex-col bg-[#0c0c0e] p-5 overflow-y-auto space-y-4 justify-between">
+              <div className="lg:col-span-5 flex flex-col bg-[#fbfdfc] border-l border-neutral-100 p-5 overflow-y-auto space-y-4 justify-between">
                 <div className="space-y-4">
                   
                   {/* Panel Header */}
-                  <div className="flex items-center justify-between pb-2.5 border-b border-neutral-800">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-neutral-200">
                     <div>
-                      <h4 className="text-xs font-semibold text-white uppercase tracking-wider">
+                      <h4 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
                         Trading Rules & Safety
                       </h4>
-                      <p className="text-[11px] text-neutral-400">Rules your agent will follow on-chain</p>
+                      <p className="text-[11px] text-neutral-500">Rules your agent will follow on-chain</p>
                     </div>
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-neutral-300">
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#a8f0be]/40 border border-[#a8f0be] text-[#053b2a] font-semibold">
                       {rules.length} Active
                     </span>
                   </div>
 
                   {/* Vault Identity Mini-Card */}
-                  <div className="p-3 rounded-lg bg-neutral-950 border border-neutral-800 space-y-1.5 text-xs">
+                  <div className="p-3 rounded-xl bg-white border border-neutral-200/80 space-y-1.5 text-xs shadow-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-400">Agent Name:</span>
-                      <span className="font-semibold text-white">{name || "Unnamed Vault"}</span>
+                      <span className="text-neutral-500">Agent Name:</span>
+                      <span className="font-semibold text-neutral-900">{name || "Unnamed Vault"}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-400">Budget / Max per Card:</span>
-                      <span className="font-mono text-neutral-200">${usdcDeposit} / ${maxSpend} USDC</span>
+                      <span className="text-neutral-500">Budget / Max per Card:</span>
+                      <span className="font-mono text-[#053b2a] font-semibold">${usdcDeposit} / ${maxSpend} USDC</span>
                     </div>
                   </div>
 
                   {/* Directives List */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-medium text-neutral-300 block">
+                      <label className="text-[11px] font-medium text-neutral-700 block">
                         Configured Trading Rules
                       </label>
-                      <span className="text-[10px] text-neutral-500">Agent safety rules</span>
+                      <span className="text-[10px] text-neutral-400">Agent safety rules</span>
                     </div>
 
                     {rules.length === 0 ? (
-                      <div className="p-4 rounded-lg bg-neutral-950/60 border border-dashed border-neutral-800 text-center text-xs text-neutral-500">
+                      <div className="p-4 rounded-xl bg-white border border-dashed border-neutral-200 text-center text-xs text-neutral-400">
                         No custom rules added yet. Chat on the left or add below to set specific cards or budget limits.
                       </div>
                     ) : (
@@ -510,16 +510,16 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                         {rules.map((rule, idx) => (
                           <div
                             key={idx}
-                            className="flex items-start justify-between p-2.5 rounded-lg bg-neutral-950 border border-neutral-800/80 text-xs"
+                            className="flex items-start justify-between p-2.5 rounded-xl bg-white border border-neutral-200/80 text-xs shadow-sm hover:border-[#a8f0be] transition"
                           >
                             <div className="flex items-start gap-2">
-                              <Check className="w-3.5 h-3.5 text-neutral-400 shrink-0 mt-0.5" />
-                              <span className="text-neutral-200 leading-snug">{rule}</span>
+                              <Check className="w-3.5 h-3.5 text-[#053b2a] shrink-0 mt-0.5" />
+                              <span className="text-neutral-800 leading-snug">{rule}</span>
                             </div>
                             <button
                               type="button"
                               onClick={() => removeRule(idx)}
-                              className="text-neutral-500 hover:text-red-400 transition ml-2 shrink-0"
+                              className="text-neutral-400 hover:text-rose-600 transition ml-2 shrink-0"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -531,7 +531,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
 
                   {/* Add Manual Directive Input */}
                   <div className="space-y-1.5 pt-1">
-                    <label className="text-[11px] font-medium text-neutral-400 block">
+                    <label className="text-[11px] font-medium text-neutral-700 block">
                       Add a Custom Rule
                     </label>
                     <div className="flex gap-1.5">
@@ -546,13 +546,13 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                             addManualRule();
                           }
                         }}
-                        className="flex-1 px-3 py-1.5 rounded-lg bg-neutral-950 border border-neutral-800 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600"
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-white border border-neutral-200 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#a8f0be] shadow-sm"
                       />
                       <button
                         type="button"
                         onClick={addManualRule}
                         disabled={!manualRuleInput.trim()}
-                        className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 text-neutral-200 text-xs font-medium flex items-center gap-1 transition shrink-0"
+                        className="px-3 py-1.5 rounded-xl bg-[#073525] hover:bg-[#0a4531] disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1 transition shrink-0 shadow-sm"
                       >
                         <Plus className="w-3 h-3" />
                         <span>Add</span>
@@ -562,7 +562,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
 
                 </div>
 
-                <div className="text-[10px] font-mono text-neutral-500 border-t border-neutral-800/60 pt-2">
+                <div className="text-[10px] font-mono text-neutral-500 border-t border-neutral-200 pt-2">
                   Rules are enforced automatically by your agent's NEAR smart contract.
                 </div>
               </div>
@@ -574,52 +574,52 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
           {step === 3 && (
             <div className="p-6 space-y-6 overflow-y-auto">
               <div>
-                <h3 className="text-sm font-semibold text-white">Review Genesis Contract & Deploy</h3>
-                <p className="text-xs text-neutral-400 mt-1">
+                <h3 className="text-sm font-semibold text-neutral-900">Review Genesis Contract & Deploy</h3>
+                <p className="text-xs text-neutral-500 mt-1">
                   Verify your parameters before committing this autonomous trading vault to NEAR Testnet.
                 </p>
               </div>
 
               {/* Genesis Contract Receipt */}
-              <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-3 text-xs">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 pb-2 border-b border-neutral-900">
+              <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 space-y-3 text-xs shadow-sm">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 pb-2 border-b border-neutral-200">
                   Genesis Contract Specification
                 </div>
 
-                <div className="flex justify-between py-1 border-b border-neutral-900">
-                  <span className="text-neutral-400">Vault Name:</span>
-                  <span className="font-semibold text-white">{name}</span>
+                <div className="flex justify-between py-1 border-b border-neutral-200">
+                  <span className="text-neutral-500">Vault Name:</span>
+                  <span className="font-semibold text-neutral-900">{name}</span>
                 </div>
 
-                <div className="flex justify-between py-1 border-b border-neutral-900">
-                  <span className="text-neutral-400">Dedicated Sub-Account:</span>
-                  <span className="font-mono text-cyan-400 font-medium">
+                <div className="flex justify-between py-1 border-b border-neutral-200">
+                  <span className="text-neutral-500">Dedicated Sub-Account:</span>
+                  <span className="font-mono text-[#053b2a] font-semibold">
                     {getAgentSlug(name)}-{suffixCode}.vaultdeck.testnet
                   </span>
                 </div>
 
-                <div className="flex justify-between py-1 border-b border-neutral-900">
-                  <span className="text-neutral-400">Treasury Capital:</span>
-                  <span className="font-mono text-white font-medium">${usdcDeposit} USDC</span>
+                <div className="flex justify-between py-1 border-b border-neutral-200">
+                  <span className="text-neutral-500">Treasury Capital:</span>
+                  <span className="font-mono text-neutral-900 font-semibold">${usdcDeposit} USDC</span>
                 </div>
 
-                <div className="flex justify-between py-1 border-b border-neutral-900">
-                  <span className="text-neutral-400">Max Spend per Card:</span>
-                  <span className="font-mono text-white font-medium">${maxSpend} USDC</span>
+                <div className="flex justify-between py-1 border-b border-neutral-200">
+                  <span className="text-neutral-500">Max Spend per Card:</span>
+                  <span className="font-mono text-neutral-900 font-semibold">${maxSpend} USDC</span>
                 </div>
 
                 {/* Configured Rules in Receipt */}
                 <div className="pt-2">
-                  <span className="text-neutral-400 block mb-1.5">
+                  <span className="text-neutral-500 block mb-1.5 font-medium">
                     Configured Trading Rules ({rules.length}):
                   </span>
                   <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
                     {rules.map((rule, idx) => (
                       <div
                         key={idx}
-                        className="flex items-start gap-2 p-2 rounded bg-neutral-900 border border-neutral-800/80 text-[11px] text-neutral-300"
+                        className="flex items-start gap-2 p-2 rounded-xl bg-white border border-neutral-200/80 text-[11px] text-neutral-800 shadow-sm"
                       >
-                        <Check className="w-3.5 h-3.5 text-neutral-400 shrink-0 mt-0.5" />
+                        <Check className="w-3.5 h-3.5 text-[#053b2a] shrink-0 mt-0.5" />
                         <span>{rule}</span>
                       </div>
                     ))}
@@ -628,7 +628,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
               </div>
 
               {/* Network Gas & Security Notice */}
-              <div className="p-3 rounded-lg bg-neutral-950/60 border border-neutral-800/60 text-[11px] text-neutral-500 space-y-1 font-mono">
+              <div className="p-3.5 rounded-2xl bg-white border border-neutral-200/80 text-[11px] text-neutral-600 space-y-1 font-mono shadow-sm">
                 <div>• NETWORK: NEAR Protocol Testnet</div>
                 <div>• ACCOUNT TYPE: Track 10 NFT-as-Account</div>
                 <div>• ACCESS KEY: Autonomous Agent Function-Call Key (Wiped on NFT transfer)</div>
@@ -640,13 +640,13 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* Footer Navigation Bar */}
-        <div className="px-6 py-4 border-t border-neutral-800/80 bg-[#0c0c0e] flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 border-t border-neutral-100 bg-[#f8faf9] flex items-center justify-between shrink-0">
           <div>
             {step > 1 ? (
               <button
                 type="button"
                 onClick={() => setStep((s) => s - 1)}
-                className="px-4 py-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-xs text-neutral-300 flex items-center gap-1.5 transition"
+                className="px-4 py-2 rounded-full bg-white hover:bg-neutral-100 border border-neutral-200 text-xs text-neutral-700 font-medium flex items-center gap-1.5 transition shadow-sm"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Back</span>
@@ -655,7 +655,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-xs text-neutral-400 hover:text-white transition"
+                className="px-4 py-2 rounded-full bg-white hover:bg-neutral-100 border border-neutral-200 text-xs text-neutral-500 hover:text-neutral-900 transition shadow-sm"
               >
                 Cancel
               </button>
@@ -668,7 +668,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                 type="button"
                 disabled={!name.trim()}
                 onClick={() => setStep(2)}
-                className="px-5 py-2 rounded-lg bg-white hover:bg-neutral-200 disabled:opacity-40 text-black text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+                className="px-5 py-2 rounded-full bg-[#073525] hover:bg-[#0a4531] disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm"
               >
                 <span>Continue to Strategy & Rules</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -679,7 +679,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={() => setStep(3)}
-                className="px-5 py-2 rounded-lg bg-white hover:bg-neutral-200 text-black text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+                className="px-5 py-2 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm"
               >
                 <span>Review Genesis Contract</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -691,7 +691,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                 type="button"
                 disabled={loading || !name.trim()}
                 onClick={handleDeployVault}
-                className="px-6 py-2 rounded-lg bg-white hover:bg-neutral-200 disabled:opacity-40 text-black text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-md"
+                className="px-6 py-2 rounded-full bg-[#073525] hover:bg-[#0a4531] disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm"
               >
                 {loading ? (
                   <span>Deploying on NEAR Testnet...</span>

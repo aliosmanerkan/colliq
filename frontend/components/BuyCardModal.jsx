@@ -5,10 +5,6 @@ import {
   X, 
   CheckCircle2, 
   ShieldCheck, 
-  Coins, 
-  Layers, 
-  ExternalLink,
-  Sparkles,
   ArrowRight
 } from "lucide-react";
 import api from "@/lib/api";
@@ -56,18 +52,18 @@ export default function BuyCardModal({ card, vaults, isOpen, onClose, onSuccess 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-3xl animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-[32px] bg-[#0c0c0e] border border-white/[0.1] p-6 sm:p-8 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg rounded-[28px] bg-white border border-neutral-200/80 p-6 sm:p-8 shadow-2xl overflow-hidden text-neutral-900">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-5 border-b border-neutral-900 mb-6">
+        <div className="flex items-center justify-between pb-5 border-b border-neutral-100 mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-white tracking-tight">Buy Card</h2>
-            <p className="text-xs text-neutral-400 mt-0.5">Physical PSA Slab • Brink's Vault Custody</p>
+            <h2 className="text-xl sm:text-2xl font-squada uppercase tracking-wide text-[#053b2a]">Buy Card</h2>
+            <p className="text-xs text-neutral-500 mt-0.5">Physical PSA Slab • Brink's Vault Custody</p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center transition"
+            className="w-8 h-8 rounded-full bg-[#f8faf9] hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900 border border-neutral-200 flex items-center justify-center transition"
           >
             <X className="w-4 h-4" />
           </button>
@@ -76,42 +72,42 @@ export default function BuyCardModal({ card, vaults, isOpen, onClose, onSuccess 
         {result ? (
           /* Success Screen */
           <div className="space-y-5 animate-in zoom-in-95 duration-200">
-            <div className="p-6 rounded-[24px] bg-neutral-950 border border-emerald-500/30 text-left space-y-3">
-              <div className="flex items-center gap-2.5 text-emerald-400 font-semibold text-sm">
-                <CheckCircle2 className="w-5 h-5" />
+            <div className="p-6 rounded-[24px] bg-[#f8faf9] border border-[#a8f0be] text-left space-y-3">
+              <div className="flex items-center gap-2.5 text-[#053b2a] font-semibold text-sm">
+                <CheckCircle2 className="w-5 h-5 text-[#053b2a]" />
                 <span>Card Secured & Added to Vault</span>
               </div>
 
-              <div className="flex items-center gap-3.5 pt-2 border-t border-neutral-900">
+              <div className="flex items-center gap-3.5 pt-2 border-t border-neutral-200/60">
                 <img
                   src={card.imageUrl}
                   alt=""
-                  className="w-12 h-16 object-contain rounded-xl bg-black p-1 border border-neutral-800"
+                  className="w-12 h-16 object-contain rounded-xl bg-white p-1 border border-neutral-200"
                 />
                 <div>
-                  <h4 className="text-sm font-semibold text-white truncate max-w-[240px]">{card.name}</h4>
-                  <div className="text-xs text-neutral-400 mt-0.5">{card.grade || "PSA 10"} • ${cardPrice} USDC</div>
-                  <div className="text-xs text-emerald-400 font-mono mt-1">
+                  <h4 className="text-sm font-semibold text-neutral-900 truncate max-w-[240px]">{card.name}</h4>
+                  <div className="text-xs text-neutral-500 mt-0.5">{card.grade || "PSA 10"} • ${cardPrice} USDC</div>
+                  <div className="text-xs text-[#053b2a] font-mono font-medium mt-1">
                     Deposited into {result.vault?.sub_account}
                   </div>
                 </div>
               </div>
 
               {/* On-Chain Provenance Card */}
-              <div className="p-3.5 rounded-2xl bg-[#0c0c0e] border border-neutral-900 font-mono text-[11px] text-neutral-400 space-y-1 mt-2">
-                <div className="text-neutral-300 font-semibold flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="p-3.5 rounded-2xl bg-white border border-neutral-200/80 font-mono text-[11px] text-neutral-600 space-y-1 mt-2">
+                <div className="text-neutral-800 font-semibold flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#053b2a]" />
                   <span>On-Chain Provenance (NEAR Chain Signatures)</span>
                 </div>
-                <div>• Custody: <span className="text-neutral-200">{result.vault_custody}</span></div>
-                <div className="truncate">• Solana Holding Key: <span className="text-neutral-200">{result.solana_holding_address || "SolVault7x9Q..."}</span></div>
-                <div className="truncate">• NEAR Settlement TX: <span className="text-white">{result.tx_hash}</span></div>
+                <div>• Custody: <span className="text-neutral-900">{result.vault_custody}</span></div>
+                <div className="truncate">• Solana Holding Key: <span className="text-neutral-900">{result.solana_holding_address || "SolVault7x9Q..."}</span></div>
+                <div className="truncate">• NEAR Settlement TX: <span className="text-neutral-900 font-bold">{result.tx_hash}</span></div>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="w-full py-3 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold transition active:scale-95 shadow-sm"
+              className="w-full py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition active:scale-95 shadow-sm"
             >
               Done
             </button>
@@ -120,28 +116,28 @@ export default function BuyCardModal({ card, vaults, isOpen, onClose, onSuccess 
           /* Purchase Form */
           <form onSubmit={handleBuy} className="space-y-5">
             {error && (
-              <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300">
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
                 {error}
               </div>
             )}
 
             {/* Selected Card Preview */}
-            <div className="p-4 rounded-[24px] bg-neutral-950 border border-neutral-900 flex items-center gap-4">
+            <div className="p-4 rounded-[24px] bg-[#f8faf9] border border-neutral-200/80 flex items-center gap-4">
               <img
                 src={card.imageUrl}
                 alt=""
-                className="w-14 h-20 object-contain rounded-xl bg-black p-1.5 border border-neutral-800"
+                className="w-14 h-20 object-contain rounded-xl bg-white p-1.5 border border-neutral-200"
               />
               <div className="flex-1 min-w-0">
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-neutral-900 text-[10px] font-mono text-neutral-300 mb-1">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-neutral-100 text-[10px] font-mono text-neutral-700 mb-1 border border-neutral-200">
                   <span>{card.grade || "PSA 10"}</span>
-                  <span className="text-neutral-600">•</span>
+                  <span className="text-neutral-400">•</span>
                   <span>{card.category || "TCG"}</span>
                 </div>
-                <h3 className="text-sm font-semibold text-white truncate" title={card.name}>
+                <h3 className="text-sm font-semibold text-neutral-900 truncate" title={card.name}>
                   {card.name}
                 </h3>
-                <div className="text-base font-semibold text-white font-mono mt-1">
+                <div className="text-base font-semibold text-neutral-900 font-mono mt-1">
                   ${Number(cardPrice).toLocaleString()} <span className="text-xs text-neutral-500 font-normal">USDC</span>
                 </div>
               </div>
@@ -150,11 +146,11 @@ export default function BuyCardModal({ card, vaults, isOpen, onClose, onSuccess 
             {/* Target Vault Selection */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-neutral-300">
+                <label className="text-xs font-medium text-neutral-700">
                   Select Destination Vault
                 </label>
                 {selectedVault && (
-                  <span className={`text-xs font-mono font-medium ${hasEnoughBalance ? "text-emerald-400" : "text-rose-400"}`}>
+                  <span className={`text-xs font-mono font-medium ${hasEnoughBalance ? "text-[#053b2a]" : "text-rose-600"}`}>
                     Treasury: ${selectedVault.usdc_balance} USDC
                   </span>
                 )}
@@ -163,7 +159,7 @@ export default function BuyCardModal({ card, vaults, isOpen, onClose, onSuccess 
               <select
                 value={targetVaultId}
                 onChange={(e) => setTargetVaultId(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-white/[0.3] transition font-sans"
+                className="w-full px-4 py-3 rounded-2xl bg-[#f8faf9] border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:border-[#a8f0be] transition font-sans"
               >
                 {vaults.map((v) => (
                   <option key={v.id} value={v.id}>
@@ -177,18 +173,18 @@ export default function BuyCardModal({ card, vaults, isOpen, onClose, onSuccess 
             </div>
 
             {/* Price Breakdown */}
-            <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 text-xs space-y-2">
-              <div className="flex items-center justify-between text-neutral-400">
+            <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 text-xs space-y-2">
+              <div className="flex items-center justify-between text-neutral-600">
                 <span>Card Valuation:</span>
-                <span className="font-mono text-white">${cardPrice} USDC</span>
+                <span className="font-mono text-neutral-900 font-medium">${cardPrice} USDC</span>
               </div>
-              <div className="flex items-center justify-between text-neutral-400">
+              <div className="flex items-center justify-between text-neutral-600">
                 <span>Protocol & Gas Fee:</span>
-                <span className="text-emerald-400 font-medium">Free (Zero Gas)</span>
+                <span className="text-[#053b2a] font-semibold">Free (Zero Gas)</span>
               </div>
-              <div className="pt-2 border-t border-neutral-900 flex items-center justify-between font-semibold">
-                <span className="text-white">Total Amount:</span>
-                <span className="text-white font-mono text-sm">${cardPrice} USDC</span>
+              <div className="pt-2 border-t border-neutral-200 flex items-center justify-between font-semibold">
+                <span className="text-neutral-900">Total Amount:</span>
+                <span className="text-[#053b2a] font-mono text-sm">${cardPrice} USDC</span>
               </div>
             </div>
 
@@ -197,7 +193,7 @@ export default function BuyCardModal({ card, vaults, isOpen, onClose, onSuccess 
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-full bg-neutral-900 hover:bg-neutral-800 text-xs font-medium text-neutral-300 transition"
+                className="px-5 py-2.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-xs font-medium text-neutral-700 transition"
               >
                 Cancel
               </button>
@@ -205,7 +201,7 @@ export default function BuyCardModal({ card, vaults, isOpen, onClose, onSuccess 
               <button
                 type="submit"
                 disabled={loading || !hasEnoughBalance}
-                className="px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-40 shadow-sm"
+                className="px-6 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-40 shadow-sm"
               >
                 <span>{loading ? "Purchasing..." : "Confirm Purchase"}</span>
                 <ArrowRight className="w-3.5 h-3.5" />

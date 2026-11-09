@@ -41,20 +41,20 @@ export default function AgentsTab() {
     <div className="space-y-6">
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
-        <div className="text-sm font-medium text-neutral-400">
+        <div className="text-sm font-medium text-neutral-600">
           Active Trading Agents ({filteredVaults.length})
         </div>
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Scope Switcher: My Vaults vs All Protocol */}
-          <div className="flex items-center gap-1 bg-neutral-950 p-1 rounded-full border border-neutral-800">
+          <div className="flex items-center gap-1 bg-white p-1 rounded-full border border-neutral-200/80 shadow-sm">
             <button
               onClick={() => setAgentScope("my")}
               className={`px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
                 agentScope === "my"
-                  ? "bg-white text-black font-semibold shadow-sm"
-                  : "text-neutral-400 hover:text-white"
+                  ? "bg-[#073525] text-white font-semibold shadow-sm"
+                  : "text-neutral-600 hover:text-neutral-900"
               }`}
             >
               My Vaults
@@ -63,8 +63,8 @@ export default function AgentsTab() {
               onClick={() => setAgentScope("all")}
               className={`px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
                 agentScope === "all"
-                  ? "bg-white text-black font-semibold shadow-sm"
-                  : "text-neutral-400 hover:text-white"
+                  ? "bg-[#073525] text-white font-semibold shadow-sm"
+                  : "text-neutral-600 hover:text-neutral-900"
               }`}
             >
               All Network Vaults
@@ -77,20 +77,20 @@ export default function AgentsTab() {
               placeholder="Search agents..."
               value={vaultSearch}
               onChange={(e) => setVaultSearch(e.target.value)}
-              className="pl-9 pr-4 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-white/[0.3] font-sans w-48"
+              className="pl-9 pr-4 py-1.5 rounded-full bg-white border border-neutral-200 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#073525] font-sans w-48 shadow-sm"
             />
-            <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-3 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5" />
           </div>
 
-          <div className="flex items-center gap-1 bg-neutral-950 p-1 rounded-full border border-neutral-800">
+          <div className="flex items-center gap-1 bg-white p-1 rounded-full border border-neutral-200/80 shadow-sm">
             {["ALL", "Whale", "Shark", "Rookie"].map((t) => (
               <button
                 key={t}
                 onClick={() => setTierFilter(t)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
                   tierFilter === t
-                    ? "bg-white text-black font-semibold shadow-sm"
-                    : "text-neutral-400 hover:text-white"
+                    ? "bg-[#073525] text-white font-semibold shadow-sm"
+                    : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
                 {t}
@@ -101,7 +101,7 @@ export default function AgentsTab() {
           <select
             value={vaultSort}
             onChange={(e) => setVaultSort(e.target.value)}
-            className="px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-white focus:outline-none focus:border-white/[0.3] cursor-pointer"
+            className="px-3 py-1.5 rounded-full bg-white border border-neutral-200 text-xs text-neutral-700 focus:outline-none focus:border-[#073525] cursor-pointer shadow-sm"
           >
             <option value="pnl_desc">Highest Return</option>
             <option value="aum_desc">Highest Treasury</option>
@@ -112,7 +112,7 @@ export default function AgentsTab() {
 
       {/* Grid */}
       {filteredVaults.length === 0 ? (
-        <div className="py-24 text-center text-xs text-neutral-500 bg-[#0c0c0e] rounded-[32px] border border-white/[0.08] space-y-4">
+        <div className="py-24 text-center text-xs text-neutral-600 bg-white rounded-[28px] border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-4">
           <p>
             {agentScope === "my" && connectedAccount 
               ? `No active trading agents found under ${connectedAccount}.`
@@ -120,7 +120,7 @@ export default function AgentsTab() {
           </p>
           <button
             onClick={openMint}
-            className="px-6 py-2.5 rounded-full bg-white text-black text-xs font-semibold transition hover:bg-neutral-200 cursor-pointer"
+            className="px-6 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition cursor-pointer shadow-md"
           >
             Mint New Agent
           </button>

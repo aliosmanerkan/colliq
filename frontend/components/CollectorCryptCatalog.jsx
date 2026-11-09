@@ -217,30 +217,30 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
     <div className="space-y-8">
       
       {/* Editorial Banner */}
-      <div className="p-8 sm:p-10 rounded-[32px] bg-[#0c0c0e] border border-white/[0.08] shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="p-8 sm:p-10 rounded-[28px] bg-white border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full text-xs font-medium bg-neutral-900 border border-neutral-800 text-neutral-300">
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#a8f0be]/40 border border-[#043224]/15 text-[#043224]">
               🛍️ Live Card Marketplace
             </span>
-            <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5" />
               Brink's & PSA Vaulted Physical Slabs (RWA)
             </span>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white font-sans">
+          <h2 className="text-2xl sm:text-3xl font-squada uppercase tracking-wide text-[#053b2a]">
             Collector Crypt Pokémon & TCG Marketplace
           </h2>
-          <p className="text-sm text-neutral-400 max-w-2xl leading-relaxed">
-            Purchase physical slabs directly to your wallet or assign an <strong className="text-cyan-400">Autonomous Trading Agent (NEAR Sub-Account)</strong> to snipe them automatically according to your custom rules.
+          <p className="text-sm text-neutral-600 max-w-2xl leading-relaxed font-poppins">
+            Purchase physical slabs directly to your wallet or assign an <strong className="text-[#053b2a] font-semibold">Autonomous Trading Agent (NEAR Sub-Account)</strong> to snipe them automatically according to your custom rules.
           </p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-neutral-950 border border-neutral-900 shrink-0 text-left md:text-right">
-          <div className="text-xs uppercase text-neutral-500 font-medium tracking-wider">Available Inventory</div>
-          <div className="text-3xl font-semibold text-white mt-1">{cards.length}</div>
-          <div className="text-xs text-emerald-400 mt-0.5">PSA 10 / GEM-MT Slabs</div>
+        <div className="p-5 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 shrink-0 text-left md:text-right">
+          <div className="text-xs uppercase text-neutral-400 font-medium tracking-wider">Available Inventory</div>
+          <div className="text-3xl font-semibold text-neutral-900 mt-1 font-mono">{cards.length}</div>
+          <div className="text-xs text-[#053b2a] mt-0.5 font-medium">PSA 10 / GEM-MT Slabs</div>
         </div>
       </div>
 
@@ -252,10 +252,10 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
             <button
               key={cat}
               onClick={() => setCategory(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-medium transition-all shrink-0 ${
+              className={`px-4 py-2 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
                 category === cat
-                  ? "bg-white text-black font-semibold shadow-sm"
-                  : "bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800"
+                  ? "bg-[#073525] text-white font-semibold shadow-sm"
+                  : "bg-white text-neutral-700 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-300"
               }`}
             >
               {cat === "ALL" ? "All Slabs" : cat}
@@ -271,15 +271,15 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
               placeholder="Search slabs (Pikachu, Charizard...)"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-white/[0.3] transition font-sans"
+              className="w-full pl-9 pr-4 py-2 rounded-full bg-white border border-neutral-200 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#073525] transition font-sans shadow-sm"
             />
-            <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-3 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5" />
           </form>
 
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-white focus:outline-none focus:border-white/[0.3] transition font-sans"
+            className="px-3 py-2 rounded-full bg-white border border-neutral-200 text-xs text-neutral-700 focus:outline-none focus:border-[#073525] transition font-sans shadow-sm cursor-pointer"
           >
             <option value="price_desc">Highest Price</option>
             <option value="price_asc">Lowest Price</option>
@@ -306,35 +306,35 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
             return (
               <div
                 key={card.id}
-                className="group relative rounded-[28px] p-4 bg-[#0c0c0e] border border-white/[0.08] hover:border-white/[0.2] transition-all duration-300 flex flex-col justify-between shadow-xl hover:-translate-y-1"
+                className="group relative rounded-[24px] p-4 bg-white border border-neutral-200/80 hover:border-[#a8f0be] transition-all duration-300 flex flex-col justify-between shadow-[0_2px_14px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_28px_rgba(4,50,36,0.08)] hover:-translate-y-1"
               >
                 <div>
                   {/* PSA Header */}
-                  <div className="mb-3 px-3 py-1.5 rounded-2xl bg-neutral-950 border border-neutral-900 flex items-center justify-between text-xs">
-                    <span className="font-bold text-red-500 font-mono">PSA</span>
-                    <span className="font-semibold text-white">{card.grade || "GEM MT 10"}</span>
-                    <span className="text-[10px] text-emerald-400 font-medium">Brink's Vaulted</span>
+                  <div className="mb-3 px-3 py-1.5 rounded-2xl bg-[#f8faf9] border border-neutral-200/70 flex items-center justify-between text-xs">
+                    <span className="font-bold text-red-600 font-mono">PSA</span>
+                    <span className="font-semibold text-neutral-900">{card.grade || "GEM MT 10"}</span>
+                    <span className="text-[10px] text-[#053b2a] font-semibold">Brink's Vaulted</span>
                   </div>
 
                   {/* Artwork Box */}
-                  <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden bg-neutral-950 flex items-center justify-center p-3 border border-neutral-900 mb-3 group-hover:border-neutral-800 transition">
+                  <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden bg-[#f4f6f5] flex items-center justify-center p-3 border border-neutral-200/60 mb-3 group-hover:border-neutral-300 transition">
                     <img
                       src={card.imageUrl}
                       alt={card.name}
                       loading="lazy"
-                      className="w-full h-full object-contain filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-contain filter drop-shadow-[0_8px_20px_rgba(0,0,0,0.15)] group-hover:scale-105 transition-transform duration-300"
                     />
 
                     {card.rareness && (
-                      <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/[0.1] text-[10px] font-medium text-amber-300 flex items-center gap-1 shadow-sm">
-                        <Flame className="w-3 h-3 text-amber-400" />
+                      <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-neutral-200 text-[10px] font-semibold text-amber-700 flex items-center gap-1 shadow-sm">
+                        <Flame className="w-3 h-3 text-amber-500" />
                         <span>Rarity {card.rareness}/100</span>
                       </div>
                     )}
                   </div>
 
                   {/* Title & Set */}
-                  <h3 className="text-sm font-semibold text-white line-clamp-2 min-h-[36px] group-hover:text-neutral-200 transition" title={card.name}>
+                  <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2 min-h-[36px] group-hover:text-[#053b2a] transition" title={card.name}>
                     {card.name}
                   </h3>
                   <div className="flex items-center justify-between text-xs text-neutral-500 mt-1">
@@ -343,15 +343,15 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                   </div>
 
                   {/* Pricing Box */}
-                  <div className="mt-3.5 p-3 rounded-2xl bg-neutral-950 border border-neutral-900 space-y-1.5">
+                  <div className="mt-3.5 p-3 rounded-2xl bg-[#f8faf9] border border-neutral-200/70 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-neutral-500">Fair Value:</span>
-                      <span className="text-sm font-semibold text-white font-mono">${price.toLocaleString()} USDC</span>
+                      <span className="text-sm font-semibold text-neutral-900 font-mono">${price.toLocaleString()} USDC</span>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-neutral-900 font-mono">
+                    <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-neutral-200/60 font-mono">
                       <span className="text-neutral-500">NEAR Price:</span>
-                      <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-emerald-400" />
+                      <span className="text-[#053b2a] font-semibold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-[#053b2a]" />
                         {usdToNear(price)} NEAR
                       </span>
                     </div>
@@ -359,7 +359,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                 </div>
 
                 {/* ACTION BUTTONS: BUY WITH NEAR, ASSIGN TO AGENT & SANDBOX */}
-                <div className="mt-4 pt-3.5 border-t border-neutral-900 space-y-2">
+                <div className="mt-4 pt-3.5 border-t border-neutral-100 space-y-2">
                   {/* Action 1: Buy with NEAR (Primary Button) */}
                   <button
                     onClick={() => {
@@ -368,9 +368,9 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                       setNearBuyError("");
                       setNearBuyStep("idle");
                     }}
-                    className="w-full py-2.5 px-4 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 shadow-md group/btn"
+                    className="w-full py-2.5 px-4 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 shadow-sm group/btn cursor-pointer"
                   >
-                    <div className="w-4 h-4 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-bold font-mono">
+                    <div className="w-4 h-4 rounded-full bg-white text-[#073525] flex items-center justify-center text-[10px] font-bold font-mono">
                       N
                     </div>
                     <span>Buy with NEAR ({usdToNear(price)} N)</span>
@@ -384,9 +384,9 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                       setAgentError("");
                       if (vaults.length > 0) setTargetVaultId(String(vaults[0].id));
                     }}
-                    className="w-full py-2 px-3 rounded-full bg-neutral-900 hover:bg-neutral-800 border border-cyan-500/30 text-cyan-400 hover:text-cyan-300 text-xs font-medium flex items-center justify-center gap-2 transition active:scale-95"
+                    className="w-full py-2 px-3 rounded-full bg-white hover:bg-neutral-50 border border-neutral-300 text-neutral-800 hover:text-neutral-900 text-xs font-medium flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-sm"
                   >
-                    <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                    <Bot className="w-3.5 h-3.5 text-[#053b2a]" />
                     <span>Assign to Agent (Snipe)</span>
                   </button>
 
@@ -398,7 +398,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                         setBuyResult(null);
                         setBuyError("");
                       }}
-                      className="text-[10px] text-neutral-500 hover:text-neutral-300 transition"
+                      className="text-[10px] text-neutral-400 hover:text-neutral-700 transition cursor-pointer"
                     >
                       Instant Buy with USDC (Sandbox)
                     </button>
@@ -416,7 +416,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
             </div>
             <button
               onClick={() => setVisibleCount((prev) => prev + 48)}
-              className="px-8 py-3 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold shadow-lg transition active:scale-95"
+              className="px-8 py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold shadow-md transition active:scale-95 cursor-pointer"
             >
               Load More Slabs (+48)
             </button>
@@ -427,18 +427,18 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
 
       {/* MODAL 0: BUY WITH NEAR (ON-CHAIN METEOR WALLET) */}
       {selectedCardForNearBuy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-3xl animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg rounded-[32px] bg-[#0c0c0e] border border-emerald-500/30 p-6 sm:p-8 shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-[28px] bg-white border border-neutral-200 p-6 sm:p-8 shadow-2xl overflow-hidden text-neutral-900">
             
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-900 mb-5">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                  <span className="font-mono font-bold text-emerald-400 text-sm">NEAR</span>
+                <div className="w-10 h-10 rounded-2xl bg-[#a8f0be]/40 border border-[#043224]/15 flex items-center justify-center">
+                  <span className="font-mono font-bold text-[#053b2a] text-sm">NEAR</span>
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Buy Slab with NEAR</h3>
-                  <p className="text-xs text-neutral-400 mt-0.5">
+                  <h3 className="text-base font-semibold text-neutral-900">Buy Slab with NEAR</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">
                     Live On-Chain Settlement via Meteor Wallet
                   </p>
                 </div>
@@ -448,7 +448,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                   if (!nearBuyLoading) setSelectedCardForNearBuy(null);
                 }}
                 disabled={nearBuyLoading}
-                className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center transition disabled:opacity-40"
+                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition disabled:opacity-40 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -458,31 +458,31 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
             {nearBuyResult ? (
               /* Success State */
               <div className="space-y-4 animate-in zoom-in-95 duration-200">
-                <div className="p-6 rounded-2xl bg-neutral-950 border border-emerald-500/40 text-emerald-400 text-xs space-y-3">
-                  <div className="flex items-center gap-2.5 font-semibold text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <div className="p-6 rounded-2xl bg-[#f8faf9] border border-emerald-500/30 text-emerald-800 text-xs space-y-3">
+                  <div className="flex items-center gap-2.5 font-semibold text-sm text-[#053b2a]">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     <span>Transaction Confirmed on NEAR Testnet!</span>
                   </div>
 
-                  <p className="text-neutral-300">
-                    You paid <span className="text-white font-mono font-semibold">{nearBuyResult.nearAmount} NEAR</span> for{" "}
-                    <span className="text-white font-semibold">{selectedCardForNearBuy.name}</span>. The physical slab is now assigned to your account.
+                  <p className="text-neutral-700">
+                    You paid <span className="text-neutral-900 font-mono font-semibold">{nearBuyResult.nearAmount} NEAR</span> for{" "}
+                    <span className="text-neutral-900 font-semibold">{selectedCardForNearBuy.name}</span>. The physical slab is now assigned to your account.
                   </p>
 
-                  <div className="p-3.5 rounded-2xl bg-[#0c0c0e] border border-neutral-900 font-mono text-[11px] text-neutral-400 space-y-1.5 mt-2">
-                    <div className="text-neutral-300 font-semibold flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <div className="p-3.5 rounded-2xl bg-white border border-neutral-200 font-mono text-[11px] text-neutral-600 space-y-1.5 mt-2">
+                    <div className="text-neutral-900 font-semibold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                       <span>On-Chain Provenance Record</span>
                     </div>
-                    <div>• Buyer Account: <span className="text-emerald-400">{connectedAccount}</span></div>
-                    <div>• Payment Settled: <span className="text-white">{nearBuyResult.nearAmount} NEAR</span></div>
-                    <div className="flex items-center gap-1.5 pt-1 border-t border-neutral-900">
+                    <div>• Buyer Account: <span className="text-[#053b2a] font-semibold">{connectedAccount}</span></div>
+                    <div>• Payment Settled: <span className="text-neutral-900 font-semibold">{nearBuyResult.nearAmount} NEAR</span></div>
+                    <div className="flex items-center gap-1.5 pt-1 border-t border-neutral-100">
                       <span>• Explorer TX:</span>
                       <a
                         href={nearBuyResult.explorerUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-cyan-400 hover:underline flex items-center gap-1 truncate"
+                        className="text-[#053b2a] hover:underline flex items-center gap-1 truncate font-medium"
                       >
                         <span className="truncate">{nearBuyResult.txHash}</span>
                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -496,7 +496,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                     setSelectedCardForNearBuy(null);
                     setNearBuyResult(null);
                   }}
-                  className="w-full py-3 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold transition active:scale-95 shadow-md"
+                  className="w-full py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition active:scale-95 shadow-md cursor-pointer"
                 >
                   Done & View in Inventory
                 </button>
@@ -505,29 +505,29 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
               /* Payment Preview & Confirmation */
               <div className="space-y-4">
                 {nearBuyError && (
-                  <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300">
+                  <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
                     {nearBuyError}
                   </div>
                 )}
 
                 {/* Card Slab Details */}
-                <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 flex items-center gap-3.5">
+                <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200 flex items-center gap-3.5">
                   <img
                     src={selectedCardForNearBuy.imageUrl}
                     alt=""
-                    className="w-16 h-20 object-contain rounded-xl bg-black p-1 border border-neutral-800"
+                    className="w-16 h-20 object-contain rounded-xl bg-white p-1 border border-neutral-200 shadow-sm"
                   />
                   <div className="truncate flex-1">
-                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-900 text-[10px] font-mono text-neutral-300 mb-1">
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-200/70 text-[10px] font-mono text-neutral-800 font-semibold mb-1">
                       <span>{selectedCardForNearBuy.grade || "PSA 10"}</span>
-                      <span className="text-neutral-600">•</span>
+                      <span className="text-neutral-400">•</span>
                       <span>{selectedCardForNearBuy.category || "TCG"}</span>
                     </div>
-                    <div className="text-xs font-semibold text-white truncate" title={selectedCardForNearBuy.name}>
+                    <div className="text-xs font-semibold text-neutral-900 truncate" title={selectedCardForNearBuy.name}>
                       {selectedCardForNearBuy.name}
                     </div>
                     <div className="flex items-baseline gap-2 mt-1 font-mono">
-                      <span className="text-base font-bold text-emerald-400">
+                      <span className="text-base font-bold text-[#053b2a]">
                         {usdToNear(selectedCardForNearBuy.insuredUsd || selectedCardForNearBuy.costUsd || 0)} NEAR
                       </span>
                       <span className="text-xs text-neutral-500">
@@ -538,37 +538,37 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                 </div>
 
                 {/* Breakdown */}
-                <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 text-xs space-y-2.5">
-                  <div className="flex items-center justify-between text-neutral-400">
+                <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200 text-xs space-y-2.5">
+                  <div className="flex items-center justify-between text-neutral-600">
                     <span className="flex items-center gap-1.5">
                       <Wallet className="w-3.5 h-3.5 text-neutral-400" />
                       Signer Account:
                     </span>
-                    <span className="font-mono text-white font-medium">
+                    <span className="font-mono text-neutral-900 font-medium">
                       {connectedAccount || "Not Connected"}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-neutral-400">
+                  <div className="flex items-center justify-between text-neutral-600">
                     <span>Live Wallet Balance:</span>
-                    <span className="font-mono text-emerald-400 font-semibold">
+                    <span className="font-mono text-[#053b2a] font-semibold">
                       {liveNearBalance} NEAR
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-neutral-400">
+                  <div className="flex items-center justify-between text-neutral-600">
                     <span>Protocol Treasury:</span>
-                    <span className="font-mono text-neutral-300">market.testnet</span>
+                    <span className="font-mono text-neutral-800">market.testnet</span>
                   </div>
 
-                  <div className="flex items-center justify-between text-neutral-400">
+                  <div className="flex items-center justify-between text-neutral-600">
                     <span>Testnet Exchange Rate:</span>
                     <span className="font-mono text-neutral-500">1 NEAR = $50 USD</span>
                   </div>
 
-                  <div className="pt-2 border-t border-neutral-900 flex items-center justify-between font-semibold">
-                    <span className="text-white">Amount to Pay:</span>
-                    <span className="text-base font-mono text-emerald-400">
+                  <div className="pt-2 border-t border-neutral-200 flex items-center justify-between font-semibold">
+                    <span className="text-neutral-900">Amount to Pay:</span>
+                    <span className="text-base font-mono text-[#053b2a]">
                       {usdToNear(selectedCardForNearBuy.insuredUsd || selectedCardForNearBuy.costUsd || 0)} NEAR
                     </span>
                   </div>
@@ -576,15 +576,15 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
 
                 {/* Status Indicator during wallet prompt */}
                 {nearBuyStep === "awaiting_wallet" && (
-                  <div className="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2.5 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2.5 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
                     <span>Please approve the transaction in your Meteor Wallet extension...</span>
                   </div>
                 )}
 
                 {nearBuyStep === "confirming" && (
-                  <div className="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 text-xs text-cyan-300 flex items-center gap-2.5 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                  <div className="p-3 rounded-2xl bg-[#a8f0be]/30 border border-[#043224]/20 text-xs text-[#053b2a] flex items-center gap-2.5 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#053b2a]" />
                     <span>Verifying transaction & minting slab ownership on NEAR...</span>
                   </div>
                 )}
@@ -595,7 +595,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                     type="button"
                     onClick={() => setSelectedCardForNearBuy(null)}
                     disabled={nearBuyLoading}
-                    className="px-4 py-2.5 rounded-full bg-neutral-900 hover:bg-neutral-800 text-xs font-medium text-neutral-300 transition disabled:opacity-40"
+                    className="px-4 py-2.5 rounded-full bg-white hover:bg-neutral-50 border border-neutral-300 text-xs font-medium text-neutral-700 transition disabled:opacity-40 cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -604,7 +604,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                     <button
                       type="button"
                       onClick={showWalletModal}
-                      className="px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold transition"
+                      className="px-6 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition cursor-pointer"
                     >
                       Connect Meteor Wallet
                     </button>
@@ -613,7 +613,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                       type="button"
                       onClick={handleBuyWithNear}
                       disabled={nearBuyLoading}
-                      className="px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold flex items-center gap-2 transition active:scale-95 disabled:opacity-50 shadow-md"
+                      className="px-6 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center gap-2 transition active:scale-95 disabled:opacity-50 shadow-md cursor-pointer"
                     >
                       {nearBuyLoading ? (
                         <>
@@ -638,21 +638,21 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
 
       {/* MODAL 1: DIRECT BUY */}
       {selectedCardForDirectBuy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-3xl animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md rounded-[32px] bg-[#0c0c0e] border border-white/[0.1] p-6 sm:p-8 shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-900 mb-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-[28px] bg-white border border-neutral-200 p-6 sm:p-8 shadow-2xl overflow-hidden text-neutral-900">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-5">
               <div>
-                <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-base font-semibold text-neutral-900 flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-[#053b2a]" />
                   Instant Purchase
                 </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">
+                <p className="text-xs text-neutral-500 mt-0.5">
                   Card transfers directly to your personal Meteor wallet
                 </p>
               </div>
               <button
                 onClick={() => setSelectedCardForDirectBuy(null)}
-                className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center transition"
+                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -660,27 +660,27 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
 
             {buyResult ? (
               <div className="space-y-4">
-                <div className="p-5 rounded-2xl bg-neutral-950 border border-emerald-500/30 text-emerald-400 text-xs space-y-2">
-                  <div className="flex items-center gap-2 font-semibold text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <div className="p-5 rounded-2xl bg-[#f8faf9] border border-emerald-500/30 text-emerald-800 text-xs space-y-2">
+                  <div className="flex items-center gap-2 font-semibold text-sm text-[#053b2a]">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     Slab Successfully Purchased!
                   </div>
-                  <p className="text-neutral-300">
-                    <span className="text-white font-semibold">{selectedCardForDirectBuy.name}</span> has been acquired and added to your wallet account.
+                  <p className="text-neutral-700">
+                    <span className="text-neutral-900 font-semibold">{selectedCardForDirectBuy.name}</span> has been acquired and added to your wallet account.
                   </p>
-                  <div className="p-3 rounded-2xl bg-[#0c0c0e] border border-neutral-900 font-mono text-[10px] text-neutral-400 space-y-1 mt-2">
-                    <div className="text-neutral-300 font-semibold flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <div className="p-3 rounded-2xl bg-white border border-neutral-200 font-mono text-[10px] text-neutral-600 space-y-1 mt-2">
+                    <div className="text-neutral-900 font-semibold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Brink's Sealed RWA Custody</span>
                     </div>
-                    <div>• PSA Cert: <span className="text-emerald-400">#{selectedCardForDirectBuy.grade}</span></div>
-                    <div className="truncate">• Transaction: <span className="text-white">{buyResult.tx_hash}</span></div>
+                    <div>• PSA Cert: <span className="text-[#053b2a] font-semibold">#{selectedCardForDirectBuy.grade}</span></div>
+                    <div className="truncate">• Transaction: <span className="text-neutral-900">{buyResult.tx_hash}</span></div>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setSelectedCardForDirectBuy(null)}
-                  className="w-full py-2.5 rounded-full bg-white text-black text-xs font-semibold transition"
+                  className="w-full py-2.5 rounded-full bg-[#073525] text-white text-xs font-semibold transition cursor-pointer"
                 >
                   Done
                 </button>
@@ -688,48 +688,48 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
             ) : (
               <div className="space-y-4">
                 {buyError && (
-                  <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300">
+                  <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
                     {buyError}
                   </div>
                 )}
 
                 {/* Card summary */}
-                <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 flex items-center gap-3">
+                <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200 flex items-center gap-3">
                   <img
                     src={selectedCardForDirectBuy.imageUrl}
                     alt=""
-                    className="w-14 h-18 object-contain rounded-xl bg-black p-1 border border-neutral-800"
+                    className="w-14 h-18 object-contain rounded-xl bg-white p-1 border border-neutral-200 shadow-sm"
                   />
                   <div className="truncate">
-                    <div className="text-xs font-semibold text-white truncate">{selectedCardForDirectBuy.name}</div>
+                    <div className="text-xs font-semibold text-neutral-900 truncate">{selectedCardForDirectBuy.name}</div>
                     <div className="text-xs text-neutral-500">{selectedCardForDirectBuy.grade} • PSA Certified</div>
-                    <div className="text-base font-bold text-emerald-400 font-mono mt-1">
+                    <div className="text-base font-bold text-[#053b2a] font-mono mt-1">
                       ${selectedCardForDirectBuy.insuredUsd || selectedCardForDirectBuy.costUsd} USDC
                     </div>
                   </div>
                 </div>
 
                 {/* Buyer Account */}
-                <div className="p-3 rounded-2xl bg-neutral-950 border border-neutral-900 flex items-center justify-between text-xs">
+                <div className="p-3 rounded-2xl bg-[#f8faf9] border border-neutral-200 flex items-center justify-between text-xs">
                   <span className="text-neutral-500 flex items-center gap-1.5">
                     <Wallet className="w-3.5 h-3.5 text-neutral-400" />
                     Recipient Account:
                   </span>
-                  <span className="font-mono font-semibold text-white">{connectedAccount}</span>
+                  <span className="font-mono font-semibold text-neutral-900">{connectedAccount}</span>
                 </div>
 
                 <div className="pt-2 flex items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setSelectedCardForDirectBuy(null)}
-                    className="px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 text-xs font-medium text-neutral-300 transition"
+                    className="px-4 py-2 rounded-full bg-white hover:bg-neutral-50 border border-neutral-300 text-xs font-medium text-neutral-700 transition cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDirectBuy}
                     disabled={buyLoading}
-                    className="px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold transition disabled:opacity-50"
+                    className="px-6 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition disabled:opacity-50 shadow-sm cursor-pointer"
                   >
                     {buyLoading ? "Processing..." : "Confirm & Pay"}
                   </button>
@@ -742,21 +742,21 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
 
       {/* MODAL 2: ASSIGN TO AGENT (SNIPE) */}
       {selectedCardForAgent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-3xl animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg rounded-[32px] bg-[#0c0c0e] border border-cyan-500/20 p-6 sm:p-8 shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-900 mb-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-[28px] bg-white border border-neutral-200 p-6 sm:p-8 shadow-2xl overflow-hidden text-neutral-900">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-5">
               <div>
-                <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-base font-semibold text-neutral-900 flex items-center gap-2">
+                  <Bot className="w-4 h-4 text-[#053b2a]" />
                   Assign Agent to Snipe
                 </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">
+                <p className="text-xs text-neutral-500 mt-0.5">
                   Your autonomous agent acquires this slab using its internal sub-account treasury
                 </p>
               </div>
               <button
                 onClick={() => setSelectedCardForAgent(null)}
-                className="w-8 h-8 rounded-full bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center transition"
+                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -764,28 +764,28 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
 
             {agentResult ? (
               <div className="space-y-4">
-                <div className="p-5 rounded-2xl bg-neutral-950 border border-cyan-500/30 text-cyan-400 text-xs space-y-2">
-                  <div className="flex items-center gap-2 font-semibold text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400" />
+                <div className="p-5 rounded-2xl bg-[#f8faf9] border border-emerald-500/30 text-emerald-800 text-xs space-y-2">
+                  <div className="flex items-center gap-2 font-semibold text-sm text-[#053b2a]">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     Agent Successfully Sniped Slab!
                   </div>
-                  <p className="text-neutral-300">
-                    <span className="text-white font-semibold">{selectedCardForAgent.name}</span> has been acquired and stored in your agent's sub-account vault.
+                  <p className="text-neutral-700">
+                    <span className="text-neutral-900 font-semibold">{selectedCardForAgent.name}</span> has been acquired and stored in your agent's sub-account vault.
                   </p>
-                  <div className="p-3.5 rounded-2xl bg-[#0c0c0e] border border-neutral-900 font-mono text-[10px] text-neutral-400 space-y-1.5 mt-2">
-                    <div className="text-neutral-300 font-semibold flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                  <div className="p-3.5 rounded-2xl bg-white border border-neutral-200 font-mono text-[10px] text-neutral-600 space-y-1.5 mt-2">
+                    <div className="text-neutral-900 font-semibold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                       <span>NEAR Chain Signatures (MPC) Holding Key</span>
                     </div>
-                    <div className="truncate">• Solana Holding Key: <span className="text-white">{agentResult.solana_holding_address || "SolVault7x9Q..."}</span></div>
-                    <div>• Custody: <span className="text-neutral-300">{agentResult.vault_custody || "Brink's Vaults"}</span></div>
-                    <div className="truncate">• Settlement TX: <span className="text-neutral-400">{agentResult.tx_hash}</span></div>
+                    <div className="truncate">• Solana Holding Key: <span className="text-neutral-900 font-semibold">{agentResult.solana_holding_address || "SolVault7x9Q..."}</span></div>
+                    <div>• Custody: <span className="text-neutral-700">{agentResult.vault_custody || "Brink's Vaults"}</span></div>
+                    <div className="truncate">• Settlement TX: <span className="text-neutral-500">{agentResult.tx_hash}</span></div>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setSelectedCardForAgent(null)}
-                  className="w-full py-2.5 rounded-full bg-white text-black text-xs font-semibold transition"
+                  className="w-full py-2.5 rounded-full bg-[#073525] text-white text-xs font-semibold transition cursor-pointer"
                 >
                   Done
                 </button>
@@ -793,22 +793,22 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
             ) : (
               <form onSubmit={handleAgentSnipe} className="space-y-4">
                 {agentError && (
-                  <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300">
+                  <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
                     {agentError}
                   </div>
                 )}
 
                 {/* Card preview */}
-                <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 flex items-center gap-3">
+                <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200 flex items-center gap-3">
                   <img
                     src={selectedCardForAgent.imageUrl}
                     alt=""
-                    className="w-14 h-18 object-contain rounded-xl bg-black p-1 border border-neutral-800"
+                    className="w-14 h-18 object-contain rounded-xl bg-white p-1 border border-neutral-200 shadow-sm"
                   />
                   <div className="truncate">
-                    <div className="text-xs font-semibold text-white truncate">{selectedCardForAgent.name}</div>
+                    <div className="text-xs font-semibold text-neutral-900 truncate">{selectedCardForAgent.name}</div>
                     <div className="text-xs text-neutral-500">{selectedCardForAgent.grade} • PSA Certified</div>
-                    <div className="text-base font-bold text-white font-mono mt-1">
+                    <div className="text-base font-bold text-[#053b2a] font-mono mt-1">
                       ${selectedCardForAgent.insuredUsd || selectedCardForAgent.costUsd} USDC
                     </div>
                   </div>
@@ -816,13 +816,13 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
 
                 {vaults.length > 0 ? (
                   <div>
-                    <label className="block text-xs font-medium text-neutral-300 mb-1.5">
+                    <label className="block text-xs font-medium text-neutral-700 mb-1.5">
                       Select Hunting Agent / Vault:
                     </label>
                     <select
                       value={targetVaultId}
                       onChange={(e) => setTargetVaultId(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs text-white focus:outline-none focus:border-cyan-500 font-sans"
+                      className="w-full px-4 py-2.5 rounded-2xl bg-white border border-neutral-200 text-xs text-neutral-900 focus:outline-none focus:border-[#073525] font-sans shadow-sm"
                     >
                       {vaults.map((v) => (
                         <option key={v.id} value={v.id}>
@@ -832,15 +832,15 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                     </select>
                   </div>
                 ) : (
-                  <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800 text-xs text-center space-y-2">
-                    <p className="text-neutral-400">You do not have any active trading agents yet.</p>
+                  <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200 text-xs text-center space-y-2">
+                    <p className="text-neutral-600">You do not have any active trading agents yet.</p>
                     <button
                       type="button"
                       onClick={() => {
                         setSelectedCardForAgent(null);
                         if (onOpenMint) onOpenMint();
                       }}
-                      className="px-4 py-2 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs transition"
+                      className="px-4 py-2 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white font-semibold text-xs transition cursor-pointer"
                     >
                       Mint New Agent
                     </button>
@@ -851,7 +851,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                   <button
                     type="button"
                     onClick={() => setSelectedCardForAgent(null)}
-                    className="px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 text-xs font-medium text-neutral-300 transition"
+                    className="px-4 py-2 rounded-full bg-white hover:bg-neutral-50 border border-neutral-300 text-xs font-medium text-neutral-700 transition cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -859,7 +859,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                     <button
                       type="submit"
                       disabled={agentLoading}
-                      className="px-6 py-2.5 rounded-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-semibold transition disabled:opacity-50"
+                      className="px-6 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition disabled:opacity-50 shadow-sm cursor-pointer"
                     >
                       {agentLoading ? "Sniping Slab..." : "Confirm Agent Snipe"}
                     </button>
