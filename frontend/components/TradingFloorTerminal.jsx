@@ -1,14 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Zap, 
   ArrowRightLeft, 
-  Clock
+  Clock,
+  Play,
+  Pause
 } from "lucide-react";
 
 export default function TradingFloorTerminal({ socketStatus, onTriggerCycle, isTriggering, liveEvents, tradeHistory }) {
   const [selectedTrade, setSelectedTrade] = useState(null);
+  const [isAutoRunning, setIsAutoRunning] = useState(false);
+
+  // Autonomous continuous trading loop (runs every 20s if enabled)
+  useEffect(() => {
+    if (!isAutoRunning) return;
+    const interval = setInterval(() => {
+      if (!isTriggering) {
+        onTriggerCycle();
+      }
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [isAutoRunning, isTriggering, onTriggerCycle]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -34,16 +48,39 @@ export default function TradingFloorTerminal({ socketStatus, onTriggerCycle, isT
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-neutral-200/80 text-[11px] text-neutral-600 font-medium">
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-neutral-200/80 text-[11px] text-neutral-600 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-[#053b2a]" />
               <span>WS: {socketStatus}</span>
             </div>
 
+            {/* Auto-Pilot Continuous Mode Toggle */}
+            <button
+              onClick={() => setIsAutoRunning(!isAutoRunning)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 border cursor-pointer ${
+                isAutoRunning
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-sm"
+                  : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50"
+              }`}
+              title="When enabled, agents negotiate and trade continuously every 20 seconds"
+            >
+              {isAutoRunning ? (
+                <>
+                  <Pause className="w-3 h-3 text-emerald-600 fill-emerald-600 animate-pulse" />
+                  <span>Auto-Pilot: ON</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3 h-3 text-neutral-500 fill-neutral-500" />
+                  <span>Auto-Pilot: OFF</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={onTriggerCycle}
               disabled={isTriggering}
-              className="px-4 py-1.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50 shadow-sm"
+              className="px-4 py-1.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
             >
               <Zap className={`w-3.5 h-3.5 ${isTriggering ? "animate-spin" : ""}`} />
               <span>{isTriggering ? "Negotiating..." : "Trigger Deal"}</span>

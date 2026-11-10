@@ -188,6 +188,126 @@ router.post("/buy-direct", async (req, res) => {
     }
 });
 
+// Assign a personal card to an AI Agent for autonomous trading & barter
+router.post("/assign-to-agent", async (req, res) => {
+    try {
+        const { card_id, target_vault_id } = req.body;
+        if (!card_id || !target_vault_id) {
+            return res.status(400).json({ error: "card_id and target_vault_id are required" });
+        }
+
+        const isNum = !isNaN(Number(card_id));
+        const card = await db.card.findOne({
+            where: isNum ? { id: Number(card_id) } : { card_id: String(card_id) }
+        });
+        if (!card) return res.status(404).json({ error: "Card not found" });
+
+        const targetVault = await db.vault.findByPk(target_vault_id);
+        if (!targetVault) return res.status(404).json({ error: "Agent vault not found" });
+
+        card.vault_id = targetVault.id;
+        card.owner_account = targetVault.sub_account;
+        card.is_locked = false;
+        await card.save();
+
+        req.app.get("io")?.emit("vault:updated", { vaultId: targetVault.id, action: "card_assigned" });
+
+        res.json({
+            status: "SUCCESS_ASSIGNED",
+            message: `Card '${card.name}' assigned to agent ${targetVault.name} for trading!`,
+            card,
+            vault: {
+                id: targetVault.id,
+                name: targetVault.name,
+                sub_account: targetVault.sub_account
+            }
+        });
+    } catch (err) {
+        console.error("Assign card error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Withdraw a card from an agent back to personal wallet
+router.post("/withdraw-from-agent", async (req, res) => {
+    try {
+        const { card_id, user_account } = req.body;
+        if (!card_id) return res.status(400).json({ error: "card_id is required" });
+
+        const isNum = !isNaN(Number(card_id));
+        const card = await db.card.findOne({
+            where: isNum ? { id: Number(card_id) } : { card_id: String(card_id) }
+        });
+        if (!card) return res.status(404).json({ error: "Card not found" });
+        if (card.is_locked) return res.status(400).json({ error: "Card is locked in active trade escrow" });
+
+        card.vault_id = null;
+        card.owner_account = user_account || "alierkan.testnet";
+        await card.save();
+
+        req.app.get("io")?.emit("vault:updated", { action: "card_withdrawn" });
+
+        res.json({
+            status: "SUCCESS_WITHDRAWN",
+            message: `Card '${card.name}' withdrawn to personal wallet (${card.owner_account}).`,
+            card
+        });
+    } catch (err) {
+        console.error("Withdraw card error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Instant liquidate a card for USDC cash (into Agent Treasury or Personal Balance)
+router.post("/liquidate-card", async (req, res) => {
+    try {
+        const { card_id } = req.body;
+        if (!card_id) return res.status(400).json({ error: "card_id is required" });
+
+        const isNum = !isNaN(Number(card_id));
+        const card = await db.card.findOne({
+            where: isNum ? { id: Number(card_id) } : { card_id: String(card_id) }
+        });
+        if (!card) return res.status(404).json({ error: "Card not found" });
+        if (card.is_locked) return res.status(400).json({ error: "Card is locked in active trade escrow" });
+
+        const cashPayout = Number(card.oracle_fair_value_usdc || 50);
+        let updatedVault = null;
+
+        if (card.vault_id) {
+            const vault = await db.vault.findByPk(card.vault_id);
+            if (vault) {
+                vault.usdc_balance = Number(vault.usdc_balance || 0) + cashPayout;
+                vault.total_trades += 1;
+                vault.realized_pnl_usdc = Number(vault.realized_pnl_usdc || 0) + 15;
+                await vault.save();
+                updatedVault = vault;
+            }
+        }
+
+        const cardTitle = card.name;
+        await card.destroy();
+
+        req.app.get("io")?.emit("vault:updated", { action: "card_liquidated" });
+        req.app.get("io")?.emit("trade:event", {
+            vaultA: updatedVault?.name || "Collector",
+            vaultB: "Collector Crypt Liquidity Pool",
+            cardTitle,
+            message: `Instant Liquidation: ${cardTitle} sold for $${cashPayout} USDC.`
+        });
+
+        res.json({
+            status: "SUCCESS_LIQUIDATED",
+            message: `Successfully liquidated '${cardTitle}' for $${cashPayout} USDC!`,
+            cash_payout_usdc: cashPayout,
+            vault: updatedVault
+        });
+    } catch (err) {
+        console.error("Liquidate card error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Protocol level metrics (AUM, Total Volume, Active Vaults)
 router.get("/stats", async (req, res) => {
     try {

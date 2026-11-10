@@ -20,38 +20,38 @@ export default function PortfolioPage() {
       <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-full border border-neutral-200/80 shadow-sm w-fit">
         <button
           onClick={() => setPortfolioTab("agents")}
-          className={`px-4 py-2 rounded-full text-xs font-medium transition flex items-center gap-2 cursor-pointer ${
+          className={`px-5 py-2.5 rounded-full text-xs font-medium transition flex items-center gap-2 cursor-pointer ${
             portfolioTab === "agents"
               ? "bg-[#073525] text-white font-semibold shadow-sm"
               : "text-neutral-600 hover:text-neutral-900"
           }`}
         >
           <Bot className="w-3.5 h-3.5" />
-          <span>My Agents ({vaults.length})</span>
+          <span>My AI Agents ({vaults.length})</span>
         </button>
 
         <button
           onClick={() => setPortfolioTab("slabs")}
-          className={`px-4 py-2 rounded-full text-xs font-medium transition flex items-center gap-2 cursor-pointer ${
+          className={`px-5 py-2.5 rounded-full text-xs font-medium transition flex items-center gap-2 cursor-pointer ${
             portfolioTab === "slabs"
               ? "bg-[#073525] text-white font-semibold shadow-sm"
               : "text-neutral-600 hover:text-neutral-900"
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
-          <span>Vaulted Slabs ({cards.length})</span>
+          <span>My Cards ({cards.length})</span>
         </button>
 
         <button
           onClick={() => setPortfolioTab("activity")}
-          className={`px-4 py-2 rounded-full text-xs font-medium transition flex items-center gap-2 cursor-pointer ${
+          className={`px-5 py-2.5 rounded-full text-xs font-medium transition flex items-center gap-2 cursor-pointer ${
             portfolioTab === "activity"
               ? "bg-[#073525] text-white font-semibold shadow-sm"
               : "text-neutral-600 hover:text-neutral-900"
           }`}
         >
           <Clock className="w-3.5 h-3.5" />
-          <span>Recent Activity & Purchases ({trades.length + cards.length})</span>
+          <span>Trade History ({trades.length})</span>
         </button>
       </div>
 

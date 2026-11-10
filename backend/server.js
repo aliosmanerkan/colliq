@@ -61,6 +61,7 @@ const io = new Server(httpServer, {
     }
 });
 
+app.set("io", io);
 a2aSwarm.setSocket(io);
 negotiationEngine.setSocket(io);
 agentChatService.setSocket(io);

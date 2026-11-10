@@ -211,6 +211,23 @@ export const AGENT_TOOLS_SCHEMA = [
             }
         }
     },
+    {
+        type: "function",
+        function: {
+            name: "trade_liquidate_card",
+            description: "Sell or liquidate a specific card held in the agent's portfolio for instant USDC cash into the treasury at fair oracle value.",
+            parameters: {
+                type: "object",
+                properties: {
+                    card_name_or_id: {
+                        type: "string",
+                        description: "Name or card_id of the card in this vault's portfolio to liquidate for cash"
+                    }
+                },
+                required: ["card_name_or_id"]
+            }
+        }
+    },
 
     // -------------------------------------------------------------
     // LAYER 4: TELEMETRY & ACCOUNTING
@@ -642,6 +659,57 @@ export async function executeAgentTool(vault, toolName, args = {}) {
                 cash_sweetener_usdc: cash,
                 negotiation_state: "PENDING_COUNTERPART_REVIEW",
                 summary: `A2A Barter proposal transmitted to @${target_vault_subaccount} with $${cash} USDC cash sweetener.`
+            };
+        }
+
+        // 8b. LIQUIDATE CARD FOR CASH
+        case "trade_liquidate_card": {
+            const { card_name_or_id } = args;
+            const fullVault = await db.vault.findOne({
+                where: { id: vault.id },
+                include: [{ model: db.card, as: "inventory" }]
+            });
+
+            const q = (card_name_or_id || "").toLowerCase();
+            const card = fullVault?.inventory?.find(c => 
+                c.card_id === card_name_or_id || 
+                String(c.id) === String(card_name_or_id) ||
+                c.name.toLowerCase().includes(q)
+            );
+
+            if (!card) {
+                return {
+                    status: "NOT_FOUND",
+                    error: `No card matching '${card_name_or_id}' found in this agent's active portfolio.`
+                };
+            }
+
+            // Check Anti-Liquidation Mutex
+            let existingRules = [];
+            try { existingRules = JSON.parse(vault.custom_rules || "[]"); } catch {}
+            const isProtected = existingRules.some(r => r.includes(card.name) && r.includes("Protected Grail"));
+            if (isProtected) {
+                return {
+                    status: "PROTECTED_GRAIL_MUTEX",
+                    error: `Action Blocked: '${card.name}' is designated as a Protected Grail under Anti-Liquidation Mutex. Remove protection directive before selling.`
+                };
+            }
+
+            const payout = Number(card.oracle_fair_value_usdc || 50);
+            const cardName = card.name;
+            await card.destroy();
+
+            vault.usdc_balance = Number(vault.usdc_balance || 0) + payout;
+            vault.total_trades += 1;
+            vault.realized_pnl_usdc = Number(vault.realized_pnl_usdc || 0) + 15;
+            await vault.save();
+
+            return {
+                status: "LIQUIDATED_TO_CASH",
+                card_sold: cardName,
+                payout_received_usdc: payout,
+                new_usdc_treasury: vault.usdc_balance,
+                summary: `Successfully liquidated '${cardName}' for $${payout} USDC cash. Treasury updated to $${vault.usdc_balance} USDC.`
             };
         }
 

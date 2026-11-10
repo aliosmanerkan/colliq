@@ -225,7 +225,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
             </span>
             <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5" />
-              Brink's & PSA Vaulted Physical Slabs (RWA)
+              Brink's & PSA Vaulted Physical Cards (RWA)
             </span>
           </div>
 
@@ -233,14 +233,14 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
             Collector Crypt Pokémon & TCG Marketplace
           </h2>
           <p className="text-sm text-neutral-600 max-w-2xl leading-relaxed font-poppins">
-            Purchase physical slabs directly to your wallet or assign an <strong className="text-[#053b2a] font-semibold">Autonomous Trading Agent (NEAR Sub-Account)</strong> to snipe them automatically according to your custom rules.
+            Purchase physical cards directly to your wallet or assign an <strong className="text-[#053b2a] font-semibold">Autonomous Trading Agent</strong> to trade them automatically according to your custom rules.
           </p>
         </div>
 
         <div className="p-5 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 shrink-0 text-left md:text-right">
           <div className="text-xs uppercase text-neutral-400 font-medium tracking-wider">Available Inventory</div>
           <div className="text-3xl font-semibold text-neutral-900 mt-1 font-mono">{cards.length}</div>
-          <div className="text-xs text-[#053b2a] mt-0.5 font-medium">PSA 10 / GEM-MT Slabs</div>
+          <div className="text-xs text-[#053b2a] mt-0.5 font-medium">PSA 10 / GEM-MT Graded Cards</div>
         </div>
       </div>
 
@@ -258,7 +258,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                   : "bg-white text-neutral-700 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-300"
               }`}
             >
-              {cat === "ALL" ? "All Slabs" : cat}
+              {cat === "ALL" ? "All Cards" : cat}
             </button>
           ))}
         </div>
@@ -412,13 +412,13 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
         {cards.length > visibleCount && (
           <div className="pt-10 pb-4 flex flex-col items-center justify-center gap-3">
             <div className="text-xs text-neutral-500 font-mono">
-              Showing {Math.min(visibleCount, cards.length)} of {cards.length.toLocaleString()} Physical Slabs
+              Showing {Math.min(visibleCount, cards.length)} of {cards.length.toLocaleString()} Physical Cards
             </div>
             <button
               onClick={() => setVisibleCount((prev) => prev + 48)}
               className="px-8 py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold shadow-md transition active:scale-95 cursor-pointer"
             >
-              Load More Slabs (+48)
+              Load More Cards (+48)
             </button>
           </div>
         )}
@@ -437,7 +437,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                   <span className="font-mono font-bold text-[#053b2a] text-sm">NEAR</span>
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-neutral-900">Buy Slab with NEAR</h3>
+                  <h3 className="text-base font-semibold text-neutral-900">Buy Card with NEAR</h3>
                   <p className="text-xs text-neutral-500 mt-0.5">
                     Live On-Chain Settlement via Meteor Wallet
                   </p>
@@ -663,7 +663,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                 <div className="p-5 rounded-2xl bg-[#f8faf9] border border-emerald-500/30 text-emerald-800 text-xs space-y-2">
                   <div className="flex items-center gap-2 font-semibold text-sm text-[#053b2a]">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    Slab Successfully Purchased!
+                    Card Successfully Purchased!
                   </div>
                   <p className="text-neutral-700">
                     <span className="text-neutral-900 font-semibold">{selectedCardForDirectBuy.name}</span> has been acquired and added to your wallet account.
@@ -767,7 +767,7 @@ export default function CollectorCryptCatalog({ vaults, onCardBridged, onOpenMin
                 <div className="p-5 rounded-2xl bg-[#f8faf9] border border-emerald-500/30 text-emerald-800 text-xs space-y-2">
                   <div className="flex items-center gap-2 font-semibold text-sm text-[#053b2a]">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    Agent Successfully Sniped Slab!
+                    Agent Successfully Sniped Card!
                   </div>
                   <p className="text-neutral-700">
                     <span className="text-neutral-900 font-semibold">{selectedCardForAgent.name}</span> has been acquired and stored in your agent's sub-account vault.

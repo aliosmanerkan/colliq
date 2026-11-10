@@ -441,9 +441,9 @@ export default function AgentChatModal({ vault, isOpen, onClose, onRulesUpdated 
                   <div className="pt-2 border-t border-neutral-100">
                     <div className="flex items-center justify-between">
                       <span className="text-neutral-700 font-medium">Cards Owned</span>
-                      <span className="font-mono font-semibold text-neutral-900">{vault.inventoryCount || 0} Slabs</span>
+                      <span className="font-mono font-semibold text-neutral-900">{vault.inventoryCount || 0} Cards</span>
                     </div>
-                    <p className="text-[10px] text-neutral-400 mt-0.5">Physical PSA slabs securely held in vault</p>
+                    <p className="text-[10px] text-neutral-400 mt-0.5">Physical PSA cards securely held by agent</p>
                   </div>
                 </div>
               </div>

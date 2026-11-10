@@ -80,7 +80,7 @@ export default function MarketplaceHero() {
         <div className="p-6 sm:p-7 rounded-[24px] bg-white border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between">
           <div className="text-xs uppercase text-neutral-400 font-medium tracking-wider">Brink's Physical Vault</div>
           <div className="text-2xl sm:text-3xl font-semibold text-neutral-900 font-mono mt-3">
-            {stats ? stats.total_cards : "..."} <span className="text-xs text-neutral-400 font-normal">Slabs</span>
+            {stats ? stats.total_cards : "..."} <span className="text-xs text-neutral-400 font-normal">Cards</span>
           </div>
           <div className="text-xs text-neutral-500 mt-2">
             Sealed PSA 10/9 RWA Certifications

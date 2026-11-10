@@ -67,9 +67,9 @@ export default function VaultDetailModal({ vault, isOpen, onClose, onOpenChat })
               <div 
                 onClick={handleCopySubAccount}
                 className="inline-flex items-center gap-1.5 text-xs text-neutral-600 cursor-pointer hover:text-neutral-900 transition select-none"
-                title="Agent Autonomous Execution Sub-Account (NEAR Track 10)"
+                title="Agent Autonomous Execution Account"
               >
-                <span className="text-[#053b2a] font-semibold text-[11px] uppercase">Sub-Acc:</span>
+                <span className="text-[#053b2a] font-semibold text-[11px] uppercase">Agent Wallet:</span>
                 <span className="font-mono text-neutral-800">{vault.sub_account}</span>
                 {copied ? <Check className="w-3.5 h-3.5 text-[#053b2a]" /> : <Copy className="w-3.5 h-3.5 text-neutral-400" />}
               </div>
@@ -98,7 +98,7 @@ export default function VaultDetailModal({ vault, isOpen, onClose, onOpenChat })
           <div className="flex flex-col items-center">
             <div className="text-xs text-neutral-500 uppercase font-medium mb-3 flex items-center gap-2">
               <Sparkles className="w-3.5 h-3.5 text-[#053b2a]" />
-              <span>On-Chain Dynamic SVG (NEP-171 / 177)</span>
+              <span>Living On-Chain NFT Card</span>
             </div>
 
             <div className="relative w-full aspect-[450/640] max-w-[320px] rounded-[24px] overflow-hidden border border-neutral-200 shadow-md bg-[#f8faf9] p-1 group">
@@ -123,14 +123,14 @@ export default function VaultDetailModal({ vault, isOpen, onClose, onOpenChat })
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 shadow-sm">
-                <div className="text-xs text-neutral-500 font-medium">USDC Reserves</div>
+                <div className="text-xs text-neutral-500 font-medium">USDC Cash</div>
                 <div className="text-xl font-semibold text-neutral-900 font-mono mt-1">
                   ${Number(vault.usdc_balance || 0).toLocaleString()} <span className="text-xs text-neutral-500 font-normal">USDC</span>
                 </div>
               </div>
 
               <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 shadow-sm">
-                <div className="text-xs text-neutral-500 font-medium">All-Time Return</div>
+                <div className="text-xs text-neutral-500 font-medium">Trading Return</div>
                 <div className="text-xl font-semibold text-[#053b2a] font-mono mt-1 flex items-center gap-1">
                   +{(vault.pnl_percentage || 0).toFixed(1)}%
                 </div>
@@ -142,7 +142,7 @@ export default function VaultDetailModal({ vault, isOpen, onClose, onOpenChat })
               <div className="text-neutral-900 font-semibold flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-[#053b2a]" />
-                  <span>Safety Controls & Rules</span>
+                  <span>Trading Rules & Limits</span>
                 </div>
                 <span className="text-[10px] text-neutral-500 font-mono">Enforced by Smart Contract</span>
               </div>
@@ -164,7 +164,7 @@ export default function VaultDetailModal({ vault, isOpen, onClose, onOpenChat })
             {/* Inventory */}
             <div>
               <div className="text-xs text-neutral-500 uppercase font-medium mb-2.5 flex items-center justify-between">
-                <span>Enclosed Slabs ({vault.inventory?.length || 0})</span>
+                <span>Cards in Agent Portfolio ({vault.inventory?.length || 0})</span>
                 <span className="text-neutral-900 font-mono font-medium">
                   ${vault.inventory?.reduce((acc, c) => acc + (c.oracle_fair_value_usdc || 0), 0).toLocaleString()} Value
                 </span>
