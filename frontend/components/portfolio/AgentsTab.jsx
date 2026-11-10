@@ -8,26 +8,21 @@ import { useApp } from "@/context/AppContext";
 export default function AgentsTab() {
   const { vaults, connectedAccount, openMint, openInspect, openTransfer, openChat } = useApp();
 
-  const [agentScope, setAgentScope] = useState("my"); // "my" | "all"
+  const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
   const [vaultSearch, setVaultSearch] = useState("");
-  const [tierFilter, setTierFilter] = useState("ALL");
   const [vaultSort, setVaultSort] = useState("pnl_desc");
 
   const filteredVaults = useMemo(() => {
     return vaults
       .filter((v) => {
-        if (agentScope === "my" && connectedAccount) {
-          const owner = (v.owner_account || "").toLowerCase();
-          const conn = connectedAccount.toLowerCase();
-          if (owner !== conn) return false;
-        }
+        const owner = (v.owner_account || "").toLowerCase();
+        if (owner !== userAccount) return false;
 
         const matchesSearch =
           v.name.toLowerCase().includes(vaultSearch.toLowerCase()) ||
           v.sub_account.toLowerCase().includes(vaultSearch.toLowerCase());
 
-        const matchesTier = tierFilter === "ALL" || v.tier === tierFilter;
-        return matchesSearch && matchesTier;
+        return matchesSearch;
       })
       .sort((a, b) => {
         if (vaultSort === "pnl_desc") return (b.pnl_percentage || 0) - (a.pnl_percentage || 0);
@@ -35,42 +30,18 @@ export default function AgentsTab() {
         if (vaultSort === "trades_desc") return (b.total_trades || 0) - (a.total_trades || 0);
         return 0;
       });
-  }, [vaults, agentScope, connectedAccount, vaultSearch, tierFilter, vaultSort]);
+  }, [vaults, userAccount, vaultSearch, vaultSort]);
 
   return (
     <div className="space-y-6">
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
         <div className="text-sm font-medium text-neutral-600">
-          Active Trading Agents ({filteredVaults.length})
+          My Active Trading Agents ({filteredVaults.length})
         </div>
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Scope Switcher: My Agents vs All Protocol */}
-          <div className="flex items-center gap-1 bg-white p-1 rounded-full border border-neutral-200/80 shadow-sm">
-            <button
-              onClick={() => setAgentScope("my")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
-                agentScope === "my"
-                  ? "bg-[#073525] text-white font-semibold shadow-sm"
-                  : "text-neutral-600 hover:text-neutral-900"
-              }`}
-            >
-              My Agents
-            </button>
-            <button
-              onClick={() => setAgentScope("all")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
-                agentScope === "all"
-                  ? "bg-[#073525] text-white font-semibold shadow-sm"
-                  : "text-neutral-600 hover:text-neutral-900"
-              }`}
-            >
-              All Agents
-            </button>
-          </div>
-
           <div className="relative">
             <input
               type="text"
@@ -98,9 +69,7 @@ export default function AgentsTab() {
       {filteredVaults.length === 0 ? (
         <div className="py-24 text-center text-xs text-neutral-600 bg-white rounded-[28px] border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-4">
           <p>
-            {agentScope === "my" && connectedAccount 
-              ? `No active trading agents found under ${connectedAccount}.`
-              : "No active trading agents found in this view."}
+            No active trading agents found under {userAccount}.
           </p>
           <button
             onClick={openMint}

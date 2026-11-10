@@ -86,7 +86,7 @@ export default function PortfolioHero() {
             <Layers className="w-4 h-4 text-[#053b2a]" />
           </div>
           <div className="text-2xl sm:text-3xl font-bold font-mono text-neutral-900 pt-1">
-            {cards.length}{" "}
+            {userCards.length}{" "}
             <span className="text-xs font-normal text-neutral-500 font-sans">Cards</span>
           </div>
           <div className="text-[11px] text-neutral-500 pt-1">
