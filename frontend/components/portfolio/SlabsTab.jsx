@@ -1,16 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Flame, Bot, DollarSign, ArrowRightLeft, Wallet, Check, AlertCircle, X, Calendar, Clock } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import api from "@/lib/api";
 
 export default function SlabsTab() {
-  const { cards, vaults, trades, loadData, openChat } = useApp();
+  const { cards, vaults, trades, connectedAccount, loadData, openChat } = useApp();
+  const [cardScope, setCardScope] = useState("my"); // "my" | "all"
   const [selectedCardForAssign, setSelectedCardForAssign] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [notification, setNotification] = useState(null);
+
+  const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
+  const userVaultIds = useMemo(() => {
+    return vaults
+      .filter((v) => (v.owner_account || "").toLowerCase() === userAccount)
+      .map((v) => v.id);
+  }, [vaults, userAccount]);
+
+  const displayedCards = useMemo(() => {
+    if (cardScope === "all") return cards;
+    return cards.filter((c) => {
+      if (c.vault_id && userVaultIds.includes(c.vault_id)) return true;
+      if ((c.owner_account || "").toLowerCase() === userAccount) return true;
+      return false;
+    });
+  }, [cards, cardScope, userVaultIds, userAccount]);
 
   const formatFullDate = (dateString) => {
     if (!dateString) return "Nov 10, 2026 • 15:29";
@@ -127,19 +144,50 @@ export default function SlabsTab() {
         </div>
       )}
 
-      {/* Header Bar */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-medium text-neutral-600">
-          My Card Collection ({cards.length})
+      {/* Header Bar with Scope Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
+        <div className="flex items-center gap-3">
+          <div className="text-sm font-semibold text-neutral-800">
+            {cardScope === "my" ? `My Card Collection (${displayedCards.length})` : `All Network Cards (${cards.length})`}
+          </div>
+
+          {/* Scope Switcher: My Cards vs All Protocol Cards */}
+          <div className="flex items-center gap-1 bg-white p-1 rounded-full border border-neutral-200/80 shadow-sm">
+            <button
+              onClick={() => setCardScope("my")}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
+                cardScope === "my"
+                  ? "bg-[#073525] text-white font-semibold shadow-sm"
+                  : "text-neutral-600 hover:text-neutral-900"
+              }`}
+            >
+              My Cards
+            </button>
+            <button
+              onClick={() => setCardScope("all")}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
+                cardScope === "all"
+                  ? "bg-[#073525] text-white font-semibold shadow-sm"
+                  : "text-neutral-600 hover:text-neutral-900"
+              }`}
+            >
+              All Network Cards
+            </button>
+          </div>
         </div>
+
         <span className="text-xs font-mono text-[#053b2a] font-semibold">
-          Total Valuation: ${cards.reduce((sum, c) => sum + (c.oracle_fair_value_usdc || 0), 0).toLocaleString()} USDC
+          Total Valuation: ${displayedCards.reduce((sum, c) => sum + (c.oracle_fair_value_usdc || 0), 0).toLocaleString()} USDC
         </span>
       </div>
 
-      {cards.length === 0 ? (
+      {displayedCards.length === 0 ? (
         <div className="py-24 text-center text-xs text-neutral-600 bg-white rounded-[28px] border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-4">
-          <p>No cards in your collection yet.</p>
+          <p>
+            {cardScope === "my" 
+              ? `No cards currently held under your account (${userAccount}).` 
+              : "No cards in the network yet."}
+          </p>
           <Link
             href="/marketplace"
             className="inline-block px-6 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition shadow-md"
@@ -149,7 +197,7 @@ export default function SlabsTab() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {cards.map((card) => {
+          {displayedCards.map((card) => {
             const cardKey = card.id || card.card_id;
             const isPersonal = !card.vault_id;
             const holdingVault = vaults.find((v) => v.id === card.vault_id);

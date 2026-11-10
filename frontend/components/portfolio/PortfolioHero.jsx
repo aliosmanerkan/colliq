@@ -4,13 +4,20 @@ import { Bot, Plus, Wallet, Layers, TrendingUp } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
 export default function PortfolioHero() {
-  const { openMint, vaults, cards } = useApp();
+  const { openMint, vaults, cards, connectedAccount } = useApp();
 
-  // Aggregate portfolio financial metrics
-  const totalCash = vaults.reduce((sum, v) => sum + Number(v.usdc_balance || 0), 0);
-  const totalCardsValue = cards.reduce((sum, c) => sum + Number(c.oracle_fair_value_usdc || 0), 0);
+  const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
+  const userVaults = vaults.filter((v) => (v.owner_account || "").toLowerCase() === userAccount);
+  const userVaultIds = userVaults.map((v) => v.id);
+  const userCards = cards.filter(
+    (c) => (c.vault_id && userVaultIds.includes(c.vault_id)) || (c.owner_account || "").toLowerCase() === userAccount
+  );
+
+  // Financial metrics for user's portfolio
+  const totalCash = userVaults.reduce((sum, v) => sum + Number(v.usdc_balance || 0), 0);
+  const totalCardsValue = userCards.reduce((sum, c) => sum + Number(c.oracle_fair_value_usdc || 0), 0);
   const totalAum = totalCash + totalCardsValue;
-  const activeAgentsCount = vaults.filter((v) => !v.is_locked).length;
+  const activeAgentsCount = userVaults.filter((v) => !v.is_locked).length;
 
   return (
     <div className="space-y-6">

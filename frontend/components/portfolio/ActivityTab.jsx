@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   ArrowRightLeft, 
   CheckCircle2, 
@@ -14,8 +14,26 @@ import {
 import { useApp } from "@/context/AppContext";
 
 export default function ActivityTab() {
-  const { trades, cards } = useApp();
+  const { trades, cards, vaults, connectedAccount } = useApp();
+  const [activityScope, setActivityScope] = useState("my"); // "my" | "all"
   const [expandedTradeId, setExpandedTradeId] = useState(null);
+
+  const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
+  const userVaultIds = useMemo(() => {
+    return vaults
+      .filter((v) => (v.owner_account || "").toLowerCase() === userAccount)
+      .map((v) => v.id);
+  }, [vaults, userAccount]);
+
+  const displayedTrades = useMemo(() => {
+    if (activityScope === "all") return trades;
+    return trades.filter((t) => userVaultIds.includes(t.vault_a_id) || userVaultIds.includes(t.vault_b_id));
+  }, [trades, activityScope, userVaultIds]);
+
+  const displayedCards = useMemo(() => {
+    if (activityScope === "all") return cards;
+    return cards.filter((c) => (c.vault_id && userVaultIds.includes(c.vault_id)) || (c.owner_account || "").toLowerCase() === userAccount);
+  }, [cards, activityScope, userVaultIds, userAccount]);
 
   const formatFullDate = (dateString) => {
     if (!dateString) return "Nov 10, 2026 • 15:29";
@@ -32,18 +50,47 @@ export default function ActivityTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
-        <div className="text-sm font-semibold text-neutral-800">
-          All On-Chain Trades & Card Acquisitions
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-neutral-100">
+        <div className="flex items-center gap-3">
+          <div className="text-sm font-semibold text-neutral-800">
+            {activityScope === "my" ? "My Agent Deals & Card Acquisitions" : "All Network Activity & Deals"}
+          </div>
+
+          {/* Scope Switcher: My Activity vs All Network */}
+          <div className="flex items-center gap-1 bg-white p-1 rounded-full border border-neutral-200/80 shadow-sm">
+            <button
+              onClick={() => setActivityScope("my")}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
+                activityScope === "my"
+                  ? "bg-[#073525] text-white font-semibold shadow-sm"
+                  : "text-neutral-600 hover:text-neutral-900"
+              }`}
+            >
+              My Activity
+            </button>
+            <button
+              onClick={() => setActivityScope("all")}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
+                activityScope === "all"
+                  ? "bg-[#073525] text-white font-semibold shadow-sm"
+                  : "text-neutral-600 hover:text-neutral-900"
+              }`}
+            >
+              All Network
+            </button>
+          </div>
         </div>
+
         <span className="text-xs font-mono text-neutral-500">
-          {trades.length} Trades • {cards.length} Cards Held
+          {displayedTrades.length} Deals • {displayedCards.length} Cards Held
         </span>
       </div>
 
-      {trades.length === 0 && cards.length === 0 ? (
+      {displayedTrades.length === 0 && displayedCards.length === 0 ? (
         <div className="py-24 text-center text-xs text-neutral-600 bg-white rounded-[28px] border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)]">
-          No activity recorded yet.
+          {activityScope === "my"
+            ? `No activity recorded yet for your account (${userAccount}).`
+            : "No activity recorded in the network yet."}
         </div>
       ) : (
         <div className="space-y-4">
@@ -51,10 +98,17 @@ export default function ActivityTab() {
           <div className="space-y-3">
             <div className="text-xs font-semibold text-[#053b2a] uppercase tracking-wider flex items-center gap-1.5">
               <ArrowRightLeft className="w-3.5 h-3.5" />
-              <span>Settled A2A Barter Deals ({trades.length})</span>
+              <span>
+                {activityScope === "my" ? `My Agent Barter Deals (${displayedTrades.length})` : `All Settled Barter Deals (${trades.length})`}
+              </span>
             </div>
 
-            {trades.map((trade) => {
+            {displayedTrades.length === 0 ? (
+              <div className="py-8 text-center text-xs text-neutral-500 bg-[#f8faf9] rounded-2xl border border-neutral-200">
+                No trades settled yet by your agents.
+              </div>
+            ) : (
+              displayedTrades.map((trade) => {
               const tradeKey = trade.id || trade.trade_id;
               const isExpanded = expandedTradeId === tradeKey;
               const cardA = trade.cards_from_a?.[0]?.name || "Card";
@@ -202,17 +256,21 @@ export default function ActivityTab() {
                   )}
                 </div>
               );
-            })}
+            }))}
           </div>
 
           {/* Section 2: Recently Acquired Cards */}
           <div className="space-y-3 pt-4">
             <div className="text-xs font-semibold text-[#053b2a] uppercase tracking-wider flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Card Collection Inception & Acquisitions ({cards.length})</span>
+              <span>
+                {activityScope === "my"
+                  ? `My Card Acquisitions (${displayedCards.length})`
+                  : `All Network Card Inceptions (${cards.length})`}
+              </span>
             </div>
 
-            {cards.map((card) => (
+            {displayedCards.map((card) => (
               <div
                 key={`acq-${card.id || card.card_id}`}
                 className="p-4 sm:p-5 rounded-[24px] bg-white border border-neutral-200/80 hover:border-[#a8f0be] shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
