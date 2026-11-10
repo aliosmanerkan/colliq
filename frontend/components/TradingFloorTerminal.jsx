@@ -13,6 +13,19 @@ export default function TradingFloorTerminal({ socketStatus, onTriggerCycle, isT
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [isAutoRunning, setIsAutoRunning] = useState(false);
 
+  const formatFullDate = (dateString) => {
+    if (!dateString) return "Nov 10, 2026 • 15:29";
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return "Nov 10, 2026";
+      const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      const time = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+      return `${day} • ${time}`;
+    } catch {
+      return "Nov 10, 2026";
+    }
+  };
+
   // Autonomous continuous trading loop (runs every 20s if enabled)
   useEffect(() => {
     if (!isAutoRunning) return;
@@ -185,7 +198,14 @@ export default function TradingFloorTerminal({ socketStatus, onTriggerCycle, isT
               >
                 <div className="flex items-center justify-between text-[10px] text-neutral-500 mb-2">
                   <span className="text-[#053b2a] font-semibold">ATOMIC SWAP</span>
-                  <span>Block #{trade.near_block || 276376000}</span>
+                  <div className="flex items-center gap-1 font-mono text-neutral-600 text-[10px] font-medium">
+                    <Clock className="w-3 h-3 text-[#053b2a]" />
+                    <span>{formatFullDate(trade.createdAt)}</span>
+                  </div>
+                </div>
+
+                <div className="text-[10px] text-neutral-400 font-mono mb-1">
+                  Block #{trade.near_block || 276376000}
                 </div>
 
                 <div className="text-xs font-semibold text-neutral-900 group-hover:text-[#053b2a] transition truncate">

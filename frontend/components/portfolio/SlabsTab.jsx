@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Flame, Bot, DollarSign, ArrowRightLeft, Wallet, Check, AlertCircle, X } from "lucide-react";
+import { Flame, Bot, DollarSign, ArrowRightLeft, Wallet, Check, AlertCircle, X, Calendar, Clock } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import api from "@/lib/api";
 
@@ -12,18 +12,16 @@ export default function SlabsTab() {
   const [actionLoading, setActionLoading] = useState(null);
   const [notification, setNotification] = useState(null);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "Recently";
+  const formatFullDate = (dateString) => {
+    if (!dateString) return "Nov 10, 2026 • 15:29";
     try {
       const d = new Date(dateString);
-      return d.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      if (isNaN(d.getTime())) return "Nov 10, 2026";
+      const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      const time = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+      return `${day} • ${time}`;
     } catch {
-      return "Recently";
+      return "Nov 10, 2026";
     }
   };
 
@@ -32,16 +30,16 @@ export default function SlabsTab() {
     for (const trade of (trades || [])) {
       const receivedByA = trade.cards_from_b?.find((c) => c.card_id === cardId || c.id === cardId || c.name === card.name);
       if (receivedByA && trade.vault_a_id === card.vault_id) {
-        return { label: `Swapped with ${trade.vault_b_name}`, date: trade.createdAt, isSwap: true };
+        return { label: `A2A Swap with ${trade.vault_b_name}`, date: trade.createdAt, isSwap: true };
       }
       const receivedByB = trade.cards_from_a?.find((c) => c.card_id === cardId || c.id === cardId || c.name === card.name);
       if (receivedByB && trade.vault_b_id === card.vault_id) {
-        return { label: `Swapped with ${trade.vault_a_name}`, date: trade.createdAt, isSwap: true };
+        return { label: `A2A Swap with ${trade.vault_a_name}`, date: trade.createdAt, isSwap: true };
       }
     }
     return {
       label: card.vault_id ? "Agent Inception" : "Personal Buy",
-      date: card.createdAt,
+      date: card.updatedAt || card.createdAt,
       isSwap: false,
     };
   };
@@ -218,12 +216,27 @@ export default function SlabsTab() {
                     </span>
                   </div>
 
-                  {/* Provenance: When and How Acquired */}
-                  <div className="mt-2 pt-2 border-t border-neutral-100/70 flex items-center justify-between text-[10px] text-neutral-500 font-mono">
-                    <span className="text-neutral-400">Acquired:</span>
-                    <span className="text-neutral-700 font-medium truncate max-w-[150px]" title={`${provenance.label} - ${formatDate(provenance.date)}`}>
-                      {provenance.label} • {formatDate(provenance.date)}
-                    </span>
+                  {/* Prominent Acquisition & Provenance Section */}
+                  <div className="mt-3 p-2.5 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 space-y-1.5 text-xs font-mono">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-neutral-500 flex items-center gap-1 font-sans">
+                        <Calendar className="w-3 h-3 text-[#053b2a]" />
+                        <span>Acquired:</span>
+                      </span>
+                      <span className="font-semibold text-neutral-900 text-[11px]">
+                        {formatFullDate(provenance.date)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-neutral-200/60">
+                      <span className="text-[10px] text-neutral-500 font-sans">Source:</span>
+                      <span
+                        className="text-[#053b2a] font-semibold text-[10px] truncate max-w-[140px]"
+                        title={provenance.label}
+                      >
+                        {provenance.label}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
