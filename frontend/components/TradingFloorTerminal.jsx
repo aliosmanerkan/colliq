@@ -213,7 +213,7 @@ export default function TradingFloorTerminal({ socketStatus, onTriggerCycle, isT
                 </div>
 
                 <div className="mt-2.5 pt-2 border-t border-neutral-200/60 flex items-center justify-between text-xs font-mono">
-                  <span className="text-neutral-500">{trade.rounds_count || 3} Rounds</span>
+                  <span className="text-neutral-500">{trade.rounds_count || 4} Turns</span>
                   <span className="text-neutral-900 font-semibold">Fee: ${trade.protocol_fee_usdc || 1.25}</span>
                 </div>
               </div>

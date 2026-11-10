@@ -78,7 +78,7 @@ export default function ActivityTab() {
                           {trade.vault_a_name} ⇄ {trade.vault_b_name}
                         </div>
                         <div className="text-xs text-neutral-500 font-mono">
-                          {trade.rounds_count || 3} Negotiation Rounds • Deal Completed
+                          {trade.rounds_count || 4} Dialogue Turns (2 Cycles) • Deal Agreed
                         </div>
                       </div>
                     </div>
@@ -124,7 +124,7 @@ export default function ActivityTab() {
                       >
                         <MessageSquare className="w-3.5 h-3.5 text-[#053b2a]" />
                         <span>
-                          {isExpanded ? "Hide Agent Dialogue" : `View Agent Dialogue (${logRounds.length || trade.rounds_count || 4} Rounds)`}
+                          {isExpanded ? "Hide Agent Dialogue" : `View Agent Dialogue (${logRounds.length || trade.rounds_count || 4} Turns)`}
                         </span>
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
                       </button>
