@@ -7,10 +7,44 @@ import { useApp } from "@/context/AppContext";
 import api from "@/lib/api";
 
 export default function SlabsTab() {
-  const { cards, vaults, loadData, openChat } = useApp();
+  const { cards, vaults, trades, loadData, openChat } = useApp();
   const [selectedCardForAssign, setSelectedCardForAssign] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [notification, setNotification] = useState(null);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Recently";
+    try {
+      const d = new Date(dateString);
+      return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Recently";
+    }
+  };
+
+  const getCardProvenance = (card) => {
+    const cardId = card.id || card.card_id;
+    for (const trade of (trades || [])) {
+      const receivedByA = trade.cards_from_b?.find((c) => c.card_id === cardId || c.id === cardId || c.name === card.name);
+      if (receivedByA && trade.vault_a_id === card.vault_id) {
+        return { label: `Swapped with ${trade.vault_b_name}`, date: trade.createdAt, isSwap: true };
+      }
+      const receivedByB = trade.cards_from_a?.find((c) => c.card_id === cardId || c.id === cardId || c.name === card.name);
+      if (receivedByB && trade.vault_b_id === card.vault_id) {
+        return { label: `Swapped with ${trade.vault_a_name}`, date: trade.createdAt, isSwap: true };
+      }
+    }
+    return {
+      label: card.vault_id ? "Agent Inception" : "Personal Buy",
+      date: card.createdAt,
+      isSwap: false,
+    };
+  };
 
   const showNotice = (msg, type = "success") => {
     setNotification({ msg, type });
@@ -121,6 +155,7 @@ export default function SlabsTab() {
             const cardKey = card.id || card.card_id;
             const isPersonal = !card.vault_id;
             const holdingVault = vaults.find((v) => v.id === card.vault_id);
+            const provenance = getCardProvenance(card);
 
             return (
               <div
@@ -180,6 +215,14 @@ export default function SlabsTab() {
                     <span className="text-xs text-neutral-500">Oracle Fair Value:</span>
                     <span className="text-sm font-semibold text-neutral-900 font-mono">
                       ${Number(card.oracle_fair_value_usdc || 0).toLocaleString()} USDC
+                    </span>
+                  </div>
+
+                  {/* Provenance: When and How Acquired */}
+                  <div className="mt-2 pt-2 border-t border-neutral-100/70 flex items-center justify-between text-[10px] text-neutral-500 font-mono">
+                    <span className="text-neutral-400">Acquired:</span>
+                    <span className="text-neutral-700 font-medium truncate max-w-[150px]" title={`${provenance.label} - ${formatDate(provenance.date)}`}>
+                      {provenance.label} • {formatDate(provenance.date)}
                     </span>
                   </div>
                 </div>
