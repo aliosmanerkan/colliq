@@ -20,6 +20,7 @@ export function AppProvider({ children }) {
   const [socketStatus, setSocketStatus] = useState("connecting");
   const [liveEvents, setLiveEvents] = useState([]);
   const [connectedAccount, setConnectedAccount] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Modals state
   const [isMintOpen, setIsMintOpen] = useState(false);
@@ -40,10 +41,10 @@ export function AppProvider({ children }) {
     }
   };
 
-  // Fetch all core platform data
+  // Fetch all core platform data with resilient Promise.allSettled
   const loadData = useCallback(async () => {
     try {
-      const [vaultsRes, cardsRes, tradesRes, statsRes, nearRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.get("/vaults"),
         api.get("/market/cards"),
         api.get("/trades/history"),
@@ -51,13 +52,27 @@ export function AppProvider({ children }) {
         api.get("/market/near-status"),
       ]);
 
-      setVaults(vaultsRes.data?.vaults || []);
-      setCards(cardsRes.data?.cards || []);
-      setTrades(tradesRes.data?.trades || []);
-      setStats(statsRes.data || null);
-      setNearStatus(nearRes.data || null);
+      const [vaultsRes, cardsRes, tradesRes, statsRes, nearRes] = results;
+
+      if (vaultsRes.status === "fulfilled") {
+        setVaults(vaultsRes.value.data?.vaults || []);
+      }
+      if (cardsRes.status === "fulfilled") {
+        setCards(cardsRes.value.data?.cards || []);
+      }
+      if (tradesRes.status === "fulfilled") {
+        setTrades(tradesRes.value.data?.trades || []);
+      }
+      if (statsRes.status === "fulfilled") {
+        setStats(statsRes.value.data || null);
+      }
+      if (nearRes.status === "fulfilled") {
+        setNearStatus(nearRes.value.data || null);
+      }
     } catch (err) {
       console.error("Failed to load platform data:", err);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -143,6 +158,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider
       value={{
+        isLoading,
         vaults,
         cards,
         trades,

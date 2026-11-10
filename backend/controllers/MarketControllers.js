@@ -236,20 +236,25 @@ router.post("/withdraw-from-agent", async (req, res) => {
 
         const isNum = !isNaN(Number(card_id));
         const card = await db.card.findOne({
-            where: isNum ? { id: Number(card_id) } : { card_id: String(card_id) }
+            where: isNum ? { id: Number(card_id) } : { card_id: String(card_id) },
+            include: [{ model: db.vault, as: "vault" }]
         });
         if (!card) return res.status(404).json({ error: "Card not found" });
         if (card.is_locked) return res.status(400).json({ error: "Card is locked in active trade escrow" });
 
+        const targetOwner = user_account || card.vault?.owner_account || "alierkan.testnet";
+        const prevAgentName = card.vault?.name || "Agent Vault";
+
         card.vault_id = null;
-        card.owner_account = user_account || "alierkan.testnet";
+        card.owner_account = targetOwner;
+        card.is_locked = false;
         await card.save();
 
-        req.app.get("io")?.emit("vault:updated", { action: "card_withdrawn" });
+        req.app.get("io")?.emit("vault:updated", { action: "card_withdrawn", cardId: card.id });
 
         res.json({
             status: "SUCCESS_WITHDRAWN",
-            message: `Card '${card.name}' withdrawn to personal wallet (${card.owner_account}).`,
+            message: `Card '${card.name}' withdrawn from ${prevAgentName} to personal wallet (${card.owner_account}).`,
             card
         });
     } catch (err) {

@@ -233,12 +233,20 @@ router.post("/:id/withdraw-card", async (req, res) => {
         if (!vault) return res.status(404).json({ error: "Vault not found" });
         if (vault.is_locked) return res.status(400).json({ error: "Vault is locked" });
 
-        const card = await db.card.findOne({ where: { card_id, vault_id: vault.id } });
+        const isNum = !isNaN(Number(card_id));
+        const card = await db.card.findOne({
+            where: isNum
+                ? { [db.Sequelize.Op.or]: [{ id: Number(card_id) }, { card_id: String(card_id) }], vault_id: vault.id }
+                : { card_id: String(card_id), vault_id: vault.id }
+        });
         if (!card) return res.status(404).json({ error: "Card not in this vault" });
 
         card.vault_id = null;
-        card.owner_account = destination_account || vault.owner_account;
+        card.owner_account = destination_account || vault.owner_account || "alierkan.testnet";
+        card.is_locked = false;
         await card.save();
+
+        req.app.get("io")?.emit("vault:updated", { vaultId: vault.id, action: "card_withdrawn", cardId: card.id });
 
         res.json({
             status: "WITHDRAWN",

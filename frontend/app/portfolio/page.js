@@ -10,7 +10,7 @@ import { useApp } from "@/context/AppContext";
 
 export default function PortfolioPage() {
   const [portfolioTab, setPortfolioTab] = useState("agents"); // "agents" | "slabs" | "activity"
-  const { vaults, cards, trades, connectedAccount } = useApp();
+  const { vaults, cards, trades, connectedAccount, isLoading } = useApp();
 
   const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
   const myVaults = vaults.filter((v) => (v.owner_account || "").toLowerCase() === userAccount);
@@ -19,6 +19,27 @@ export default function PortfolioPage() {
     (c) => (c.vault_id && myVaultIds.includes(c.vault_id)) || (c.owner_account || "").toLowerCase() === userAccount
   );
   const myTrades = trades.filter((t) => myVaultIds.includes(t.vault_a_id) || myVaultIds.includes(t.vault_b_id));
+
+  if (isLoading && vaults.length === 0) {
+    return (
+      <section className="space-y-8 animate-in fade-in duration-200">
+        <div className="p-8 sm:p-10 rounded-[28px] bg-white border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] animate-pulse space-y-4">
+          <div className="h-6 w-48 bg-neutral-200/80 rounded-full" />
+          <div className="h-10 w-72 bg-neutral-200/80 rounded-xl" />
+          <div className="h-4 w-96 bg-neutral-100 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="p-5 rounded-[24px] bg-white border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] animate-pulse space-y-3">
+              <div className="h-4 w-24 bg-neutral-200/80 rounded" />
+              <div className="h-8 w-32 bg-neutral-300/80 rounded" />
+              <div className="h-3 w-28 bg-neutral-100 rounded" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-8 animate-in fade-in duration-200">

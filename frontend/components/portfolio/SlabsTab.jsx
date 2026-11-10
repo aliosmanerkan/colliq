@@ -107,7 +107,10 @@ export default function SlabsTab() {
     const cardId = card.id || card.card_id;
     setActionLoading(`withdraw-${cardId}`);
     try {
-      const res = await api.post("/market/withdraw-from-agent", { card_id: cardId });
+      const res = await api.post("/market/withdraw-from-agent", {
+        card_id: cardId,
+        user_account: userAccount,
+      });
       showNotice(res.data?.message || "Card withdrawn to personal wallet.");
       await loadData();
     } catch (err) {

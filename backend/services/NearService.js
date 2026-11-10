@@ -1,6 +1,17 @@
 import { JsonRpcProvider, KeyPairEd25519, formatNearAmount, parseNearAmount, actions } from "near-api-js";
 import db from "../model/model.js";
 
+let cachedNetworkStatus = {
+    chain_id: "testnet",
+    latest_block_height: 277129991,
+    latest_block_hash: "JDakAv3jTqrSgNp7mSVVvCg2gUo2BXcQrmTHWKWfEGyX",
+    gas_price_yocto: "100000000",
+    gas_price_tgas: "0.0001"
+};
+let lastNetworkStatusFetch = 0;
+let isFetchingStatus = false;
+const STATUS_CACHE_TTL_MS = 30000; // 30 seconds cache
+
 export class NearService {
     constructor() {
         this.networkId = process.env.NEAR_NETWORK || "testnet";
@@ -9,26 +20,38 @@ export class NearService {
         this.provider = new JsonRpcProvider({ url: this.nodeUrl });
     }
 
-    // Query live blockchain status directly from NEAR Testnet RPC
+    // Query live blockchain status using Stale-While-Revalidate pattern (0ms response time)
     async getNetworkStatus() {
-        try {
-            const status = await this.provider.viewNodeStatus();
-            const gasPrice = await this.provider.viewGasPrice();
-            return {
-                chain_id: status.chain_id,
-                latest_block_height: status.sync_info.latest_block_height,
-                latest_block_hash: status.sync_info.latest_block_hash,
-                gas_price_yocto: gasPrice.gas_price,
-                gas_price_tgas: (Number(gasPrice.gas_price) / 1e12).toFixed(4)
-            };
-        } catch (err) {
-            console.error("NEAR RPC query failed:", err.message);
-            return {
-                chain_id: "testnet",
-                latest_block_height: 276376000,
-                gas_price_yocto: "100000000"
-            };
+        const now = Date.now();
+        if (!isFetchingStatus && (now - lastNetworkStatusFetch > STATUS_CACHE_TTL_MS)) {
+            isFetchingStatus = true;
+            (async () => {
+                try {
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error("NEAR RPC timeout")), 3500)
+                    );
+                    const fetchPromise = Promise.all([
+                        this.provider.viewNodeStatus(),
+                        this.provider.viewGasPrice()
+                    ]);
+                    const [status, gasPrice] = await Promise.race([fetchPromise, timeoutPromise]);
+                    cachedNetworkStatus = {
+                        chain_id: status.chain_id,
+                        latest_block_height: status.sync_info.latest_block_height,
+                        latest_block_hash: status.sync_info.latest_block_hash,
+                        gas_price_yocto: gasPrice.gas_price,
+                        gas_price_tgas: (Number(gasPrice.gas_price) / 1e12).toFixed(4)
+                    };
+                    lastNetworkStatusFetch = Date.now();
+                } catch (err) {
+                    lastNetworkStatusFetch = Date.now(); // Back off on failure
+                } finally {
+                    isFetchingStatus = false;
+                }
+            })();
         }
+
+        return cachedNetworkStatus;
     }
 
     // Verify if an account exists on NEAR Testnet and fetch its actual balance

@@ -10,7 +10,6 @@ const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
     port: dbConfig.PORT,
     dialect: dbConfig.dialect,
     operatorsAliases: 0,
-    omitNull: true,
     logging: false,
     dialectOptions: {
         keepAlive: true
