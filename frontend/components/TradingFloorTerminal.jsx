@@ -26,14 +26,14 @@ export default function TradingFloorTerminal({ socketStatus, onTriggerCycle, isT
     }
   };
 
-  // Autonomous continuous trading loop (runs every 20s if enabled)
+  // Autonomous continuous trading loop (runs every 12s if enabled)
   useEffect(() => {
     if (!isAutoRunning) return;
     const interval = setInterval(() => {
       if (!isTriggering) {
         onTriggerCycle();
       }
-    }, 20000);
+    }, 12000);
     return () => clearInterval(interval);
   }, [isAutoRunning, isTriggering, onTriggerCycle]);
 
@@ -131,9 +131,11 @@ export default function TradingFloorTerminal({ socketStatus, onTriggerCycle, isT
                   evt.type === "round"
                     ? "bg-white border-neutral-200/80 text-neutral-800 shadow-sm"
                     : evt.type === "settled"
-                    ? "bg-[#a8f0be]/15 border-[#a8f0be] text-[#053b2a] shadow-sm"
+                    ? "bg-[#a8f0be]/20 border-[#a8f0be] text-[#053b2a] shadow-sm ring-1 ring-[#a8f0be]/40"
                     : evt.type === "match"
-                    ? "bg-[#e3fb71]/25 border-[#d2ec5a] text-[#3f6212] shadow-sm"
+                    ? "bg-[#e3fb71]/25 border-[#d2ec5a] text-[#3f6212] shadow-sm font-medium"
+                    : evt.type === "telemetry"
+                    ? "bg-[#f8faf9] border-neutral-200/80 text-neutral-600 font-mono text-[11px]"
                     : "bg-amber-50 border-amber-200 text-amber-900 shadow-sm"
                 }`}
               >

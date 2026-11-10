@@ -1,5 +1,6 @@
 import { JsonRpcProvider } from "near-api-js";
 import crypto from "node:crypto";
+import axios from "axios";
 import db from "../../model/model.js";
 
 // ==========================================
@@ -252,6 +253,107 @@ export class A2ANegotiationEngine {
         }
     }
 
+    /**
+     * Executes an autonomous LLM turn via OpenRouter API with full contextual strategy,
+     * natural pacing, and an instant mathematical fallback for maximum demo resilience.
+     */
+    async evaluateTurnWithLLM(
+        agent: StatelessAgentPersona,
+        vaultName: string,
+        turnNumber: number,
+        myCard: any,
+        theirCard: any,
+        previousCashOffer: number = 0,
+        counterpartyArgument: string = ""
+    ): Promise<A2ANegotiationTurnOutput> {
+        const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+        if (!apiKey) {
+            return this.evaluateTurn(agent, turnNumber, myCard, theirCard, previousCashOffer, counterpartyArgument);
+        }
+
+        const model = process.env.OPENROUTER_MODEL?.trim() || "deepseek/deepseek-v4.1-flash";
+        const myVal = Number(myCard?.oracle_fair_value_usdc || 100);
+        const theirVal = Number(theirCard?.oracle_fair_value_usdc || 100);
+        const absSpread = Math.abs(theirVal - myVal);
+        const netSpread = Math.round(theirVal - myVal);
+
+        const prompt = `You are an autonomous AI trading agent named "${vaultName}" (sub-account: ${agent.sub_account}) on NEAR Protocol Track 10 (NFTs as Accounts).
+Strategy: ${agent.strategy}. Single-trade max cash spend limit: $${agent.max_spend_per_trade_usdc} USDC.
+
+BARTER CONTEXT:
+- Your card: ${myCard?.name} (${myCard?.grade || "PSA 10"}, Oracle Value: $${myVal} USDC)
+- Counterpart card: ${theirCard?.name} (${theirCard?.grade || "PSA 10"}, Oracle Value: $${theirVal} USDC)
+- Net Spread (theirVal - myVal): $${netSpread} USDC (Absolute spread: $${absSpread} USDC)
+- Current Turn: Round ${turnNumber} of 4
+${turnNumber > 1 ? `- Counterpart Previous Cash Offer: $${previousCashOffer} USDC\n- Counterpart Argument: "${sanitizeUntrustedInput(counterpartyArgument)}"` : ""}
+
+ROUND OBJECTIVES:
+${turnNumber === 1 ? "- Turn 1 (Initiator Propose): Propose a smart opening barter offer. If your card is cheaper, offer realistic USDC sweetener to bridge the spread." : ""}
+${turnNumber === 2 ? "- Turn 2 (Responder Counter): Evaluate their offer. Counter with an adjusted USDC amount or accept if fair." : ""}
+${turnNumber === 3 ? "- Turn 3 (Initiator Evaluate): Counterpart counter-offered. Decide to ACCEPT if terms meet your strategy/limits, or make a final counter." : ""}
+${turnNumber === 4 ? "- Turn 4 (Responder Sign): Final turn. Decide to ACCEPT to execute NEAR atomic settlement, or REJECT." : ""}
+
+STRICT OUTPUT FORMAT:
+You MUST respond with valid JSON only. Do not include markdown or backticks.
+{
+  "decision": "ACCEPT" or "COUNTER" or "REJECT",
+  "offer_usdc": <integer number of USDC cash to balance the trade, or 0 if your card is more valuable>,
+  "public_argument": "<concise 1-2 sentence dialogue directed to the counterpart>",
+  "private_reasoning_for_owner": "<1 sentence risk/profit assessment>"
+}`;
+
+        try {
+            const resp = await axios.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                {
+                    model,
+                    messages: [
+                        { role: "system", content: "You are an elite autonomous AI trading agent on NEAR Protocol. Output JSON only." },
+                        { role: "user", content: prompt }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 350
+                },
+                {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "HTTP-Referer": "http://localhost:3000",
+                        "X-Title": "VaultDeck NEAR Track 10",
+                        "Content-Type": "application/json"
+                    },
+                    timeout: 8000
+                }
+            );
+
+            const content = resp.data?.choices?.[0]?.message?.content || "";
+            const cleanJson = content.replace(/```json/gi, "").replace(/```/g, "").trim();
+            const parsed = JSON.parse(cleanJson);
+
+            const validDecisions: AgentDecision[] = ["ACCEPT", "COUNTER", "REJECT"];
+            const decision: AgentDecision = validDecisions.includes(parsed.decision?.toUpperCase())
+                ? parsed.decision.toUpperCase() as AgentDecision
+                : (turnNumber >= 3 ? "ACCEPT" : "COUNTER");
+
+            let cash = Number(parsed.offer_usdc) || 0;
+            if (cash > agent.max_spend_per_trade_usdc) {
+                cash = agent.max_spend_per_trade_usdc;
+            }
+            if (cash < 0) cash = 0;
+
+            return {
+                decision,
+                offer_usdc: Math.round(cash),
+                offer_cards: myCard ? [myCard.card_id] : [],
+                request_cards: theirCard ? [theirCard.card_id] : [],
+                public_argument: sanitizeUntrustedInput(parsed.public_argument || `${decision}: Barter proposal evaluated under ${agent.strategy} directives.`),
+                private_reasoning_for_owner: sanitizeUntrustedInput(parsed.private_reasoning_for_owner || `Autonomous LLM assessment completed under $${agent.max_spend_per_trade_usdc} spend limit.`)
+            };
+        } catch (err: any) {
+            console.warn(`[A2A LLM] Round ${turnNumber} LLM notice (${err.message}). Using resilient mathematical fallback.`);
+            return this.evaluateTurn(agent, turnNumber, myCard, theirCard, previousCashOffer, counterpartyArgument);
+        }
+    }
+
     // Orchestrates 4-turn A2A barter session
     async runNegotiationRoom(buyerVault: any, sellerVault: any): Promise<any> {
         const buyerPersona: StatelessAgentPersona = {
@@ -296,8 +398,9 @@ export class A2ANegotiationEngine {
         let isConsensus = false;
 
         // TURN 1: Buyer (Initiator) Opening Proposal
-        const turn1 = this.evaluateTurn(
+        const turn1 = await this.evaluateTurnWithLLM(
             buyerPersona,
+            buyerVault.name,
             1,
             cardFromBuyer,
             cardFromSeller,
@@ -317,10 +420,12 @@ export class A2ANegotiationEngine {
             });
         }
         lastArgument = turn1.public_argument;
+        await new Promise(r => setTimeout(r, 900));
 
         // TURN 2: Seller (Responder) Counter-Offer
-        const turn2 = this.evaluateTurn(
+        const turn2 = await this.evaluateTurnWithLLM(
             sellerPersona,
+            sellerVault.name,
             2,
             cardFromSeller,
             cardFromBuyer,
@@ -339,6 +444,7 @@ export class A2ANegotiationEngine {
                 log: { speaker: sellerVault.name, message: turn2.public_argument, decision: turn2.decision }
             });
         }
+        await new Promise(r => setTimeout(r, 900));
 
         if (turn2.decision === "REJECT") {
             return { status: "REJECTED_GUARDRAIL", history: negotiationHistory };
@@ -346,8 +452,9 @@ export class A2ANegotiationEngine {
         lastArgument = turn2.public_argument;
 
         // TURN 3: Buyer (Initiator) Acceptance
-        const turn3 = this.evaluateTurn(
+        const turn3 = await this.evaluateTurnWithLLM(
             buyerPersona,
+            buyerVault.name,
             3,
             cardFromBuyer,
             cardFromSeller,
@@ -366,6 +473,7 @@ export class A2ANegotiationEngine {
                 log: { speaker: buyerVault.name, message: turn3.public_argument, decision: turn3.decision }
             });
         }
+        await new Promise(r => setTimeout(r, 900));
 
         if (turn3.decision === "REJECT") {
             return { status: "REJECTED_GUARDRAIL", history: negotiationHistory };
@@ -373,8 +481,9 @@ export class A2ANegotiationEngine {
         lastArgument = turn3.public_argument;
 
         // TURN 4: Seller (Responder) Final Sign
-        const turn4 = this.evaluateTurn(
+        const turn4 = await this.evaluateTurnWithLLM(
             sellerPersona,
+            sellerVault.name,
             4,
             cardFromSeller,
             cardFromBuyer,
@@ -393,6 +502,7 @@ export class A2ANegotiationEngine {
                 log: { speaker: sellerVault.name, message: turn4.public_argument, decision: turn4.decision }
             });
         }
+        await new Promise(r => setTimeout(r, 800));
 
         isConsensus = (turn3.decision === "ACCEPT" && turn4.decision === "ACCEPT");
 
@@ -463,6 +573,13 @@ export class A2ANegotiationEngine {
                     trade: tradeLog,
                     buyer: buyerVault.name,
                     seller: sellerVault.name,
+                    txHash
+                });
+                this.io.emit("trade:event", {
+                    vaultA: buyerVault.name,
+                    vaultB: sellerVault.name,
+                    cardTitle: `${cardFromBuyer.name} ⇄ ${cardFromSeller.name}`,
+                    tradeId: tradeLog.trade_id,
                     txHash
                 });
             }

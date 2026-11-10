@@ -61,7 +61,38 @@ export function AppProvider({ children }) {
         setCards(cardsRes.value.data?.cards || []);
       }
       if (tradesRes.status === "fulfilled") {
-        setTrades(tradesRes.value.data?.trades || []);
+        const fetchedTrades = tradesRes.value.data?.trades || [];
+        setTrades(fetchedTrades);
+
+        // Pre-hydrate liveEvents on initial load so terminal is immediately active
+        setLiveEvents((prev) => {
+          if (prev.length > 0) return prev;
+          const preloaded = [];
+          for (const t of fetchedTrades.slice(0, 4)) {
+            const txHash = t.tx_hash || "0x9482bf...38a";
+            preloaded.push({
+              id: `settled-${t.id || t.trade_id}`,
+              type: "settled",
+              speaker: "NEAR ATOMIC SETTLEMENT",
+              message: `⚡ Consensus locked! Parity swap executed between ${t.vault_a_name} and ${t.vault_b_name}.`,
+              details: { txHash },
+              timestamp: new Date(t.createdAt).getTime() || Date.now(),
+            });
+            if (Array.isArray(t.negotiation_log)) {
+              for (const round of t.negotiation_log) {
+                preloaded.push({
+                  id: `round-${t.id}-${round.round}`,
+                  type: "round",
+                  speaker: `${round.agent || "Agent"} (Round ${round.round})`,
+                  message: round.turn?.public_argument || "Barter terms proposed.",
+                  decision: round.turn?.decision || null,
+                  timestamp: new Date(t.createdAt).getTime() || Date.now(),
+                });
+              }
+            }
+          }
+          return preloaded;
+        });
       }
       if (statsRes.status === "fulfilled") {
         setStats(statsRes.value.data || null);
@@ -96,16 +127,76 @@ export function AppProvider({ children }) {
     const onConnect = () => setSocketStatus("connected");
     const onDisconnect = () => setSocketStatus("disconnected");
 
+    const onMatchFound = (data) => {
+      const nameA = data.vaultA?.name || "Agent A";
+      const nameB = data.vaultB?.name || "Agent B";
+      setLiveEvents((prev) => [
+        {
+          id: `match-${Date.now()}-${Math.random()}`,
+          type: "match",
+          speaker: "A2A MATCHMAKER",
+          message: `🤝 Pair Matched: ${nameA} ⇄ ${nameB} entered atomic negotiation channel.`,
+          timestamp: Date.now(),
+        },
+        ...prev.slice(0, 50),
+      ]);
+    };
+
+    const onRoundUpdate = (data) => {
+      setLiveEvents((prev) => [
+        {
+          id: `round-${Date.now()}-${Math.random()}`,
+          type: "round",
+          speaker: `${data.log?.speaker || "Agent"} (Round ${data.round || 1})`,
+          message: data.log?.message || "",
+          decision: data.log?.decision || null,
+          timestamp: Date.now(),
+        },
+        ...prev.slice(0, 50),
+      ]);
+    };
+
+    const onTradeSettled = (data) => {
+      const buyer = data.buyer || "Agent A";
+      const seller = data.seller || "Agent B";
+      const txHash = data.txHash || data.trade?.tx_hash || "0x9482bf...38a";
+      setLiveEvents((prev) => [
+        {
+          id: `settled-${Date.now()}-${Math.random()}`,
+          type: "settled",
+          speaker: "NEAR ATOMIC SETTLEMENT",
+          message: `⚡ Consensus locked! Parity swap executed between ${buyer} and ${seller}. NEAR state synchronized.`,
+          details: { txHash },
+          timestamp: Date.now(),
+        },
+        ...prev.slice(0, 50),
+      ]);
+      loadData();
+    };
+
+    const onTelemetry = (data) => {
+      setLiveEvents((prev) => [
+        {
+          id: `telemetry-${Date.now()}-${Math.random()}`,
+          type: "telemetry",
+          speaker: data.speaker || data.category || "SYSTEM",
+          message: data.message,
+          timestamp: Date.now(),
+        },
+        ...prev.slice(0, 50),
+      ]);
+    };
+
     const onTradeEvent = (data) => {
       setLiveEvents((prev) => [
         {
           id: `evt-${Date.now()}-${Math.random()}`,
-          type: "trade",
+          type: "settled",
           speaker: "A2A ENGINE",
           message: `Deal locked: ${data.vaultA} swapped with ${data.vaultB}! Card: ${data.cardTitle || "PSA Slab"}.`,
           timestamp: Date.now(),
         },
-        ...prev.slice(0, 40),
+        ...prev.slice(0, 50),
       ]);
       loadData();
     };
@@ -119,13 +210,17 @@ export function AppProvider({ children }) {
           message: `⚠️ Trade declined by agent safety rules between ${data.vaultA} and ${data.vaultB}. Zero loss incurred.`,
           timestamp: Date.now(),
         },
-        ...prev.slice(0, 40),
+        ...prev.slice(0, 50),
       ]);
       loadData();
     };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    socket.on("a2a_match_found", onMatchFound);
+    socket.on("a2a_round_update", onRoundUpdate);
+    socket.on("a2a_trade_settled", onTradeSettled);
+    socket.on("a2a_telemetry", onTelemetry);
     socket.on("trade:event", onTradeEvent);
     socket.on("trade:rejected", onTradeRejected);
     socket.on("vault:created", () => loadData());
@@ -135,6 +230,10 @@ export function AppProvider({ children }) {
       if (walletSub?.unsubscribe) walletSub.unsubscribe();
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      socket.off("a2a_match_found", onMatchFound);
+      socket.off("a2a_round_update", onRoundUpdate);
+      socket.off("a2a_trade_settled", onTradeSettled);
+      socket.off("a2a_telemetry", onTelemetry);
       socket.off("trade:event", onTradeEvent);
       socket.off("trade:rejected", onTradeRejected);
       socket.off("vault:created");
