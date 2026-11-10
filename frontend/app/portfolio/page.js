@@ -10,7 +10,15 @@ import { useApp } from "@/context/AppContext";
 
 export default function PortfolioPage() {
   const [portfolioTab, setPortfolioTab] = useState("agents"); // "agents" | "slabs" | "activity"
-  const { vaults, cards, trades } = useApp();
+  const { vaults, cards, trades, connectedAccount } = useApp();
+
+  const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
+  const myVaults = vaults.filter((v) => (v.owner_account || "").toLowerCase() === userAccount);
+  const myVaultIds = myVaults.map((v) => v.id);
+  const myCards = cards.filter(
+    (c) => (c.vault_id && myVaultIds.includes(c.vault_id)) || (c.owner_account || "").toLowerCase() === userAccount
+  );
+  const myTrades = trades.filter((t) => myVaultIds.includes(t.vault_a_id) || myVaultIds.includes(t.vault_b_id));
 
   return (
     <section className="space-y-8 animate-in fade-in duration-200">
@@ -27,7 +35,7 @@ export default function PortfolioPage() {
           }`}
         >
           <Bot className="w-3.5 h-3.5" />
-          <span>My AI Agents ({vaults.length})</span>
+          <span>My AI Agents ({myVaults.length})</span>
         </button>
 
         <button
@@ -39,7 +47,7 @@ export default function PortfolioPage() {
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
-          <span>My Cards ({cards.length})</span>
+          <span>My Cards ({myCards.length})</span>
         </button>
 
         <button
@@ -51,7 +59,7 @@ export default function PortfolioPage() {
           }`}
         >
           <Clock className="w-3.5 h-3.5" />
-          <span>Trade History ({trades.length})</span>
+          <span>Trade History ({myTrades.length})</span>
         </button>
       </div>
 
