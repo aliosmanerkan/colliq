@@ -298,7 +298,7 @@ export default function SlabsTab() {
                       {vault.name}
                     </div>
                     <div className="text-[10px] text-neutral-500 font-mono">
-                      @{vault.sub_account} • {vault.strategy}
+                      @{vault.sub_account}
                     </div>
                   </div>
                   <div className="text-right">

@@ -51,13 +51,10 @@ export default function VaultCard({ vault, onInspect, onTransfer, onChat }) {
               <h3 className="text-base font-semibold text-neutral-900 group-hover:text-[#053b2a] transition leading-tight">
                 {vault.name}
               </h3>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#e3fb71]/60 text-[#4d7c0f] border border-[#d2ec5a]/70">
-                  {vault.strategy || "BALANCED_TRADER"}
-                </span>
-                <span className="text-[11px] text-neutral-400 font-mono">
-                  Cap: ${vault.guardrail_max_spend_per_trade || 250}
-                </span>
+              <div className="flex items-center gap-1.5 mt-1 text-[11px] text-neutral-500 font-mono">
+                <span>@{vault.sub_account}</span>
+                <span>•</span>
+                <span>Cap: ${vault.guardrail_max_spend_per_trade || 250}</span>
               </div>
             </div>
           </div>

@@ -180,9 +180,6 @@ export default function AgentChatModal({ vault, isOpen, onClose, onRulesUpdated 
                 <h3 className="text-sm sm:text-base font-squada uppercase tracking-wide text-[#053b2a]">
                   {vault.name}
                 </h3>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#e3fb71]/60 border border-[#d2ec5a]/70 text-[10px] font-mono text-[#4d7c0f] font-semibold">
-                  {vault.strategy || "BALANCED_TRADER"}
-                </span>
               </div>
 
               <div 
