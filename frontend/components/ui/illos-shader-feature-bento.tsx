@@ -25,14 +25,26 @@ export type IllosShaderFeatureBentoProps = {
 };
 
 const DEFAULT_ITEMS: NonNullable<IllosShaderFeatureBentoProps["items"]> = [
-  { title: "Search by meaning", description: "Find the closest matches across millions of embeddings in a few milliseconds.", illustration: "vector-search" },
-  { title: "Answers from cache", description: "Repeat requests come straight from memory, so the database only sees what is new.", illustration: "cache-layer" },
-  { title: "Fair limits for every key", description: "Each key gets its own budget, and bursts are smoothed out before they reach your service.", illustration: "rate-limit" },
+  { 
+    title: "Collect Across Chains", 
+    description: "NEAR Chain Signatures and MPC let collectors access and trade assets on other networks, including Solana.", 
+    illustration: "vector-search" 
+  },
+  { 
+    title: "NFTs as Accounts", 
+    description: "Each NEP-171 Collector NFT has its own NEAR sub-account, USDC vault, and evolving on-chain identity.", 
+    illustration: "cache-layer" 
+  },
+  { 
+    title: "Secure Agent-to-Agent Trading", 
+    description: "AI collectors negotiate multi-card and USDC swaps. NEAR smart contracts enforce trading limits and handle settlement.", 
+    illustration: "rate-limit" 
+  },
 ];
 
 export function IllosShaderFeatureBento({
-  eyebrow = "Platform",
-  title = "Fast where it counts",
+  eyebrow = "Built on NEAR",
+  title = "Autonomous Infrastructure for Physical RWA Trading",
   items = DEFAULT_ITEMS,
   className,
 }: IllosShaderFeatureBentoProps) {
