@@ -15,7 +15,9 @@ import {
   ArrowRightLeft,
   Layers,
   Calendar,
-  CheckCircle2
+  CheckCircle2,
+  MessageSquare,
+  ChevronDown
 } from "lucide-react";
 import api from "@/lib/api";
 import { useApp } from "@/context/AppContext";
@@ -26,6 +28,7 @@ export default function VaultDetailModal({ vault, isOpen, onClose, onOpenChat })
   const [copied, setCopied] = useState(false);
   const [withdrawingCardId, setWithdrawingCardId] = useState(null);
   const [withdrawMsg, setWithdrawMsg] = useState("");
+  const [expandedTradeId, setExpandedTradeId] = useState(null);
 
   if (!isOpen || !vault) return null;
 
@@ -394,17 +397,63 @@ export default function VaultDetailModal({ vault, isOpen, onClose, onOpenChat })
 
                             {/* Settlement Footnote with Explorer Link */}
                             <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1 border-t border-neutral-200/60 font-mono">
-                              <span>NEAR Block #{trade.near_block}</span>
+                              <button
+                                onClick={() => setExpandedTradeId(expandedTradeId === (trade.id || trade.trade_id) ? null : (trade.id || trade.trade_id))}
+                                className="flex items-center gap-1 text-[#053b2a] font-semibold hover:underline cursor-pointer"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                <span>{expandedTradeId === (trade.id || trade.trade_id) ? "Hide Dialogue" : `View Dialogue (${trade.negotiation_log?.length || 4}R)`}</span>
+                                <ChevronDown className={`w-3 h-3 transition-transform ${expandedTradeId === (trade.id || trade.trade_id) ? "rotate-180" : ""}`} />
+                              </button>
+
                               <a
                                 href={`https://testnet.nearblocks.io/txns/${trade.tx_hash}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-[#053b2a] hover:underline flex items-center gap-1 font-semibold"
+                                className="text-neutral-500 hover:text-[#053b2a] flex items-center gap-1"
                               >
-                                <span>{trade.tx_hash?.substring(0, 10)}...</span>
+                                <span>Block #{trade.near_block}</span>
                                 <ExternalLink className="w-2.5 h-2.5" />
                               </a>
                             </div>
+
+                            {/* Expandable Negotiation Dialogue inside Modal */}
+                            {expandedTradeId === (trade.id || trade.trade_id) && trade.negotiation_log && (
+                              <div className="pt-2 border-t border-neutral-200/60 space-y-2 animate-in fade-in duration-150">
+                                <div className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider flex items-center gap-1">
+                                  <Bot className="w-3 h-3 text-[#053b2a]" />
+                                  <span>Agent Negotiation Dialogue</span>
+                                </div>
+
+                                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                  {trade.negotiation_log.map((turnItem, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="p-2.5 rounded-xl bg-white border border-neutral-200/70 text-[11px] font-mono space-y-1"
+                                    >
+                                      <div className="flex items-center justify-between text-[10px]">
+                                        <span className="font-bold text-neutral-900">
+                                          R{turnItem.round}: {turnItem.agent}
+                                        </span>
+                                        <span className={`px-1.5 py-0.2 rounded font-bold border ${
+                                          turnItem.turn?.decision === "ACCEPT" ? "bg-emerald-50 text-emerald-800 border-emerald-300" : "bg-amber-50 text-amber-800 border-amber-300"
+                                        }`}>
+                                          {turnItem.turn?.decision}
+                                        </span>
+                                      </div>
+                                      <p className="text-neutral-700 font-sans text-[11px] leading-relaxed">
+                                        "{turnItem.turn?.public_argument}"
+                                      </p>
+                                      {turnItem.turn?.private_reasoning_for_owner && (
+                                        <p className="text-[10px] text-neutral-500 font-sans italic pt-1 border-t border-neutral-100">
+                                          <strong>Private Strategy:</strong> {turnItem.turn?.private_reasoning_for_owner}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })

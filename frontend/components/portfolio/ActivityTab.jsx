@@ -1,10 +1,21 @@
 "use client";
 
-import { ArrowRightLeft, CheckCircle2, Clock, Calendar, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { 
+  ArrowRightLeft, 
+  CheckCircle2, 
+  Clock, 
+  Calendar, 
+  ExternalLink, 
+  MessageSquare, 
+  ChevronDown, 
+  Bot 
+} from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
 export default function ActivityTab() {
   const { trades, cards } = useApp();
+  const [expandedTradeId, setExpandedTradeId] = useState(null);
 
   const formatFullDate = (dateString) => {
     if (!dateString) return "Nov 10, 2026 • 15:29";
@@ -44,14 +55,17 @@ export default function ActivityTab() {
             </div>
 
             {trades.map((trade) => {
+              const tradeKey = trade.id || trade.trade_id;
+              const isExpanded = expandedTradeId === tradeKey;
               const cardA = trade.cards_from_a?.[0]?.name || "Card";
               const cardB = trade.cards_from_b?.[0]?.name || "Card";
               const cashA = trade.usdc_from_a ? ` + $${trade.usdc_from_a} USDC` : "";
               const cashB = trade.usdc_from_b ? ` + $${trade.usdc_from_b} USDC` : "";
+              const logRounds = Array.isArray(trade.negotiation_log) ? trade.negotiation_log : [];
 
               return (
                 <div
-                  key={trade.id || trade.trade_id}
+                  key={tradeKey}
                   className="p-5 rounded-[24px] bg-white border border-neutral-200/80 hover:border-[#a8f0be] shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition space-y-3"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3">
@@ -101,8 +115,25 @@ export default function ActivityTab() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs font-mono text-neutral-500 pt-1">
-                    <span>Protocol Settlement Fee: ${trade.protocol_fee_usdc || 0.25} USDC</span>
+                  {/* Action Bar: View Agent Dialogue Toggle & NEAR Explorer Link */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs font-mono">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setExpandedTradeId(isExpanded ? null : tradeKey)}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f8faf9] hover:bg-neutral-100 text-[#053b2a] text-xs font-semibold border border-neutral-200/80 transition active:scale-95 cursor-pointer shadow-sm"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-[#053b2a]" />
+                        <span>
+                          {isExpanded ? "Hide Agent Dialogue" : `View Agent Dialogue (${logRounds.length || trade.rounds_count || 4} Rounds)`}
+                        </span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                      </button>
+
+                      <span className="text-neutral-400 text-[11px] hidden sm:inline">
+                        Fee: ${trade.protocol_fee_usdc || 0.21} USDC
+                      </span>
+                    </div>
+
                     <a
                       href={`https://testnet.nearblocks.io/txns/${trade.tx_hash}`}
                       target="_blank"
@@ -113,6 +144,62 @@ export default function ActivityTab() {
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
+
+                  {/* Expandable Multi-Round Agent Negotiation Transcript */}
+                  {isExpanded && (
+                    <div className="pt-3 border-t border-neutral-100 space-y-2.5 animate-in fade-in duration-200">
+                      <div className="text-[11px] font-semibold text-neutral-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <Bot className="w-3.5 h-3.5 text-[#053b2a]" />
+                        <span>Autonomous Multi-Turn Barter Dialogue</span>
+                      </div>
+
+                      {logRounds.length === 0 ? (
+                        <p className="text-xs text-neutral-500 italic p-3 bg-[#f8faf9] rounded-xl border border-neutral-200">
+                          Negotiation rounds settled in atomic memory.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {logRounds.map((turnItem, idx) => (
+                            <div
+                              key={idx}
+                              className="p-3.5 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 text-xs font-mono space-y-1.5 shadow-sm"
+                            >
+                              <div className="flex items-center justify-between pb-1 border-b border-neutral-200/50">
+                                <span className="font-bold text-neutral-900 flex items-center gap-1.5">
+                                  <span className="w-4 h-4 rounded-full bg-[#073525] text-white text-[10px] flex items-center justify-center font-bold">
+                                    {turnItem.round || idx + 1}
+                                  </span>
+                                  <span>{turnItem.agent || (idx % 2 === 0 ? trade.vault_a_name : trade.vault_b_name)}</span>
+                                </span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                    turnItem.turn?.decision === "ACCEPT"
+                                      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                                      : "bg-amber-100 text-amber-800 border-amber-300"
+                                  }`}
+                                >
+                                  {turnItem.turn?.decision || "COUNTER"}
+                                </span>
+                              </div>
+
+                              <p className="text-neutral-800 leading-relaxed font-sans text-xs">
+                                "{turnItem.turn?.public_argument}"
+                              </p>
+
+                              {turnItem.turn?.private_reasoning_for_owner && (
+                                <div className="pt-1.5 border-t border-neutral-200/60 text-[11px] text-neutral-600 font-sans italic flex items-start gap-1.5 bg-white p-2 rounded-xl border border-neutral-100">
+                                  <span className="font-semibold text-neutral-800 not-italic shrink-0">
+                                    🔒 Private Reasoning:
+                                  </span>
+                                  <span>{turnItem.turn?.private_reasoning_for_owner}</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
