@@ -46,7 +46,7 @@ export default function FaqSection() {
                 FAQs Component preview
               </span>
 
-              <h2 className="font-display font-black text-4xl sm:text-5xl text-neutral-900 tracking-tight mt-3 uppercase">
+              <h2 className="font-display text-4xl sm:text-5xl text-neutral-900 tracking-wide mt-3 uppercase">
                 FAQS
               </h2>
 

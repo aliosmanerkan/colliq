@@ -1,6 +1,66 @@
 "use client";
 
 import { ArrowDown } from "lucide-react";
+import CardDeckCarousel from "@/components/ui/card-deck-carousel";
+
+const HERO_SLIDES = [
+  {
+    title: "Umbreon VMAX Alt Art",
+    caption: "2021 Sword & Shield Evolving Skies #095 • PSA 10 GEM MINT",
+    category: "POKÉMON",
+    grade: "PSA 10",
+    image: "https://d1xpxki1g4htqu.cloudfront.net/0-FzbklxvfIW5mDxeRSvEyNOvPGNEXUyX9MlC9yhQL0",
+  },
+  {
+    title: "Victor Wembanyama",
+    caption: "2024 Select Red Cracked Ice #9 • BGS 9.5 GEM MINT",
+    category: "BASKETBALL",
+    grade: "BGS 9.5",
+    image: "https://d1xpxki1g4htqu.cloudfront.net/EJdMbFfNw7OQqXfX8xy1sltkRPNLLYHiZ4Sje35g7Xc",
+  },
+  {
+    title: "Monkey D. Luffy",
+    caption: "2024 Japanese OP10-Royal Blood #118 • PSA 10 GEM MINT",
+    category: "ONE PIECE",
+    grade: "PSA 10",
+    image: "https://d1xpxki1g4htqu.cloudfront.net/8XvsjvOW3LVp6Xc11hpdOqGJKplvdnKFmUXE_QpmRaM",
+  },
+  {
+    title: "Erling Haaland",
+    caption: "2019 Topps Chrome UCL Refractor #74 • PSA 10 GEM MINT",
+    category: "SOCCER",
+    grade: "PSA 10",
+    image: "https://d1xpxki1g4htqu.cloudfront.net/r4IQK2YWC0ifjt_RYc0qAp6XYL11txw_Z8D7KmolAVk",
+  },
+  {
+    title: "Vegeta Super",
+    caption: "2024 Fusion World Ultra Limit #FB04 • PSA 10 GEM MINT",
+    category: "DRAGON BALL",
+    grade: "PSA 10",
+    image: "https://d1xpxki1g4htqu.cloudfront.net/artJj-xOwwJImBoZiISjwQgNthArvkc04CXjjKqbxVo",
+  },
+  {
+    title: "Ahri Inquisitive",
+    caption: "2025 Riftbound: LoL Origins #119 • PSA 10 GEM MINT",
+    category: "RIFTBOUND",
+    grade: "PSA 10",
+    image: "https://d1xpxki1g4htqu.cloudfront.net/PK1u0vlSgsfenNDlOmNiJet7mFNQCilirk-7bkOElkA",
+  },
+  {
+    title: "Matas Buzelis",
+    caption: "2024 Panini Prizm Rookie #252 • PSA 10 GEM MINT",
+    category: "BASKETBALL",
+    grade: "PSA 10",
+    image: "https://d1xpxki1g4htqu.cloudfront.net/9YlvyUt8SCWbr8q9ERu3x8zkDAYl1RgU_9G-BHGG8sc",
+  },
+  {
+    title: "Heimerdinger Inventor",
+    caption: "2025 Riftbound: LoL Origins #111a • PSA 10 GEM MINT",
+    category: "RIFTBOUND",
+    grade: "PSA 10",
+    image: "https://d1xpxki1g4htqu.cloudfront.net/bm5X8EBprVb1whSmQo1s1u_MKhNPcO2EJgkODujzwuY",
+  },
+];
 
 export default function HeroSection() {
   const scrollToCollections = () => {
@@ -9,45 +69,34 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative w-full bg-[#a8f0be] pt-8 sm:pt-14 pb-20 sm:pb-28 overflow-hidden">
+    <section className="relative w-full bg-[#B9EFC6] pt-8 sm:pt-14 pb-20 sm:pb-28 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12">
-        
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center min-h-[460px] sm:min-h-[520px]">
-          
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center min-h-[480px] sm:min-h-[540px]">
+
           {/* Left: Huge Display Typography */}
           <div className="lg:col-span-7 flex flex-col justify-center">
-            <h1 className="font-display font-black text-5xl sm:text-7xl lg:text-[5.4rem] xl:text-[6.2rem] text-[#053b2a] leading-[0.93] tracking-tight uppercase select-none">
+            <h1 className="font-squada text-5xl sm:text-7xl lg:text-[5.4rem] xl:text-[6.2rem] text-[#09481E] leading-[0.93] tracking-normal uppercase select-none">
               THE FUTURE<br />
               OF COLLECTING<br />
               IS AGENTIC.
             </h1>
           </div>
 
-          {/* Right: Layered 3D Perspective Card Stack */}
+          {/* Right: Card Deck Carousel with Timed Auto Throw */}
           <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="relative w-[280px] sm:w-[330px] lg:w-[360px] aspect-[4/5] flex items-center justify-center">
-              
-              {/* Back Layer 1 (Tilted Right) */}
-              <div className="absolute inset-0 rounded-[28px] bg-emerald-800/20 transform rotate-6 translate-x-3 translate-y-2 border border-white/20 shadow-lg pointer-events-none" />
-
-              {/* Back Layer 2 (Tilted Left) */}
-              <div className="absolute inset-0 rounded-[28px] bg-emerald-900/30 transform -rotate-3 -translate-x-2 translate-y-1 border border-white/30 shadow-xl pointer-events-none" />
-
-              {/* Front Main Scenic Card (Alpine Lake with Wooden Boat from Figma) */}
-              <div className="relative w-full h-full rounded-[28px] overflow-hidden shadow-2xl shadow-[#043021]/30 border-2 border-white/50 group transition-transform duration-500 hover:scale-[1.02]">
-                <img 
-                  src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop" 
-                  alt="Scenic Alpine Collectible" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
-                
-                {/* Subtle Top Badge */}
-                <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-white/80 backdrop-blur-md text-[11px] font-semibold text-[#043224] tracking-wide uppercase shadow-sm">
-                  Alpine Gem-MT 10
-                </div>
-              </div>
-
+            <div className="w-full max-w-[320px] sm:max-w-[360px] lg:max-w-[380px]">
+              <CardDeckCarousel
+                slides={HERO_SLIDES}
+                cardWidth="100%"
+                aspect="3.1 / 4.3"
+                scatter={8}
+                autoplay={3200}
+                showButtons={false}
+                showCount={true}
+                background="transparent"
+                ink="#043224"
+              />
             </div>
           </div>
 
@@ -55,7 +104,7 @@ export default function HeroSection() {
 
         {/* Bottom Center: See Collections Prompt */}
         <div className="flex flex-col items-center justify-center mt-12 sm:mt-16 text-[#043224]">
-          <button 
+          <button
             onClick={scrollToCollections}
             className="group flex flex-col items-center gap-1.5 text-xs font-medium cursor-pointer transition hover:opacity-80"
           >

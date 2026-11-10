@@ -19,17 +19,17 @@ export default function LandingNavbar() {
   };
 
   return (
-    <div className="w-full bg-[#a8f0be] border-b border-[#043021]/10">
+    <div className="w-full bg-[#09481E] border-b border-[#043021]/10">
       <header className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 h-20 flex items-center justify-between">
-        
+
         {/* Logo (8-Leaf Swirl / Pinwheel Icon in Figma) */}
-        <div 
+        <div
           onClick={scrollToTop}
           className="cursor-pointer flex items-center gap-2 select-none group"
         >
           <div className="w-8 h-8 rounded-full flex items-center justify-center transition-transform group-hover:rotate-45 duration-500">
-            <svg 
-              viewBox="0 0 24 24" 
+            <svg
+              viewBox="0 0 24 24"
               className="w-7 h-7 text-[#043224] fill-current"
             >
               <path d="M12 2C12.5 5 15 7.5 18 8C15 8.5 12.5 11 12 14C11.5 11 9 8.5 6 8C9 7.5 11.5 5 12 2Z" opacity="0.9" />
@@ -38,26 +38,26 @@ export default function LandingNavbar() {
               <path d="M2 12C5 11.5 7.5 9 8 6C8.5 9 11 11.5 14 12C11 12.5 8.5 15 8 18C7.5 15 5 12.5 2 12Z" opacity="0.9" />
             </svg>
           </div>
-          <span className="font-display font-bold text-lg tracking-tight text-[#043224] hidden sm:inline-block">
+          <span className="font-display text-xl sm:text-2xl tracking-wide uppercase text-[#043224] hidden sm:inline-block">
             VaultDeck
           </span>
         </div>
 
         {/* Center Navigation Links */}
         <nav className="flex items-center gap-7 sm:gap-10 text-xs sm:text-sm font-medium text-[#043224]">
-          <Link 
+          <Link
             href="/marketplace"
             className="hover:opacity-70 transition cursor-pointer"
           >
             Marketplace
           </Link>
-          <Link 
+          <Link
             href="/portfolio"
             className="hover:opacity-70 transition cursor-pointer"
           >
             My Portfolio
           </Link>
-          <button 
+          <button
             onClick={() => scrollToSection("how-it-works")}
             className="hover:opacity-70 transition cursor-pointer"
           >

@@ -12,7 +12,7 @@ export default function HowItWorksSection() {
           <span className="text-[11px] font-semibold text-neutral-400 tracking-widest uppercase">
             HOW IT WORKS
           </span>
-          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-[#053b2a] tracking-tight mt-2 uppercase">
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl text-[#053b2a] tracking-wide mt-2 uppercase">
             MINT A BRAIN. LET IT COLLECT.
           </h2>
           <p className="text-xs sm:text-sm text-neutral-500 mt-3 leading-relaxed">
