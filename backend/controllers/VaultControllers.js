@@ -259,6 +259,121 @@ router.post("/:id/withdraw-card", async (req, res) => {
     }
 });
 
+// DEPOSIT USDC TO AGENT TREASURY
+router.post("/:id/deposit-treasury", async (req, res) => {
+    try {
+        const { amount, tx_hash } = req.body;
+        const depositAmt = parseFloat(amount);
+        if (isNaN(depositAmt) || depositAmt <= 0) {
+            return res.status(400).json({ error: "Deposit amount must be a positive number." });
+        }
+
+        const vault = await db.vault.findOne({ where: getVaultWhere(req.params.id) });
+        if (!vault) return res.status(404).json({ error: "Vault not found" });
+
+        vault.usdc_balance = Math.round((vault.usdc_balance + depositAmt) * 100) / 100;
+
+        // Append system notification to chat history
+        let history = [];
+        try {
+            history = JSON.parse(vault.chat_history || "[]");
+        } catch {}
+        history.push({
+            id: `msg-fund-${Date.now()}`,
+            sender: "system",
+            text: `Treasury funded with +$${depositAmt.toLocaleString()} USDC. Active balance: $${vault.usdc_balance.toLocaleString()} USDC.`,
+            actionType: "TREASURY_FUND",
+            timestamp: new Date().toISOString()
+        });
+        vault.chat_history = JSON.stringify(history);
+        await vault.save();
+
+        req.app.get("io")?.emit("vault:updated", { 
+            vaultId: vault.id, 
+            action: "treasury_deposit", 
+            amount: depositAmt, 
+            balance: vault.usdc_balance 
+        });
+
+        res.json({
+            status: "FUNDED",
+            message: `Deposited $${depositAmt} USDC into ${vault.name} treasury!`,
+            vault: {
+                id: vault.id,
+                name: vault.name,
+                usdc_balance: vault.usdc_balance
+            },
+            tx_hash: tx_hash || `0x_dep_${Date.now()}`
+        });
+    } catch (err) {
+        console.error("Deposit treasury error:", err);
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// WITHDRAW USDC FROM AGENT TREASURY TO OWNER WALLET
+router.post("/:id/withdraw-treasury", async (req, res) => {
+    try {
+        const { amount, destination_account } = req.body;
+        const withdrawAmt = parseFloat(amount);
+        if (isNaN(withdrawAmt) || withdrawAmt <= 0) {
+            return res.status(400).json({ error: "Withdrawal amount must be a positive number." });
+        }
+
+        const vault = await db.vault.findOne({ where: getVaultWhere(req.params.id) });
+        if (!vault) return res.status(404).json({ error: "Vault not found" });
+
+        if (vault.is_locked) {
+            return res.status(400).json({ error: "Vault is locked in an active trade. Cannot withdraw cash." });
+        }
+
+        if (vault.usdc_balance < withdrawAmt) {
+            return res.status(400).json({ 
+                error: `Insufficient treasury funds. Available: $${vault.usdc_balance} USDC, Requested: $${withdrawAmt} USDC.` 
+            });
+        }
+
+        vault.usdc_balance = Math.round((vault.usdc_balance - withdrawAmt) * 100) / 100;
+        const recipient = destination_account || vault.owner_account || "alierkan.testnet";
+
+        // Append system notification to chat history
+        let history = [];
+        try {
+            history = JSON.parse(vault.chat_history || "[]");
+        } catch {}
+        history.push({
+            id: `msg-wd-${Date.now()}`,
+            sender: "system",
+            text: `Withdrew $${withdrawAmt.toLocaleString()} USDC to ${recipient}. Remaining balance: $${vault.usdc_balance.toLocaleString()} USDC.`,
+            actionType: "TREASURY_WITHDRAW",
+            timestamp: new Date().toISOString()
+        });
+        vault.chat_history = JSON.stringify(history);
+        await vault.save();
+
+        req.app.get("io")?.emit("vault:updated", { 
+            vaultId: vault.id, 
+            action: "treasury_withdraw", 
+            amount: withdrawAmt, 
+            balance: vault.usdc_balance 
+        });
+
+        res.json({
+            status: "WITHDRAWN",
+            message: `Withdrew $${withdrawAmt} USDC to ${recipient}`,
+            vault: {
+                id: vault.id,
+                name: vault.name,
+                usdc_balance: vault.usdc_balance
+            },
+            recipient
+        });
+    } catch (err) {
+        console.error("Withdraw treasury error:", err);
+        res.status(400).json({ error: err.message });
+    }
+});
+
 // GET CHAT HISTORY & ACTIVE DIRECTIVES
 router.get("/:id/chat", async (req, res) => {
     try {

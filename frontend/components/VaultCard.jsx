@@ -139,17 +139,17 @@ export default function VaultCard({ vault, onInspect, onTransfer, onChat }) {
       <div className="mt-5 pt-4 border-t border-neutral-100 flex items-center gap-2">
         <button
           onClick={() => onChat && onChat(vault)}
-          className="flex-1 py-2.5 px-4 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 shadow-sm cursor-pointer"
+          className="flex-1 py-2.5 px-4 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 shadow-xs cursor-pointer"
         >
           <Bot className="w-3.5 h-3.5 text-white" />
-          <span>Chat & Rules</span>
+          <span>Command Studio</span>
         </button>
 
         <button
           onClick={() => onInspect && onInspect(vault)}
-          className="py-2.5 px-4 rounded-full bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-800 text-xs font-medium flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+          className="py-2.5 px-3.5 rounded-full bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-800 text-xs font-medium flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
         >
-          <span>View Cards</span>
+          <span>Cards ({cardsCount})</span>
           <ArrowUpRight className="w-3.5 h-3.5 text-neutral-600" />
         </button>
 

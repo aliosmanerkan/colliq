@@ -2,24 +2,38 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Flame, Bot, DollarSign, ArrowRightLeft, Wallet, Check, AlertCircle, X, Calendar, Clock } from "lucide-react";
+import { 
+  Bot, 
+  Wallet, 
+  Check, 
+  AlertCircle, 
+  X, 
+  ArrowRight, 
+  ArrowDownToLine, 
+  DollarSign, 
+  ExternalLink,
+  ChevronRight
+} from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import api from "@/lib/api";
 
 export default function SlabsTab() {
-  const { cards, vaults, trades, connectedAccount, loadData, openChat } = useApp();
+  const { cards, vaults, connectedAccount, loadData, openChat } = useApp();
+  const [filterMode, setFilterMode] = useState("all"); // "all" | "personal" | "agents"
   const [selectedCardForAssign, setSelectedCardForAssign] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [notification, setNotification] = useState(null);
 
   const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
-  const userVaultIds = useMemo(() => {
-    return vaults
-      .filter((v) => (v.owner_account || "").toLowerCase() === userAccount)
-      .map((v) => v.id);
+  const userVaults = useMemo(() => {
+    return vaults.filter((v) => (v.owner_account || "").toLowerCase() === userAccount);
   }, [vaults, userAccount]);
 
-  const myCards = useMemo(() => {
+  const userVaultIds = useMemo(() => {
+    return userVaults.map((v) => v.id);
+  }, [userVaults]);
+
+  const allMyCards = useMemo(() => {
     return cards.filter((c) => {
       if (c.vault_id && userVaultIds.includes(c.vault_id)) return true;
       if ((c.owner_account || "").toLowerCase() === userAccount) return true;
@@ -27,37 +41,23 @@ export default function SlabsTab() {
     });
   }, [cards, userVaultIds, userAccount]);
 
-  const formatFullDate = (dateString) => {
-    if (!dateString) return "Nov 10, 2026 • 15:29";
-    try {
-      const d = new Date(dateString);
-      if (isNaN(d.getTime())) return "Nov 10, 2026";
-      const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-      const time = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-      return `${day} • ${time}`;
-    } catch {
-      return "Nov 10, 2026";
-    }
-  };
+  const personalCards = useMemo(() => {
+    return allMyCards.filter((c) => !c.vault_id);
+  }, [allMyCards]);
 
-  const getCardProvenance = (card) => {
-    const cardId = card.id || card.card_id;
-    for (const trade of (trades || [])) {
-      const receivedByA = trade.cards_from_b?.find((c) => c.card_id === cardId || c.id === cardId || c.name === card.name);
-      if (receivedByA && trade.vault_a_id === card.vault_id) {
-        return { label: `A2A Swap with ${trade.vault_b_name}`, date: trade.createdAt, isSwap: true };
-      }
-      const receivedByB = trade.cards_from_a?.find((c) => c.card_id === cardId || c.id === cardId || c.name === card.name);
-      if (receivedByB && trade.vault_b_id === card.vault_id) {
-        return { label: `A2A Swap with ${trade.vault_a_name}`, date: trade.createdAt, isSwap: true };
-      }
-    }
-    return {
-      label: card.vault_id ? "Agent Inception" : "Personal Buy",
-      date: card.updatedAt || card.createdAt,
-      isSwap: false,
-    };
-  };
+  const agentCards = useMemo(() => {
+    return allMyCards.filter((c) => Boolean(c.vault_id));
+  }, [allMyCards]);
+
+  const filteredCards = useMemo(() => {
+    if (filterMode === "personal") return personalCards;
+    if (filterMode === "agents") return agentCards;
+    return allMyCards;
+  }, [filterMode, allMyCards, personalCards, agentCards]);
+
+  const totalValuation = useMemo(() => {
+    return filteredCards.reduce((sum, c) => sum + (c.oracle_fair_value_usdc || 50), 0);
+  }, [filteredCards]);
 
   const showNotice = (msg, type = "success") => {
     setNotification({ msg, type });
@@ -77,6 +77,24 @@ export default function SlabsTab() {
       await loadData();
     } catch (err) {
       showNotice(err.message || "Failed to assign card to agent", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Withdraw card from agent to personal wallet (instant, zero page reload)
+  const handleWithdraw = async (card) => {
+    const cardId = card.id || card.card_id;
+    setActionLoading(`withdraw-${cardId}`);
+    try {
+      const res = await api.post("/market/withdraw-from-agent", {
+        card_id: cardId,
+        user_account: userAccount,
+      });
+      showNotice(res.data?.message || "Card withdrawn to personal wallet.");
+      await loadData();
+    } catch (err) {
+      showNotice(err.message || "Failed to withdraw card", "error");
     } finally {
       setActionLoading(null);
     }
@@ -102,33 +120,15 @@ export default function SlabsTab() {
     }
   };
 
-  // Withdraw card from agent to personal custody
-  const handleWithdraw = async (card) => {
-    const cardId = card.id || card.card_id;
-    setActionLoading(`withdraw-${cardId}`);
-    try {
-      const res = await api.post("/market/withdraw-from-agent", {
-        card_id: cardId,
-        user_account: userAccount,
-      });
-      showNotice(res.data?.message || "Card withdrawn to personal wallet.");
-      await loadData();
-    } catch (err) {
-      showNotice(err.message || "Failed to withdraw card", "error");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Dynamic Toast Notification */}
+      {/* Toast Notification */}
       {notification && (
         <div
-          className={`p-4 rounded-2xl flex items-center justify-between gap-3 text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200 border ${
+          className={`p-3.5 rounded-2xl flex items-center justify-between gap-3 text-xs font-medium animate-in fade-in duration-200 border ${
             notification.type === "error"
-              ? "bg-red-50 border-red-200 text-red-700"
-              : "bg-emerald-50 border-emerald-200 text-emerald-800"
+              ? "bg-rose-50 border-rose-200 text-rose-800"
+              : "bg-emerald-50 border-emerald-200 text-emerald-900"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -139,180 +139,177 @@ export default function SlabsTab() {
             )}
             <span>{notification.msg}</span>
           </div>
-          <button onClick={() => setNotification(null)} className="cursor-pointer text-neutral-400 hover:text-neutral-700">
+          <button onClick={() => setNotification(null)} className="text-neutral-400 hover:text-neutral-700">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* Clean Header Bar */}
-      <div className="flex items-center justify-between pb-2">
-        <div className="text-sm font-semibold text-neutral-800">
-          My Card Collection ({myCards.length})
+      {/* Filter Bar & Custody Breakdown */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-neutral-100">
+        {/* Custody Filter Pills */}
+        <div className="flex items-center gap-1.5 p-1 rounded-full bg-neutral-100/80 border border-neutral-200/80 w-fit">
+          <button
+            type="button"
+            onClick={() => setFilterMode("all")}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+              filterMode === "all"
+                ? "bg-white text-neutral-900 shadow-2xs"
+                : "text-neutral-500 hover:text-neutral-900"
+            }`}
+          >
+            All Slabs ({allMyCards.length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterMode("personal")}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+              filterMode === "personal"
+                ? "bg-white text-neutral-900 shadow-2xs"
+                : "text-neutral-500 hover:text-neutral-900"
+            }`}
+          >
+            <Wallet className="w-3 h-3 text-emerald-600" />
+            <span>Personal Wallet ({personalCards.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterMode("agents")}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+              filterMode === "agents"
+                ? "bg-white text-neutral-900 shadow-2xs"
+                : "text-neutral-500 hover:text-neutral-900"
+            }`}
+          >
+            <Bot className="w-3 h-3 text-[#073525]" />
+            <span>Held by Agents ({agentCards.length})</span>
+          </button>
         </div>
 
-        <span className="text-xs font-mono text-[#053b2a] font-semibold">
-          Total Valuation: ${myCards.reduce((sum, c) => sum + (c.oracle_fair_value_usdc || 0), 0).toLocaleString()} USDC
-        </span>
+        {/* Valuation Tag */}
+        <div className="text-xs font-mono text-neutral-500">
+          Valuation: <strong className="text-neutral-900 font-bold">${totalValuation.toLocaleString()} USDC</strong>
+        </div>
       </div>
 
-      {myCards.length === 0 ? (
-        <div className="py-24 text-center text-xs text-neutral-600 bg-white rounded-[28px] border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-4">
-          <p>No cards currently held in your collection.</p>
+      {/* Slabs Grid */}
+      {filteredCards.length === 0 ? (
+        <div className="py-24 text-center text-xs text-neutral-500 bg-white rounded-[24px] border border-neutral-200/80 space-y-3">
+          <p className="font-medium text-neutral-800">
+            {filterMode === "personal"
+              ? "No slabs currently in your personal wallet."
+              : filterMode === "agents"
+              ? "No slabs currently allocated to your AI agents."
+              : "No slabs held in your portfolio yet."}
+          </p>
           <Link
             href="/marketplace"
-            className="inline-block px-6 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition shadow-md"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition shadow-xs"
           >
-            Browse Marketplace
+            <span>Acquire Verified Slabs</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {myCards.map((card) => {
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5">
+          {filteredCards.map((card) => {
             const cardKey = card.id || card.card_id;
             const isPersonal = !card.vault_id;
-            const holdingVault = vaults.find((v) => v.id === card.vault_id);
-            const provenance = getCardProvenance(card);
+            const holdingVault = userVaults.find((v) => v.id === card.vault_id) || card.vault;
+            const isActing = actionLoading === `withdraw-${cardKey}` || actionLoading === `liquidate-${cardKey}`;
+
+            const comp = card.gradingCompany || (card.grade?.startsWith("CGC") ? "CGC" : card.grade?.startsWith("BGS") ? "BGS" : "PSA");
+            const cleanGrade = card.grade?.replace(/^(PSA|CGC|BGS|SGC)\s*/i, "") || "10";
+            const compColor = comp === "CGC" ? "text-blue-700 bg-blue-50 border-blue-200" : comp === "BGS" ? "text-amber-700 bg-amber-50 border-amber-200" : "text-red-700 bg-red-50 border-red-200";
 
             return (
               <div
                 key={cardKey}
-                className="group relative rounded-[24px] p-4 bg-white border border-neutral-200/80 hover:border-[#a8f0be] transition-all duration-300 flex flex-col justify-between shadow-[0_2px_14px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_28px_rgba(4,50,36,0.08)] hover:-translate-y-1"
+                className="group relative rounded-2xl p-3 bg-white border border-neutral-200/80 hover:border-emerald-600 transition-all duration-200 flex flex-col justify-between shadow-2xs hover:shadow-md"
               >
                 <div>
-                  {/* PSA Grade Header */}
-                  <div className="mb-3 px-3 py-1.5 rounded-2xl bg-[#f8faf9] border border-neutral-200/70 flex items-center justify-between text-xs">
-                    <span className="font-bold text-red-600 font-mono">PSA</span>
-                    <span className="font-semibold text-neutral-900">{card.grade || "GEM MT 10"}</span>
-                    <span className="text-[10px] text-[#053b2a] font-semibold">Brink's Custody</span>
-                  </div>
+                  {/* Slab Canvas */}
+                  <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-[#fbfdfc] flex items-center justify-center p-2 border border-neutral-100 group-hover:border-neutral-200 transition mb-2.5">
+                    {/* Top Left: Grader & Grade */}
+                    <div className="absolute top-2 left-2 z-10">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold font-mono border ${compColor}`}>
+                        {comp} {cleanGrade}
+                      </span>
+                    </div>
 
-                  {/* Artwork Box */}
-                  <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden bg-[#f4f6f5] flex items-center justify-center p-3 border border-neutral-200/60 mb-3 group-hover:border-neutral-300 transition">
+                    {/* Top Right: Custody Badge */}
+                    <div className="absolute top-2 right-2 z-10">
+                      {isPersonal ? (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          Personal
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold bg-[#073525] text-white">
+                          @{holdingVault?.name || "Agent"}
+                        </span>
+                      )}
+                    </div>
+
                     <img
                       src={card.image_url}
                       alt={card.name}
                       loading="lazy"
-                      className="w-full h-full object-contain filter drop-shadow-[0_8px_20px_rgba(0,0,0,0.15)] group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-200"
                     />
-
-                    {card.rareness_score && (
-                      <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-neutral-200 text-[10px] font-semibold text-amber-700 flex items-center gap-1 shadow-sm">
-                        <Flame className="w-3 h-3 text-amber-500" />
-                        <span>Scarcity {card.rareness_score}/100</span>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Title & Set */}
-                  <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2 min-h-[36px] group-hover:text-[#053b2a] transition" title={card.name}>
+                  {/* Metadata */}
+                  <div className="text-[10px] text-neutral-400 font-semibold tracking-wider uppercase mb-1">
+                    {card.category || "TCG"} {card.psa_cert_number ? `• #${card.psa_cert_number}` : ""}
+                  </div>
+
+                  {/* Title */}
+                  <h3
+                    className="text-xs font-medium text-neutral-900 line-clamp-2 min-h-[32px] group-hover:text-[#073525] transition leading-snug"
+                    title={card.name}
+                  >
                     {card.name}
                   </h3>
-                  <div className="flex items-center justify-between text-xs text-neutral-500 mt-1">
-                    <span>{card.category || "TCG"}</span>
-                    <span>Cert #{card.psa_cert_number || "Verified"}</span>
-                  </div>
 
-                  {/* Holding Status Badge */}
-                  <div className="mt-3 p-2.5 rounded-2xl bg-[#f8faf9] border border-neutral-200 text-xs flex items-center justify-between">
-                    <span className="text-neutral-500">
-                      {isPersonal ? "Custody:" : "Held by Agent:"}
-                    </span>
-                    <span
-                      className={`font-semibold truncate max-w-[130px] font-mono text-xs ${
-                        isPersonal ? "text-emerald-700" : "text-[#053b2a]"
-                      }`}
-                    >
-                      {isPersonal ? "Personal Wallet" : holdingVault?.name || card.vault?.name || "Agent"}
-                    </span>
-                  </div>
-
-                  {/* Oracle Fair Value */}
-                  <div className="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between">
-                    <span className="text-xs text-neutral-500">Oracle Fair Value:</span>
-                    <span className="text-sm font-semibold text-neutral-900 font-mono">
-                      ${Number(card.oracle_fair_value_usdc || 0).toLocaleString()} USDC
-                    </span>
-                  </div>
-
-                  {/* Prominent Acquisition & Provenance Section */}
-                  <div className="mt-3 p-2.5 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 space-y-1.5 text-xs font-mono">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-neutral-500 flex items-center gap-1 font-sans">
-                        <Calendar className="w-3 h-3 text-[#053b2a]" />
-                        <span>Acquired:</span>
-                      </span>
-                      <span className="font-semibold text-neutral-900 text-[11px]">
-                        {formatFullDate(provenance.date)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1 border-t border-neutral-200/60">
-                      <span className="text-[10px] text-neutral-500 font-sans">Source:</span>
-                      <span
-                        className="text-[#053b2a] font-semibold text-[10px] truncate max-w-[140px]"
-                        title={provenance.label}
-                      >
-                        {provenance.label}
-                      </span>
-                    </div>
+                  {/* Valuation */}
+                  <div className="mt-2 text-xs font-mono font-bold text-neutral-900">
+                    ${Number(card.oracle_fair_value_usdc || 50).toLocaleString()} <span className="text-[10px] font-normal text-neutral-400 font-sans">USDC</span>
                   </div>
                 </div>
 
-                {/* Interactive Action Command Center */}
-                <div className="mt-4 pt-3 border-t border-neutral-100 space-y-2">
+                {/* Sleek Action Footer */}
+                <div className="mt-3 pt-2 border-t border-neutral-100 flex items-center gap-1.5">
                   {isPersonal ? (
-                    // Personal card actions: Assign to agent or Liquidate
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => setSelectedCardForAssign(card)}
-                        disabled={actionLoading === `assign-${cardKey}`}
-                        className="w-full py-2 px-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-[11px] font-semibold transition active:scale-95 flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-                      >
-                        <Bot className="w-3 h-3" />
-                        <span>Assign Agent</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleLiquidate(card)}
-                        disabled={actionLoading === `liquidate-${cardKey}`}
-                        className="w-full py-2 px-3 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-medium transition active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
-                      >
-                        <DollarSign className="w-3 h-3 text-emerald-600" />
-                        <span>Liquidate</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCardForAssign(card)}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-[#073525] hover:bg-[#0a4531] text-white text-[11px] font-semibold transition active:scale-95 shadow-2xs cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <Bot className="w-3 h-3" />
+                      <span>Assign to Agent</span>
+                    </button>
                   ) : (
-                    // Agent-held card actions: Chat & Instruct Agent, Liquidate, or Withdraw
-                    <div className="space-y-1.5">
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => holdingVault && openChat(holdingVault)}
-                          className="w-full py-2 px-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-[11px] font-semibold transition active:scale-95 flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-                        >
-                          <Bot className="w-3 h-3" />
-                          <span>Chat Agent</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleLiquidate(card)}
-                          disabled={actionLoading === `liquidate-${cardKey}`}
-                          className="w-full py-2 px-3 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-medium transition active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
-                        >
-                          <DollarSign className="w-3 h-3 text-emerald-600" />
-                          <span>Liquidate</span>
-                        </button>
-                      </div>
-
-                      <button
-                        onClick={() => handleWithdraw(card)}
-                        disabled={actionLoading === `withdraw-${cardKey}`}
-                        className="w-full py-1.5 text-center text-[10px] text-neutral-500 hover:text-neutral-900 transition underline underline-offset-2 cursor-pointer"
-                      >
-                        Withdraw card to personal wallet
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleWithdraw(card)}
+                      disabled={isActing}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-800 text-[11px] font-semibold transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isActing ? "Withdrawing..." : "Withdraw"}
+                    </button>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => handleLiquidate(card)}
+                    disabled={isActing}
+                    className="py-1.5 px-2 rounded-lg bg-neutral-50 hover:bg-rose-50 border border-neutral-200 text-neutral-600 hover:text-rose-700 text-[11px] font-medium transition cursor-pointer"
+                    title="Instant liquidation for USDC"
+                  >
+                    Liquidate
+                  </button>
                 </div>
               </div>
             );
@@ -322,79 +319,70 @@ export default function SlabsTab() {
 
       {/* Assign to Agent Modal */}
       {selectedCardForAssign && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[28px] max-w-md w-full p-6 shadow-2xl border border-neutral-100 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-[28px] bg-white border border-neutral-200 p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-              <div className="flex items-center gap-2">
-                <Bot className="w-4 h-4 text-[#053b2a]" />
-                <h3 className="font-semibold text-neutral-900 text-sm">Assign Card to AI Agent</h3>
-              </div>
+              <h3 className="text-sm font-bold text-neutral-900">Assign Slab to Agent Vault</h3>
               <button
+                type="button"
                 onClick={() => setSelectedCardForAssign(null)}
-                className="p-1 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition cursor-pointer"
+                className="w-7 h-7 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-500 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#f8faf9] border border-neutral-200/70">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#f8faf9] border border-neutral-200">
               <img
                 src={selectedCardForAssign.image_url}
-                alt={selectedCardForAssign.name}
+                alt=""
                 className="w-12 h-16 object-contain rounded-lg bg-white p-1 border border-neutral-200 shrink-0"
               />
-              <div className="min-w-0">
-                <div className="text-xs font-semibold text-neutral-900 truncate">
+              <div className="truncate">
+                <div className="text-[10px] font-mono text-neutral-400 uppercase font-semibold">
+                  {selectedCardForAssign.category} • {selectedCardForAssign.grade || "PSA 10"}
+                </div>
+                <h4 className="text-xs font-bold text-neutral-900 truncate" title={selectedCardForAssign.name}>
                   {selectedCardForAssign.name}
-                </div>
-                <div className="text-[11px] text-neutral-500 font-mono mt-0.5">
-                  Fair Value: ${selectedCardForAssign.oracle_fair_value_usdc} USDC
-                </div>
-                <div className="text-[10px] text-[#053b2a] font-semibold mt-0.5">
-                  PSA {selectedCardForAssign.grade || "10"}
+                </h4>
+                <div className="text-xs font-mono font-semibold text-[#073525] mt-0.5">
+                  ${selectedCardForAssign.oracle_fair_value_usdc || 50} USDC
                 </div>
               </div>
             </div>
 
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              Select an active AI agent. The agent will hold this card in its inventory and automatically barter or trade it on the A2A trading floor according to its strategy.
-            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-neutral-700 uppercase tracking-wider block">
+                Select Destination Agent Vault:
+              </label>
 
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {vaults.map((vault) => (
-                <button
-                  key={vault.id}
-                  onClick={() => handleAssignToAgent(selectedCardForAssign.id || selectedCardForAssign.card_id, vault.id)}
-                  disabled={actionLoading?.startsWith("assign-")}
-                  className="w-full p-3 rounded-2xl bg-white hover:bg-[#a8f0be]/20 border border-neutral-200 hover:border-[#a8f0be] text-left transition flex items-center justify-between cursor-pointer group"
-                >
-                  <div>
-                    <div className="text-xs font-semibold text-neutral-900 group-hover:text-[#053b2a]">
-                      {vault.name}
-                    </div>
-                    <div className="text-[10px] text-neutral-500 font-mono">
-                      @{vault.sub_account}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-bold text-[#053b2a] font-mono">
-                      ${vault.usdc_balance} USDC
-                    </span>
-                    <div className="text-[10px] text-neutral-500">
-                      {vault.tier}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="pt-2 flex justify-end">
-              <button
-                onClick={() => setSelectedCardForAssign(null)}
-                className="px-5 py-2 rounded-full border border-neutral-200 text-neutral-700 text-xs font-medium hover:bg-neutral-50 transition cursor-pointer"
-              >
-                Cancel
-              </button>
+              {userVaults.length === 0 ? (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                  You have not deployed any AI agents yet. Please deploy an agent first.
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {userVaults.map((vault) => (
+                    <button
+                      key={vault.id}
+                      type="button"
+                      onClick={() => handleAssignToAgent(selectedCardForAssign.id || selectedCardForAssign.card_id, vault.id)}
+                      disabled={actionLoading === `assign-${selectedCardForAssign.id || selectedCardForAssign.card_id}`}
+                      className="w-full p-3 rounded-xl border border-neutral-200 hover:border-[#073525] hover:bg-[#f8faf9] transition text-left flex items-center justify-between cursor-pointer group"
+                    >
+                      <div>
+                        <div className="text-xs font-bold text-neutral-900 group-hover:text-[#073525]">
+                          {vault.name}
+                        </div>
+                        <div className="text-[10px] text-neutral-500 font-mono">
+                          @{vault.sub_account} • ${vault.usdc_balance} USDC
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-[#073525]" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

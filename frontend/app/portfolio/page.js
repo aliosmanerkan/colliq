@@ -22,20 +22,20 @@ export default function PortfolioPage() {
 
   if (isLoading && vaults.length === 0) {
     return (
-      <section className="space-y-8 animate-in fade-in duration-200">
-        <div className="p-8 sm:p-10 rounded-[28px] bg-white border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] animate-pulse space-y-4">
-          <div className="h-6 w-48 bg-neutral-200/80 rounded-full" />
-          <div className="h-10 w-72 bg-neutral-200/80 rounded-xl" />
-          <div className="h-4 w-96 bg-neutral-100 rounded-lg" />
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="p-5 rounded-[24px] bg-white border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] animate-pulse space-y-3">
-              <div className="h-4 w-24 bg-neutral-200/80 rounded" />
-              <div className="h-8 w-32 bg-neutral-300/80 rounded" />
-              <div className="h-3 w-28 bg-neutral-100 rounded" />
+      <section className="space-y-6 animate-in fade-in duration-200">
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-neutral-200/80 shadow-sm animate-pulse flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-neutral-100" />
+            <div className="space-y-2">
+              <div className="h-4 w-32 bg-neutral-200 rounded" />
+              <div className="h-7 w-40 bg-neutral-300 rounded" />
             </div>
-          ))}
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="h-10 w-28 bg-neutral-100 rounded-lg" />
+            <div className="h-10 w-28 bg-neutral-100 rounded-lg" />
+            <div className="h-10 w-32 bg-neutral-200 rounded-xl" />
+          </div>
         </div>
       </section>
     );

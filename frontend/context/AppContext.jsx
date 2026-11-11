@@ -6,8 +6,7 @@ import { getSocket } from "@/lib/socket";
 import { initNearWallet } from "@/lib/near";
 import MintVaultModal from "@/components/MintVaultModal";
 import TransferVaultModal from "@/components/TransferVaultModal";
-import VaultDetailModal from "@/components/VaultDetailModal";
-import AgentChatModal from "@/components/AgentChatModal";
+import AgentCommandStudioModal from "@/components/AgentCommandStudioModal";
 
 const AppContext = createContext(null);
 
@@ -243,18 +242,31 @@ export function AppProvider({ children }) {
     };
   }, [loadData]);
 
-  // Modal helper methods
+  // Modal helper methods (Unified Agent Command Studio)
+  const [studioInitialTab, setStudioInitialTab] = useState("directives");
   const openMint = () => setIsMintOpen(true);
   const closeMint = () => setIsMintOpen(false);
 
   const openTransfer = (vault) => setTransferVault(vault);
   const closeTransfer = () => setTransferVault(null);
 
-  const openInspect = (vault) => setInspectVault(vault);
+  const openInspect = (vault) => {
+    setStudioInitialTab("inventory");
+    setInspectVault(vault);
+  };
   const closeInspect = () => setInspectVault(null);
 
-  const openChat = (vault) => setChatVault(vault);
+  const openChat = (vault) => {
+    setStudioInitialTab("directives");
+    setChatVault(vault);
+  };
   const closeChat = () => setChatVault(null);
+
+  const activeStudioVault = inspectVault || chatVault;
+  const closeStudio = () => {
+    setInspectVault(null);
+    setChatVault(null);
+  };
 
   return (
     <AppContext.Provider
@@ -297,18 +309,11 @@ export function AppProvider({ children }) {
         onSuccess={() => loadData()}
       />
 
-      <VaultDetailModal
-        vault={inspectVault}
-        isOpen={!!inspectVault}
-        onClose={closeInspect}
-        onOpenChat={(v) => openChat(v)}
-      />
-
-      <AgentChatModal
-        vault={chatVault}
-        isOpen={!!chatVault}
-        onClose={closeChat}
-        onRulesUpdated={() => loadData()}
+      <AgentCommandStudioModal
+        vault={activeStudioVault}
+        isOpen={!!activeStudioVault}
+        onClose={closeStudio}
+        initialTab={studioInitialTab}
       />
     </AppContext.Provider>
   );
