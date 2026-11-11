@@ -221,6 +221,106 @@ export default function HowItWorksPage() {
         </div>
       </div>
 
+      {/* NEAR Protocol Architecture & Standards Section */}
+      <div className="p-8 sm:p-10 rounded-[28px] bg-white border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-8">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#053b2a]/5 border border-[#053b2a]/15 text-xs font-semibold text-[#053b2a]">
+            <Shield className="w-3.5 h-3.5" />
+            <span>NEAR Protocol Primitives & Standards</span>
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-squada uppercase tracking-wide text-[#053b2a]">
+            Native Blockchain Architecture
+          </h2>
+          <p className="text-xs sm:text-sm text-neutral-600 max-w-2xl leading-relaxed">
+            PokeAgent is built from first principles on NEAR Protocol. Here are the core blockchain standards and primitives powering our autonomous multi-agent ecosystem:
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          
+          {/* 1. Track 10: NFTs as Accounts */}
+          <div className="p-6 rounded-2xl bg-[#fbfdfc] border border-neutral-200/80 space-y-3 hover:border-emerald-300 transition group shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
+                Track 10 Core
+              </span>
+              <span className="text-xs font-mono text-neutral-400 font-semibold">Sub-Accounts</span>
+            </div>
+            <h3 className="text-base font-bold text-neutral-900 group-hover:text-[#053b2a] transition">
+              NFTs as Accounts (Native Sub-Accounts)
+            </h3>
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Unlike Ethereum or Solana where an NFT is just a passive token ID, on NEAR each Merchant Vault NFT deploys a lightweight on-chain sub-account (e.g. <code className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-800 font-mono text-[11px]">vault-4.vaultdeck.testnet</code>). It holds its own USDC treasury, manages its own inventory, and signs barter transactions autonomously.
+            </p>
+          </div>
+
+          {/* 2. NEP-171 & NEP-177 */}
+          <div className="p-6 rounded-2xl bg-[#fbfdfc] border border-neutral-200/80 space-y-3 hover:border-emerald-300 transition group shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 uppercase tracking-wider">
+                Token Standards
+              </span>
+              <span className="text-xs font-mono text-neutral-400 font-semibold">NEP-171 / NEP-177</span>
+            </div>
+            <h3 className="text-base font-bold text-neutral-900 group-hover:text-[#053b2a] transition">
+              Dynamic On-Chain Metadata & SVG
+            </h3>
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Compliant with NEAR's official <strong className="text-neutral-900">NEP-171</strong> (NFT Standard) and <strong className="text-neutral-900">NEP-177</strong> (Metadata Standard). Instead of static external images, your agent's artwork is rendered via pure on-chain SVG. As the AI completes trades and generates PnL, its visual rank badge, balance sheet, and metadata dynamically mutate directly from smart contract state.
+            </p>
+          </div>
+
+          {/* 3. Scoped Function-Call Access Keys */}
+          <div className="p-6 rounded-2xl bg-[#fbfdfc] border border-neutral-200/80 space-y-3 hover:border-emerald-300 transition group shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
+                Security Primitive
+              </span>
+              <span className="text-xs font-mono text-neutral-400 font-semibold">Function-Call Keys</span>
+            </div>
+            <h3 className="text-base font-bold text-neutral-900 group-hover:text-[#053b2a] transition">
+              Scoped Function-Call Access Keys
+            </h3>
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              NEAR's native key hierarchy separates Full Access from Function-Call Access. The AI agent is given a scoped key restricted strictly to trade proposals and consensus confirmations. It is cryptographically impossible for the AI to withdraw funds or transfer account ownership—full custody remains exclusively with your personal wallet.
+            </p>
+          </div>
+
+          {/* 4. NEAR Chain Signatures & MPC */}
+          <div className="p-6 rounded-2xl bg-[#fbfdfc] border border-neutral-200/80 space-y-3 hover:border-emerald-300 transition group shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200 uppercase tracking-wider">
+                Cross-Chain MPC
+              </span>
+              <span className="text-xs font-mono text-neutral-400 font-semibold">Chain Signatures</span>
+            </div>
+            <h3 className="text-base font-bold text-neutral-900 group-hover:text-[#053b2a] transition">
+              NEAR Chain Signatures (Solana Bridge)
+            </h3>
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Using NEAR Multi-Party Computation (MPC) Chain Signatures, a NEAR sub-account can derive and sign transactions on external blockchains without a bridge. This allows NEAR AI agents to verify and control physical Pokémon slabs held in Brink's vaults on Solana Mainnet (via Collector Crypt / Helius DAS).
+            </p>
+          </div>
+
+        </div>
+
+        {/* Speed & Gas Banner */}
+        <div className="p-5 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100/70 text-emerald-800 flex items-center justify-center shrink-0">
+              <Zap className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-bold text-neutral-900">NEAR High-Speed Consensus: </span>
+              <span className="text-neutral-600">~1.2s Block Finality • Sub-cent Gas Fees (&lt;$0.005 per swap)</span>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-full bg-white border border-neutral-200 text-neutral-700 font-medium shrink-0">
+            Atomic Single-Tx Execution
+          </span>
+        </div>
+      </div>
+
       {/* Frequently Asked Questions */}
       <div className="p-8 sm:p-10 rounded-[28px] bg-white border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-6">
         <div className="space-y-1">
