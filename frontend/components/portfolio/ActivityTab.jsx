@@ -73,9 +73,10 @@ export default function ActivityTab() {
           {myTrades.map((trade) => {
             const tradeKey = trade.id || trade.trade_id;
             const isExpanded = expandedTradeId === tradeKey;
-            const cardA = trade.cards_from_a?.[0]?.name || "Card";
+            const isMarketSnipe = trade.vault_b_name?.includes("Collector Crypt") || String(trade.trade_id).startsWith("snipe");
+            const cardA = trade.cards_from_a?.[0]?.name || (trade.usdc_from_a ? `$${trade.usdc_from_a} USDC` : "Card");
             const cardB = trade.cards_from_b?.[0]?.name || "Card";
-            const cashA = trade.usdc_from_a ? ` + $${trade.usdc_from_a} USDC` : "";
+            const cashA = trade.usdc_from_a && trade.cards_from_a?.length > 0 ? ` + $${trade.usdc_from_a} USDC` : "";
             const cashB = trade.usdc_from_b ? ` + $${trade.usdc_from_b} USDC` : "";
             const logRounds = Array.isArray(trade.negotiation_log) ? trade.negotiation_log : [];
 
@@ -86,15 +87,29 @@ export default function ActivityTab() {
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#a8f0be]/30 border border-[#043224]/15 flex items-center justify-center shrink-0">
-                      <ArrowRightLeft className="w-4 h-4 text-[#053b2a]" />
+                    <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${
+                      isMarketSnipe
+                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                        : "bg-[#a8f0be]/30 border-[#043224]/15 text-[#053b2a]"
+                    }`}>
+                      <ArrowRightLeft className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-neutral-900">
-                        {trade.vault_a_name} ⇄ {trade.vault_b_name}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-neutral-900">
+                          {trade.vault_a_name} ⇄ {trade.vault_b_name}
+                        </span>
+                        {isMarketSnipe && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
+                            Market Snipe
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-neutral-500 font-mono">
-                        {trade.rounds_count || 4} Negotiation Turns • Atomic Settlement
+                        {isMarketSnipe 
+                          ? "Collector Crypt Sourced • Physical PWCC / Brink's Custody"
+                          : `${trade.rounds_count || 4} Negotiation Turns • Atomic Settlement`
+                        }
                       </div>
                     </div>
                   </div>
@@ -139,7 +154,12 @@ export default function ActivityTab() {
                     >
                       <MessageSquare className="w-3.5 h-3.5 text-[#053b2a]" />
                       <span>
-                        {isExpanded ? "Hide Agent Dialogue" : `View Agent Dialogue (${logRounds.length || trade.rounds_count || 4} Turns)`}
+                        {isExpanded
+                          ? "Hide Details"
+                          : isMarketSnipe
+                            ? "View Snipe Reasoning"
+                            : `View Agent Dialogue (${logRounds.length || trade.rounds_count || 4} Turns)`
+                        }
                       </span>
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
                     </button>

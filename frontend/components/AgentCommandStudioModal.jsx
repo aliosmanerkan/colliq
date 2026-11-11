@@ -782,7 +782,8 @@ export default function AgentCommandStudioModal({
                   </div>
                 ) : (
                   vaultTrades.map((trade) => {
-                    const cardA = trade.cards_from_a?.[0]?.name || "Card";
+                    const isMarketSnipe = trade.vault_b_name?.includes("Collector Crypt") || String(trade.trade_id).startsWith("snipe");
+                    const cardA = trade.cards_from_a?.[0]?.name || (trade.usdc_from_a ? `$${trade.usdc_from_a} USDC` : "Card");
                     const cardB = trade.cards_from_b?.[0]?.name || "Card";
                     const isInitiator = trade.vault_a_id === vault.id;
                     const counterparty = isInitiator ? trade.vault_b_name : trade.vault_a_name;
@@ -793,21 +794,38 @@ export default function AgentCommandStudioModal({
                         className="p-4 rounded-2xl bg-[#fbfdfc] border border-neutral-200/80 space-y-2 text-xs"
                       >
                         <div className="flex items-center justify-between font-mono">
-                          <span className="font-bold text-neutral-900">
-                            Swap with {counterparty}
+                          <span className="font-bold text-neutral-900 truncate max-w-[240px]">
+                            {isMarketSnipe ? `Market Snipe: ${counterparty}` : `Swap with ${counterparty}`}
                           </span>
-                          <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            {trade.status || "SETTLED"}
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                            isMarketSnipe
+                              ? "text-blue-800 bg-blue-50 border-blue-200 font-semibold"
+                              : "text-emerald-800 bg-emerald-50 border-emerald-200"
+                          }`}>
+                            {isMarketSnipe ? "SNIPED" : (trade.status || "SETTLED")}
                           </span>
                         </div>
 
                         <div className="p-2.5 rounded-xl bg-white border border-neutral-200/60 font-mono text-[11px] space-y-1">
-                          <div className="text-neutral-600 truncate">
-                            Offered: <span className="font-medium text-neutral-900">{isInitiator ? cardA : cardB}</span>
-                          </div>
-                          <div className="text-neutral-600 truncate">
-                            Received: <span className="font-medium text-neutral-900">{isInitiator ? cardB : cardA}</span>
-                          </div>
+                          {isMarketSnipe ? (
+                            <>
+                              <div className="text-neutral-600 truncate">
+                                Paid: <span className="font-medium text-neutral-900">${trade.usdc_from_a} USDC</span>
+                              </div>
+                              <div className="text-neutral-600 truncate">
+                                Acquired Slab: <span className="font-medium text-[#073525]">{cardB}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-neutral-600 truncate">
+                                Offered: <span className="font-medium text-neutral-900">{isInitiator ? cardA : cardB}</span>
+                              </div>
+                              <div className="text-neutral-600 truncate">
+                                Received: <span className="font-medium text-neutral-900">{isInitiator ? cardB : cardA}</span>
+                              </div>
+                            </>
+                          )}
                         </div>
 
                         {trade.tx_hash && (

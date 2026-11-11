@@ -4,6 +4,7 @@ import { generateVaultDynamicSvg } from "../services/DynamicSvgService.js";
 import nearService from "../services/NearService.js";
 import agentChatService from "../services/AgentChatService.js";
 import agentInceptionService from "../services/AgentInceptionService.js";
+import a2aSwarm from "../services/A2ASwarmService.js";
 
 export function getVaultWhere(idParam) {
     const isNum = !isNaN(idParam) && !isNaN(parseInt(idParam)) && !String(idParam).includes("-");
@@ -174,10 +175,20 @@ router.post("/mint", async (req, res) => {
             bio: bio || "Newly minted Autonomous Merchant Vault."
         });
 
+        // Autonomous Inception Scan & Inaugural Market Snipe
+        let inauguralSnipe = null;
+        try {
+            inauguralSnipe = await a2aSwarm.scanAndSnipeForNewVault(newVault);
+            await newVault.reload();
+        } catch (snipeErr) {
+            console.warn("Inaugural market scan notice:", snipeErr.message);
+        }
+
         res.status(201).json({
             status: "MINTED",
             vault: newVault,
-            accessKey: keyPair
+            accessKey: keyPair,
+            inauguralSnipe
         });
     } catch (err) {
         console.error("Mint error:", err);
@@ -213,6 +224,90 @@ router.post("/:id/snipe", async (req, res) => {
 
         const { bridgeCollectorCryptCardToNearVault } = await import("../services/CollectorCryptService.js");
         const result = await bridgeCollectorCryptCardToNearVault(card_id, vault.id, vault.sub_account, card_data);
+
+        // Record snipe into trade ledger
+        const cardPrice = Number(result.card.oracle_fair_value_usdc || 50);
+        let ccVault = await db.vault.findOne({ where: { sub_account: "collectorcrypt.vaultdeck.testnet" } });
+        if (!ccVault) {
+            ccVault = await db.vault.create({
+                vault_id: "v-collectorcrypt-system",
+                sub_account: "collectorcrypt.vaultdeck.testnet",
+                name: "Collector Crypt Vault (PWCC / Brink's)",
+                owner_account: "collectorcrypt.testnet",
+                usdc_balance: 500000.0,
+                strategy: "MARKET_MAKER",
+                tier: "MASTER",
+                guardrail_max_spend_per_trade: 50000.0,
+                guardrail_min_oracle_fair_value_pct: 70.0,
+                custom_rules: JSON.stringify(["Physical Slab Custodian"]),
+                chat_history: "[]",
+                access_key_public: "ed25519:collectorcryptsystemkey",
+                bio: "Physical vault custodian securing 170k+ authenticated PSA/CGC slabs."
+            });
+        }
+
+        const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        const nearBlock = 276399000 + Math.floor(Math.random() * 5000);
+        const txHash = `0xnear_snipe_${Date.now()}`;
+
+        await db.trade.create({
+            trade_id: tradeId,
+            vault_a_id: vault.id,
+            vault_b_id: ccVault.id,
+            vault_a_name: vault.name,
+            vault_b_name: "Collector Crypt Vault (PWCC / Brink's)",
+            cards_from_a: [],
+            cards_from_b: [result.card],
+            usdc_from_a: cardPrice,
+            usdc_from_b: 0.0,
+            rounds_count: 1,
+            negotiation_log: [
+                {
+                    round: 1,
+                    agent: vault.name,
+                    turn: {
+                        decision: "ACCEPT",
+                        public_argument: `Direct market acquisition: Secured ${result.card.name} (${result.card.grade || "PSA 10"}) at $${cardPrice.toFixed(2)} USDC.`,
+                        private_reasoning_for_owner: `Physical slab bridged to vault sub-account. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`
+                    }
+                }
+            ],
+            status: "COMPLETED",
+            protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
+            tx_hash: txHash,
+            near_block: nearBlock
+        });
+
+        // Append to chat history
+        let history = [];
+        try {
+            history = JSON.parse(vault.chat_history || "[]");
+        } catch {
+            history = [];
+        }
+
+        history.push({
+            id: `msg-snipe-${Date.now()}`,
+            sender: "agent",
+            senderAccount: vault.sub_account,
+            text: `🎯 Direct Market Snipe:\nAcquired ${result.card.name} (${result.card.grade || "PSA 10"}) from Collector Crypt for $${cardPrice.toFixed(2)} USDC.\nPhysical custody secured in PWCC/Brink's vault. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
+            actionType: "MARKET_SNIPE",
+            timestamp: new Date().toISOString()
+        });
+
+        vault.chat_history = JSON.stringify(history);
+        await vault.save();
+
+        const io = req.app.get("io");
+        if (io) {
+            io.emit("market_snipe", {
+                vault: { id: vault.id, name: vault.name, sub_account: vault.sub_account, usdc_balance: vault.usdc_balance },
+                card: result.card,
+                price: cardPrice,
+                tx_hash: txHash
+            });
+            io.emit("vault:updated", { vaultId: vault.id, newBalance: vault.usdc_balance });
+        }
 
         res.json({
             status: "SNIPED_BY_AGENT",

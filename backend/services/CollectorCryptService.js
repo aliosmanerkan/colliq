@@ -452,7 +452,7 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
     const vault = await db.vault.findOne({ where: { id: vaultId } });
     if (!vault) throw new Error("Target NEAR Merchant Vault not found");
 
-    if (vault.is_locked) {
+    if (vault.is_locked && !vault.lock_reason?.startsWith("MARKET_SNIPE")) {
         throw new Error("Vault is currently locked. Cannot bridge cards.");
     }
 

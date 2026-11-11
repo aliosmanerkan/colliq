@@ -32,6 +32,21 @@ router.post("/trigger-swarm", async (req, res) => {
     }
 });
 
+// Trigger an Autonomous Collector Crypt Market Snipe Cycle across active vaults
+router.post("/trigger-sniper", async (req, res) => {
+    try {
+        const { search } = req.body || {};
+        const result = await a2aSwarm.executeMarketSnipeCycle(search);
+        res.json({
+            status: "MARKET_SNIPER_EXECUTED",
+            result
+        });
+    } catch (err) {
+        console.error("Market sniper trigger error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET recent trade history & negotiation transcripts
 router.get("/history", async (req, res) => {
     try {

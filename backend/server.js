@@ -81,6 +81,11 @@ io.on("connection", (socket) => {
         await a2aSwarm.executeNegotiationCycle();
     });
 
+    socket.on("trigger_snipe_cycle", async () => {
+        console.log(`🎯 Market Snipe Cycle triggered by socket client: ${socket.id}`);
+        await a2aSwarm.executeMarketSnipeCycle();
+    });
+
     socket.on("disconnect", (reason) => {
         console.log(`🔌 Client disconnected (${socket.id}): ${reason}`);
     });
@@ -144,6 +149,11 @@ httpServer.listen(port, () => {
     console.log(`📡 A2A Swarm Live Exchange ws://localhost:${port}`);
     // Non-blocking pre-warm of 170k+ Collector Crypt inventory
     warmUpCollectorCryptCache().catch((err) => console.warn("Cache pre-warm notice:", err.message));
+
+    // Autonomous market sniper loop (monitors Collector Crypt for agent directives every 60s)
+    setInterval(() => {
+        a2aSwarm.executeMarketSnipeCycle().catch((err) => console.warn("Auto sniper background notice:", err.message));
+    }, 60000);
 });
 
 export { io, app, httpServer };
