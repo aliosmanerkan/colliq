@@ -20,7 +20,7 @@ import auth from "./controllers/AuthControllers.js";
 import vaults from "./controllers/VaultControllers.js";
 import trades from "./controllers/TradeControllers.js";
 import market from "./controllers/MarketControllers.js";
-import { seedInitialVaultsAndCards } from "./services/CollectorCryptService.js";
+import { seedInitialVaultsAndCards, warmUpCollectorCryptCache } from "./services/CollectorCryptService.js";
 import a2aSwarm from "./services/A2ASwarmService.js";
 import negotiationEngine from "./src/agents/negotiationEngine.ts";
 import agentChatService from "./services/AgentChatService.js";
@@ -142,6 +142,8 @@ app.use((err, req, res, next) => {
 httpServer.listen(port, () => {
     console.log(`🚀 VaultDeck Protocol Backend running on port ${port}`);
     console.log(`📡 A2A Swarm Live Exchange ws://localhost:${port}`);
+    // Non-blocking pre-warm of 170k+ Collector Crypt inventory
+    warmUpCollectorCryptCache().catch((err) => console.warn("Cache pre-warm notice:", err.message));
 });
 
 export { io, app, httpServer };

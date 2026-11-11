@@ -207,12 +207,12 @@ router.post("/:id/transfer", async (req, res) => {
 // AGENT SNIPES / BUYS A CARD FROM THE MARKETPLACE
 router.post("/:id/snipe", async (req, res) => {
     try {
-        const { card_id } = req.body;
+        const { card_id, card_data } = req.body;
         const vault = await db.vault.findOne({ where: getVaultWhere(req.params.id) });
         if (!vault) return res.status(404).json({ error: "Vault not found" });
 
         const { bridgeCollectorCryptCardToNearVault } = await import("../services/CollectorCryptService.js");
-        const result = await bridgeCollectorCryptCardToNearVault(card_id, vault.id, vault.sub_account);
+        const result = await bridgeCollectorCryptCardToNearVault(card_id, vault.id, vault.sub_account, card_data);
 
         res.json({
             status: "SNIPED_BY_AGENT",

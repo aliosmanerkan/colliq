@@ -1,7 +1,12 @@
 import express from "express";
 import db from "../model/model.js";
 import nearService from "../services/NearService.js";
-import { getCollectorCryptInventory, bridgeCollectorCryptCardToNearVault } from "../services/CollectorCryptService.js";
+import { 
+    getCollectorCryptInventory, 
+    bridgeCollectorCryptCardToNearVault, 
+    fetchCollectorCryptMarketplace, 
+    findCollectorCryptCardById 
+} from "../services/CollectorCryptService.js";
 
 const router = express.Router();
 
@@ -38,78 +43,35 @@ router.get("/cards", async (req, res) => {
     }
 });
 
-// GET authentic Collector Crypt inventory (Solana Brink's Vault) with filtering & search
-router.get("/collector-crypt", (req, res) => {
+// GET authentic Collector Crypt inventory (170k+ Live Solana Brink's & PWCC Vaults)
+router.get("/collector-crypt", async (req, res) => {
     try {
-        let cards = getCollectorCryptInventory();
-        const { search, category, grade, sortBy } = req.query;
+        const { 
+            search, 
+            category, 
+            gradingCompany, 
+            grade, 
+            sortBy, 
+            orderBy, 
+            cursor, 
+            limit, 
+            listedOnly 
+        } = req.query;
 
-        if (search) {
-            const q = search.toLowerCase();
-            cards = cards.filter(c => 
-                c.name?.toLowerCase().includes(q) || 
-                c.category?.toLowerCase().includes(q) ||
-                c.id?.toLowerCase().includes(q)
-            );
-        }
-
-        if (category && category !== "ALL") {
-            const catLower = category.toLowerCase();
-            cards = cards.filter(c => {
-                if (!c.category) return false;
-                const cLower = c.category.toLowerCase();
-                if (catLower.includes("magic") && cLower.includes("magic")) return true;
-                if (catLower.includes("yu-gi") && cLower.includes("yu-gi")) return true;
-                if (catLower.includes("pokemon") && cLower.includes("pokemon")) return true;
-                if (catLower.includes("dragon") && cLower.includes("dragon")) return true;
-                return cLower === catLower;
-            });
-        }
-
-        if (grade && grade !== "ALL") {
-            cards = cards.filter(c => c.grade?.toLowerCase().includes(grade.toLowerCase()));
-        }
-
-        if (sortBy === "price_desc") {
-            cards = [...cards].sort((a, b) => (b.insuredUsd || b.costUsd || 0) - (a.insuredUsd || a.costUsd || 0));
-        } else if (sortBy === "price_asc") {
-            cards = [...cards].sort((a, b) => (a.insuredUsd || a.costUsd || 0) - (b.insuredUsd || b.costUsd || 0));
-        } else if (sortBy === "rareness") {
-            cards = [...cards].sort((a, b) => (b.rareness || 0) - (a.rareness || 0));
-        } else if (sortBy === "return") {
-            cards = [...cards].sort((a, b) => (b.returnPct || 0) - (a.returnPct || 0));
-        } else if (sortBy === "newest") {
-            cards = [...cards].sort((a, b) => (b.acquiredAt || 0) - (a.acquiredAt || 0));
-        } else if (sortBy === "pop_asc") {
-            const getPop = (c) => (typeof c.population?.atGrade === "number" ? c.population.atGrade : 999999);
-            cards = [...cards].sort((a, b) => getPop(a) - getPop(b));
-        } else if (sortBy === "pop_desc") {
-            const getPop = (c) => (typeof c.population?.atGrade === "number" ? c.population.atGrade : 0);
-            cards = [...cards].sort((a, b) => getPop(b) - getPop(a));
-        } else if (sortBy === "name_asc") {
-            cards = [...cards].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-        } else if (sortBy === "name_desc") {
-            cards = [...cards].sort((a, b) => (b.name || "").localeCompare(a.name || ""));
-        } else if (sortBy === "grade_desc") {
-            const getGradeNum = (g) => {
-                if (!g) return 0;
-                if (g.includes("10")) return 10;
-                if (g.includes("9.5")) return 9.5;
-                if (g.includes("9")) return 9;
-                if (g.includes("8")) return 8;
-                return 0;
-            };
-            cards = [...cards].sort((a, b) => getGradeNum(b.grade) - getGradeNum(a.grade));
-        }
-
-        res.json({
-            total: cards.length,
-            custody: "Brink's Vault & PSA (Collector Crypt)",
-            chain_origin: "Solana Mainnet",
-            bridge_destination: "NEAR Protocol (Track 10: NFTs as Accounts)",
-            cards
+        const result = await fetchCollectorCryptMarketplace({
+            search,
+            category,
+            gradingCompany,
+            grade,
+            sortBy: sortBy || orderBy,
+            cursor,
+            limit: limit ? parseInt(limit, 10) : 48,
+            listedOnly: listedOnly === "true" || listedOnly === true
         });
+
+        res.json(result);
     } catch (err) {
+        console.error("Marketplace fetch error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -117,12 +79,17 @@ router.get("/collector-crypt", (req, res) => {
 // Buy Collector Crypt Card and secure into a NEAR Merchant Vault
 router.post("/collector-crypt/buy", async (req, res) => {
     try {
-        const { card_id, vault_id, owner_account } = req.body;
+        const { card_id, vault_id, owner_account, card_data } = req.body;
         if (!card_id || !vault_id) {
             return res.status(400).json({ error: "card_id and vault_id are required" });
         }
 
-        const result = await bridgeCollectorCryptCardToNearVault(card_id, vault_id, owner_account || "alierkan.testnet");
+        const result = await bridgeCollectorCryptCardToNearVault(
+            card_id, 
+            vault_id, 
+            owner_account || "alierkan.testnet", 
+            card_data
+        );
         res.json(result);
     } catch (err) {
         console.error("Buy card error:", err);
@@ -133,12 +100,17 @@ router.post("/collector-crypt/buy", async (req, res) => {
 // Bridge Collector Crypt Card to a NEAR Merchant Vault
 router.post("/collector-crypt/bridge", async (req, res) => {
     try {
-        const { card_id, vault_id, owner_account } = req.body;
+        const { card_id, vault_id, owner_account, card_data } = req.body;
         if (!card_id || !vault_id) {
             return res.status(400).json({ error: "card_id and vault_id are required" });
         }
 
-        const result = await bridgeCollectorCryptCardToNearVault(card_id, vault_id, owner_account || "alierkan.testnet");
+        const result = await bridgeCollectorCryptCardToNearVault(
+            card_id, 
+            vault_id, 
+            owner_account || "alierkan.testnet", 
+            card_data
+        );
         res.json(result);
     } catch (err) {
         console.error("Bridge card error:", err);
@@ -149,24 +121,26 @@ router.post("/collector-crypt/bridge", async (req, res) => {
 // Direct Buy with Personal Account (Manual Purchase with NEAR or USDC)
 router.post("/buy-direct", async (req, res) => {
     try {
-        const { card_id, buyer_account, tx_hash, payment_method, near_amount } = req.body;
+        const { card_id, buyer_account, tx_hash, payment_method, near_amount, card_data } = req.body;
         if (!card_id || !buyer_account) {
             return res.status(400).json({ error: "card_id and buyer_account are required" });
         }
 
-        const ccCards = getCollectorCryptInventory();
-        const ccCard = ccCards.find(c => c.id === card_id);
+        const ccCard = findCollectorCryptCardById(card_id, card_data);
 
         let finalCard;
         if (ccCard) {
-            const certNum = ccCard.id.substring(0, 8).toUpperCase();
+            const certNum = ccCard.certNumber || ccCard.id.substring(0, 8).toUpperCase();
             const cardPrice = ccCard.insuredUsd || ccCard.costUsd || 50.0;
-            const existingCard = await db.card.findOne({ where: { solana_mint: ccCard.id } });
+            const existingCard = await db.card.findOne({
+                where: db.Sequelize.or({ solana_mint: ccCard.id }, { card_id: ccCard.id })
+            });
 
             if (existingCard) {
                 existingCard.vault_id = null;
                 existingCard.owner_account = buyer_account;
                 existingCard.is_locked = false;
+                existingCard.oracle_fair_value_usdc = cardPrice;
                 await existingCard.save();
                 finalCard = existingCard;
             } else {
@@ -178,13 +152,13 @@ router.post("/buy-direct", async (req, res) => {
                     solana_mint: ccCard.id,
                     name: ccCard.name,
                     category: ccCard.category || "Pokemon",
-                    set_name: ccCard.name.split("PSA")[0]?.trim() || "Collector Crypt Vault",
+                    set_name: ccCard.set || ccCard.name.split("PSA")[0]?.trim() || "Collector Crypt Vault",
                     grade: ccCard.grade || "PSA 10 GEM MT",
                     rareness_score: ccCard.rareness || 80,
                     oracle_fair_value_usdc: cardPrice,
                     last_sale_usdc: ccCard.costUsd || cardPrice,
                     image_url: ccCard.imageUrl,
-                    barcode: `CC-${certNum}-PSA`,
+                    barcode: `CC-${certNum}-${ccCard.gradingCompany || "PSA"}`,
                     population_higher: ccCard.population?.higher || 0,
                     is_locked: false
                 });
@@ -194,14 +168,15 @@ router.post("/buy-direct", async (req, res) => {
             if (!existingCard) return res.status(404).json({ error: "Card not found" });
             if (existingCard.is_locked) return res.status(400).json({ error: "Card is locked in active trade" });
 
-            existingCard.owner_account = buyer_account;
             existingCard.vault_id = null;
+            existingCard.owner_account = buyer_account;
+            existingCard.is_locked = false;
             await existingCard.save();
             finalCard = existingCard;
         }
 
         const networkInfo = await nearService.getNetworkStatus();
-        const settledTxHash = tx_hash || `0x${networkInfo.latest_block_hash?.substring(0, 32) || "4JpW2Z"}`;
+        const settledTxHash = tx_hash || `0x${networkInfo.latest_block_hash?.substring(0, 32) || Date.now()}`;
 
         res.json({
             status: "SUCCESS_BOUGHT",
@@ -215,7 +190,7 @@ router.post("/buy-direct", async (req, res) => {
         });
     } catch (err) {
         console.error("Direct buy error:", err);
-        res.status(500).json({ error: err.message });
+        res.status(400).json({ error: err.message });
     }
 });
 

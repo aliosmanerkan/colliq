@@ -1,67 +1,91 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { 
-  Search, 
-  Sparkles, 
-  ShieldCheck, 
-  ArrowRight, 
-  Flame, 
-  CheckCircle2, 
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  Search,
   X,
-  Bot, 
-  Wallet, 
-  Coins, 
-  ExternalLink, 
+  ArrowRight,
+  ExternalLink,
   Loader2,
+  CheckCircle2,
+  Wallet,
+  Bot,
+  RotateCcw,
+  ShieldCheck,
   ChevronDown
 } from "lucide-react";
 import api from "@/lib/api";
-import { 
-  initNearWallet, 
-  showWalletModal, 
-  usdToNear, 
-  executeNearPayment, 
-  getLiveNearAccountBalance 
+import {
+  initNearWallet,
+  showWalletModal,
+  usdToNear,
+  executeNearPayment,
+  getLiveNearAccountBalance
 } from "@/lib/near";
 
-const CATEGORIES = [
-  { id: "ALL", label: "All Cards" },
-  { id: "Pokemon", label: "Pokémon" },
-  { id: "One Piece", label: "One Piece" },
-  { id: "Basketball", label: "Basketball" },
-  { id: "Football", label: "Football" },
-  { id: "Magic", label: "Magic: The Gathering" },
-  { id: "Yu-Gi-Oh", label: "Yu-Gi-Oh!" },
-  { id: "Dragon Ball", label: "Dragon Ball" },
+const BASE_CATEGORIES = [
+  { id: "ALL", label: "All Slabs", defaultCount: 171386 },
+  { id: "Pokemon", label: "Pokémon", defaultCount: 102428 },
+  { id: "One Piece", label: "One Piece", defaultCount: 31664 },
+  { id: "Baseball", label: "Baseball", defaultCount: 6343 },
+  { id: "Dragon Ball", label: "Dragon Ball", defaultCount: 5085 },
+  { id: "Basketball", label: "Basketball", defaultCount: 4728 },
+  { id: "Football", label: "Football", defaultCount: 3513 },
+  { id: "Lorcana", label: "Lorcana", defaultCount: 2384 },
+  { id: "Yu-Gi-Oh!", label: "Yu-Gi-Oh!", defaultCount: 465 },
+  { id: "Magic The Gathering", label: "Magic", defaultCount: 460 }
+];
+
+const GRADING_COMPANIES = [
+  { id: "ALL", label: "All Graders" },
+  { id: "PSA", label: "PSA" },
+  { id: "CGC", label: "CGC" },
+  { id: "BGS", label: "BGS" },
+  { id: "SGC", label: "SGC" }
 ];
 
 const SORT_OPTIONS = [
-  { id: "price_desc", label: "Price: High to Low" },
-  { id: "price_asc", label: "Price: Low to High" },
-  { id: "rareness", label: "Highest Rarity Score" },
-  { id: "pop_asc", label: "Lowest Population (Scarcest)" },
-  { id: "return", label: "Top 30D Gainers (% Return)" },
-  { id: "newest", label: "Recently Vaulted" },
-  { id: "grade_desc", label: "Grade: PSA 10 First" },
-  { id: "name_asc", label: "Name: A → Z" },
-  { id: "name_desc", label: "Name: Z → A" },
+  { id: "listedDateDesc", label: "Recently Listed" },
+  { id: "priceDesc", label: "Value: High to Low" },
+  { id: "priceAsc", label: "Value: Low to High" },
+  { id: "listedPriceAsc", label: "Listing Price: Low to High" },
+  { id: "yearAsc", label: "Vintage First (Oldest)" },
+  { id: "yearDesc", label: "Modern First (Newest)" }
 ];
 
-export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOpenMint }) {
+function formatCount(num) {
+  if (!num) return "";
+  if (num >= 1000) return `${(num / 1000).toFixed(num >= 10000 ? 0 : 1)}k`;
+  return String(num);
+}
+
+export default function CollectorCryptCatalog({
+  vaults = [],
+  onCardBridged,
+  onOpenMint,
+  onTotalSlabsChange
+}) {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [findTotal, setFindTotal] = useState(171386);
+  const [categoryCounts, setCategoryCounts] = useState({});
+  const [nextCursor, setNextCursor] = useState(null);
+
+  // Filters
   const [category, setCategory] = useState("ALL");
-  const [sortBy, setSortBy] = useState("price_desc");
-  const [visibleCount, setVisibleCount] = useState(48);
+  const [gradingCompany, setGradingCompany] = useState("ALL");
+  const [sortBy, setSortBy] = useState("listedDateDesc");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   // Connected Wallet Account & Live NEAR Balance
   const [connectedAccount, setConnectedAccount] = useState(null);
   const [liveNearBalance, setLiveNearBalance] = useState("0.00");
 
-  // Unified Purchase Modal
+  // Slab Inspector & Acquisition Modal
   const [selectedCard, setSelectedCard] = useState(null);
+  const [activeImageView, setActiveImageView] = useState("front"); // "front" | "back"
   const [destination, setDestination] = useState("personal"); // "personal" | "vault"
   const [targetVaultId, setTargetVaultId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("NEAR"); // "NEAR" | "USDC"
@@ -70,6 +94,15 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
   const [purchaseResult, setPurchaseResult] = useState(null);
   const [purchaseError, setPurchaseError] = useState("");
 
+  // Search input debounce (300ms)
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
+  // Wallet subscription
   useEffect(() => {
     let subscription = null;
     initNearWallet().then(async (w) => {
@@ -105,32 +138,62 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
     }
   }, [vaults, targetVaultId]);
 
-  const fetchCcCards = async () => {
-    setLoading(true);
+  // Fetch initial or updated cards when filter change
+  const fetchCards = useCallback(async (isLoadMore = false, cursorToUse = null) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const res = await api.get("/market/collector-crypt", {
-        params: { search, category, sortBy },
+        params: {
+          category,
+          gradingCompany,
+          sortBy,
+          search: debouncedSearch,
+          cursor: cursorToUse || undefined,
+          limit: 48
+        }
       });
-      setCards(res.data?.cards || []);
+
+      const fetchedCards = res.data?.cards || [];
+      const newNextCursor = res.data?.nextCursor || null;
+      const total = res.data?.findTotal || res.data?.total || 171386;
+
+      setFindTotal(total);
+      if (onTotalSlabsChange) onTotalSlabsChange(total);
+
+      if (res.data?.cardsQtyByCategory) {
+        setCategoryCounts(res.data.cardsQtyByCategory);
+      }
+
+      setNextCursor(newNextCursor);
+
+      if (isLoadMore) {
+        setCards((prev) => [...prev, ...fetchedCards]);
+      } else {
+        setCards(fetchedCards);
+      }
     } catch (err) {
       console.error("Error loading Collector Crypt inventory:", err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  };
+  }, [category, gradingCompany, sortBy, debouncedSearch, onTotalSlabsChange]);
 
   useEffect(() => {
-    setVisibleCount(48);
-    fetchCcCards();
-  }, [category, sortBy]);
+    fetchCards(false, null);
+  }, [fetchCards]);
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    setVisibleCount(48);
-    fetchCcCards();
+  const handleLoadMore = () => {
+    if (!nextCursor || loadingMore) return;
+    fetchCards(true, nextCursor);
   };
 
-  // Unified Purchase Handler
+  // Unified Purchase & Delivery Handler
   const handleConfirmPurchase = async () => {
     if (!selectedCard) return;
 
@@ -138,30 +201,31 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
     setPurchaseError("");
 
     try {
-      const price = selectedCard.insuredUsd || selectedCard.costUsd || 0;
+      const price = selectedCard.costUsd || selectedCard.insuredUsd || 50;
       const nearAmount = usdToNear(price);
 
-      // Branch A: Deposit to Agent Vault (Snipe)
+      // Destination A: Snipe into AI Agent Vault
       if (destination === "vault") {
         if (!targetVaultId) {
           throw new Error("Please select an agent vault destination.");
         }
         const res = await api.post(`/vaults/${targetVaultId}/snipe`, {
           card_id: selectedCard.id,
+          card_data: selectedCard
         });
 
         setPurchaseResult({
           card: selectedCard,
           destinationType: "vault",
           targetVault: vaults.find((v) => String(v.id) === String(targetVaultId))?.name || "Agent Vault",
-          txHash: res.data?.card?.card_id || "0x_SETTLED_VAULT_ACQUISITION",
+          txHash: res.data?.tx_hash || res.data?.card?.card_id || "0x_SETTLED_VAULT_ACQUISITION"
         });
         setPurchaseStep("success");
         if (onCardBridged) onCardBridged();
         return;
       }
 
-      // Branch B: Buy with NEAR (Direct to Personal Wallet)
+      // Destination B: Personal Wallet via NEAR
       if (paymentMethod === "NEAR") {
         const wallet = await initNearWallet();
         const accId = wallet?.accountId || connectedAccount;
@@ -174,7 +238,7 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
         setPurchaseStep("awaiting_wallet");
         const paymentRes = await executeNearPayment({
           receiverId: "market.testnet",
-          amountNear: nearAmount,
+          amountNear: nearAmount
         });
 
         setPurchaseStep("confirming");
@@ -184,6 +248,7 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
           payment_method: "NEAR",
           near_amount: nearAmount,
           tx_hash: paymentRes.txHash,
+          card_data: selectedCard
         });
 
         const newBal = await getLiveNearAccountBalance(accId);
@@ -195,29 +260,29 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
           destinationType: "personal",
           nearAmount,
           txHash: paymentRes.txHash,
-          explorerUrl: `https://testnet.nearblocks.io/txns/${paymentRes.txHash}`,
+          explorerUrl: `https://testnet.nearblocks.io/txns/${paymentRes.txHash}`
         });
         setPurchaseStep("success");
         if (onCardBridged) onCardBridged();
         return;
       }
 
-      // Branch C: Instant Buy with USDC
+      // Destination C: Personal Wallet via Instant USDC
       const res = await api.post("/market/buy-direct", {
         card_id: selectedCard.id,
         buyer_account: connectedAccount || "alierkan.testnet",
         payment_method: "USDC",
+        card_data: selectedCard
       });
 
       setPurchaseResult({
         ...res.data,
         card: selectedCard,
         destinationType: "personal",
-        txHash: res.data?.tx_hash || "0x_USDC_SETTLED",
+        txHash: res.data?.tx_hash || "0x_USDC_SETTLED"
       });
       setPurchaseStep("success");
       if (onCardBridged) onCardBridged();
-
     } catch (err) {
       console.error("Purchase error:", err);
       setPurchaseError(err.message || "Purchase could not be completed. Please try again.");
@@ -229,47 +294,81 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
 
   return (
     <div className="space-y-6">
-      
-      {/* Search & Filter Bar */}
-      <div className="p-6 rounded-[24px] bg-white border border-neutral-200/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-4">
-        
-        {/* Top Filter Controls */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-          
-          {/* Category Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-            {CATEGORIES.map((cat) => (
+      {/* FILTER & SEARCH CONTROL BAR */}
+      <div className="space-y-4">
+        {/* Dynamic Category Chips with Live Counts */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {BASE_CATEGORIES.map((cat) => {
+            const liveCount = cat.id === "ALL" ? findTotal : (categoryCounts[cat.id] || cat.defaultCount);
+            const countLabel = formatCount(liveCount);
+
+            return (
               <button
                 key={cat.id}
                 onClick={() => setCategory(cat.id)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
                   category === cat.id
-                    ? "bg-[#073525] text-white shadow-sm"
-                    : "bg-[#f8faf9] text-neutral-600 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-300"
+                    ? "bg-[#073525] text-white shadow-sm font-semibold"
+                    : "bg-white text-neutral-600 hover:text-neutral-900 border border-neutral-200/90 hover:border-neutral-300"
                 }`}
               >
-                {cat.label}
+                <span>{cat.label}</span>
+                {countLabel && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                      category === cat.id ? "bg-white/20 text-white" : "bg-neutral-100 text-neutral-400"
+                    }`}
+                  >
+                    {countLabel}
+                  </span>
+                )}
               </button>
-            ))}
+            );
+          })}
+        </div>
+
+        {/* Search, Grader, and Sort Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1 sm:max-w-md">
+            <input
+              type="text"
+              placeholder="Search 170k+ vaulted slabs by card, set, cert #..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 rounded-full bg-white border border-neutral-200 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#073525] focus:ring-1 focus:ring-[#073525] transition font-sans shadow-sm"
+            />
+            <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput("")}
+                className="absolute right-3 top-2.5 text-neutral-400 hover:text-neutral-700"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          {/* Search Input & Sort */}
-          <div className="flex items-center gap-3">
-            <form onSubmit={handleSearchSubmit} className="relative flex-1 md:w-64">
-              <input
-                type="text"
-                placeholder="Search by card, set, character..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-full bg-[#f8faf9] border border-neutral-200 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#073525] focus:bg-white transition shadow-sm font-sans"
-              />
-              <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
-            </form>
+          {/* Grader Filter & Sort Dropdown */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Grader Filter */}
+            <select
+              value={gradingCompany}
+              onChange={(e) => setGradingCompany(e.target.value)}
+              className="px-3 py-2 rounded-full bg-white border border-neutral-200 text-xs font-medium text-neutral-700 focus:outline-none focus:border-[#073525] transition cursor-pointer shadow-sm"
+            >
+              {GRADING_COMPANIES.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.label}
+                </option>
+              ))}
+            </select>
 
+            {/* Sort Dropdown */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3.5 py-2.5 rounded-full bg-[#f8faf9] border border-neutral-200 text-xs font-semibold text-neutral-700 focus:outline-none focus:border-[#073525] transition shadow-sm cursor-pointer shrink-0"
+              className="px-3.5 py-2 rounded-full bg-white border border-neutral-200 text-xs font-semibold text-neutral-800 focus:outline-none focus:border-[#073525] transition cursor-pointer shadow-sm"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.id} value={opt.id}>
@@ -279,153 +378,137 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
             </select>
           </div>
         </div>
-
-        {/* Sub-bar stats note */}
-        <div className="pt-3 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-neutral-500">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>Showing <strong className="text-neutral-900 font-semibold">{cards.length.toLocaleString()} verified slabs</strong></span>
-            <span className="text-neutral-300">•</span>
-            <span>Curated from Collector Crypt's 167k+ physical Solana vault</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-neutral-400 font-mono text-[11px]">
-            <span>Brink's Custody Verified</span>
-          </div>
-        </div>
       </div>
 
-      {/* Grid of Slabs */}
+      {/* CARD GRID (ZERO AI SLOP, HIGH-DENSITY PROFESSIONAL DISPLAY) */}
       {loading ? (
-        <div className="py-24 text-center text-xs text-neutral-400 animate-pulse flex flex-col items-center justify-center gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-[#053b2a]" />
-          <span>Loading verified slabs from Brink's vault index...</span>
+        <div className="py-32 flex flex-col items-center justify-center gap-3 text-neutral-400 text-xs">
+          <Loader2 className="w-6 h-6 animate-spin text-[#073525]" />
+          <span>Streaming verified slabs from Collector Crypt vault index...</span>
         </div>
       ) : cards.length === 0 ? (
         <div className="py-24 text-center rounded-[24px] bg-white border border-neutral-200 p-8 space-y-2">
-          <p className="text-sm font-semibold text-neutral-900">No slabs found</p>
-          <p className="text-xs text-neutral-500">Try adjusting your search terms or category filter.</p>
+          <p className="text-sm font-semibold text-neutral-900">No matching slabs found</p>
+          <p className="text-xs text-neutral-500">Try adjusting your search terms or clearing filters.</p>
         </div>
       ) : (
         <div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {cards.slice(0, visibleCount).map((card) => {
-              const price = card.insuredUsd || card.costUsd || 0;
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5">
+            {cards.map((card) => {
+              const price = card.costUsd || card.insuredUsd || 50;
               const nearPrice = usdToNear(price);
+
+              const comp = card.gradingCompany || (card.grade?.startsWith("CGC") ? "CGC" : card.grade?.startsWith("BGS") ? "BGS" : "PSA");
+              const cleanGrade = card.grade?.replace(/^(PSA|CGC|BGS|SGC)\s*/i, "") || "10";
+              const compColor = comp === "CGC" ? "text-blue-700 bg-blue-50 border-blue-200" : comp === "BGS" ? "text-amber-700 bg-amber-50 border-amber-200" : "text-red-700 bg-red-50 border-red-200";
 
               return (
                 <div
                   key={card.id}
-                  className="group relative rounded-[24px] p-4 bg-white border border-neutral-200/80 hover:border-emerald-300 transition-all duration-300 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(4,50,36,0.06)] hover:-translate-y-1"
+                  onClick={() => {
+                    setSelectedCard(card);
+                    setActiveImageView("front");
+                    setPurchaseResult(null);
+                    setPurchaseError("");
+                    setPurchaseStep("idle");
+                  }}
+                  className="group relative rounded-2xl p-3 bg-white border border-neutral-200/80 hover:border-emerald-600 transition-all duration-200 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(7,53,37,0.08)] hover:-translate-y-0.5 cursor-pointer"
                 >
                   <div>
-                    {/* Slab Header Label */}
-                    {(() => {
-                      const comp = card.grade?.startsWith("CGC") ? "CGC" : card.grade?.startsWith("BGS") ? "BGS" : "PSA";
-                      const cleanGrade = card.grade?.replace(/^(PSA|CGC|BGS)\s*/i, "") || "GEM MT 10";
-                      const badgeColor = comp === "CGC" ? "text-blue-600" : comp === "BGS" ? "text-amber-600" : "text-red-600";
-                      return (
-                        <div className="mb-3 px-3 py-1.5 rounded-xl bg-[#f8faf9] border border-neutral-200/70 flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`font-black font-mono tracking-tight ${badgeColor}`}>{comp}</span>
-                            <span className="font-bold text-neutral-900">{cleanGrade}</span>
-                          </div>
-                          <span className="text-[10px] text-emerald-800 font-medium bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            Vaulted
-                          </span>
-                        </div>
-                      );
-                    })()}
+                    {/* Upper Canvas (Slab Image Container) */}
+                    <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-[#fbfdfc] flex items-center justify-center p-2 border border-neutral-100 group-hover:border-neutral-200 transition mb-2.5">
+                      {/* Top Badges */}
+                      <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold font-mono border ${compColor}`}>
+                          {comp} {cleanGrade}
+                        </span>
+                      </div>
 
-                    {/* Artwork Container */}
-                    <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden bg-[#fbfdfc] flex items-center justify-center p-3 border border-neutral-100 mb-3 group-hover:border-neutral-200 transition">
-                      <img
-                        src={card.imageUrl}
-                        alt={card.name}
-                        loading="lazy"
-                        className="w-full h-full object-contain filter drop-shadow-[0_6px_16px_rgba(0,0,0,0.12)] group-hover:scale-105 transition-transform duration-300"
-                      />
-
-                      {card.rareness && (
-                        <div className="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-white/95 backdrop-blur-md border border-neutral-200 text-[10px] font-semibold text-amber-700 flex items-center gap-1 shadow-sm">
-                          <Flame className="w-3 h-3 text-amber-500" />
-                          <span>Rarity {card.rareness}</span>
+                      {card.certNumber && (
+                        <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-neutral-400 bg-white/80 backdrop-blur-xs px-1.5 py-0.5 rounded border border-neutral-200/60">
+                          #{card.certNumber}
                         </div>
                       )}
+
+                      <img
+                        src={card.thumbnailUrl || card.imageUrl}
+                        alt={card.name}
+                        loading="lazy"
+                        className="w-full h-full object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-200"
+                      />
                     </div>
 
-                    {/* Card Title & Category */}
-                    <h3 className="text-xs font-bold text-neutral-900 line-clamp-2 min-h-[34px] group-hover:text-[#053b2a] transition leading-snug" title={card.name}>
+                    {/* Metadata Header */}
+                    <div className="text-[10px] text-neutral-400 font-semibold tracking-wider uppercase mb-1">
+                      {card.category || "TCG"} {card.year ? `• ${card.year}` : ""}
+                    </div>
+
+                    {/* Card Title */}
+                    <h3
+                      className="text-xs font-medium text-neutral-900 line-clamp-2 min-h-[32px] group-hover:text-[#073525] transition leading-snug"
+                      title={card.name}
+                    >
                       {card.name}
                     </h3>
-                    
-                    <div className="flex items-center justify-between text-[11px] text-neutral-400 mt-1">
-                      <span>{card.category || "TCG"}</span>
-                      <span>Pop: {card.population?.atGrade || "N/A"}</span>
-                    </div>
-
-                    {/* Valuation Box */}
-                    <div className="mt-3 p-3 rounded-xl bg-[#f8faf9] border border-neutral-200/60 flex items-center justify-between">
-                      <div>
-                        <div className="text-[10px] text-neutral-400 font-medium">Fair Value</div>
-                        <div className="text-sm font-bold text-neutral-900 font-mono">${price.toLocaleString()} USDC</div>
-                      </div>
-                      <div className="text-right font-mono">
-                        <div className="text-[10px] text-neutral-400">NEAR</div>
-                        <div className="text-xs font-bold text-[#053b2a]">{nearPrice} N</div>
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Single Clean Action Button */}
-                  <div className="mt-4 pt-3 border-t border-neutral-100">
-                    <button
-                      onClick={() => {
-                        setSelectedCard(card);
-                        setPurchaseResult(null);
-                        setPurchaseError("");
-                        setPurchaseStep("idle");
-                      }}
-                      className="w-full py-2.5 px-4 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 shadow-sm cursor-pointer"
-                    >
-                      <span>Buy Slab</span>
+                  {/* Valuation & Quick Action */}
+                  <div className="mt-3 pt-2.5 border-t border-neutral-100 flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-bold text-neutral-900 font-mono leading-tight">
+                        ${Number(price).toLocaleString()}
+                        <span className="text-[10px] font-normal text-neutral-400 ml-1">USDC</span>
+                      </div>
+                      <div className="text-[10px] text-neutral-400 font-mono">
+                        ~{nearPrice} NEAR
+                      </div>
+                    </div>
+
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs font-semibold text-[#073525]">
+                      <span>Acquire</span>
                       <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Load More Pagination */}
-          {cards.length > visibleCount && (
-            <div className="pt-10 pb-4 flex flex-col items-center justify-center gap-3">
-              <div className="text-xs text-neutral-500 font-mono">
-                Showing {Math.min(visibleCount, cards.length)} of {cards.length.toLocaleString()} Verified Slabs
-              </div>
-              <button
-                onClick={() => setVisibleCount((prev) => prev + 48)}
-                className="px-8 py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold shadow-sm transition active:scale-95 cursor-pointer"
-              >
-                Load More Slabs (+48)
-              </button>
+          {/* REAL CURSOR PAGINATION */}
+          <div className="pt-12 pb-6 flex flex-col items-center justify-center gap-3">
+            <div className="text-xs text-neutral-500 font-mono">
+              Showing {cards.length.toLocaleString()} of {Number(findTotal).toLocaleString()} Verified Slabs
             </div>
-          )}
+
+            {nextCursor && (
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="px-8 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold shadow-sm transition active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Loading Next 48 Slabs...</span>
+                  </>
+                ) : (
+                  <span>Load More Slabs (+48)</span>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* UNIFIED ACQUISITION MODAL */}
+      {/* SLAB INSPECTOR & ACQUISITION MODAL (SPLIT 2-COLUMN) */}
       {selectedCard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg rounded-[28px] bg-white border border-neutral-200 p-6 sm:p-8 shadow-2xl overflow-hidden text-neutral-900 animate-in zoom-in-95 duration-200">
-            
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="relative w-full max-w-3xl rounded-[28px] bg-white border border-neutral-200 p-6 sm:p-8 shadow-2xl overflow-hidden text-neutral-900 animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-5">
-              <div>
-                <h3 className="text-base font-bold text-neutral-900">Acquire Physical Slab</h3>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  Brink's Vault Custody • Real PSA 10 Authentication
-                </p>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                <h3 className="text-base font-bold text-neutral-900">Physical Slab Inspector</h3>
               </div>
               <button
                 onClick={() => {
@@ -438,32 +521,36 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
               </button>
             </div>
 
-            {/* Content: Success State */}
             {purchaseResult ? (
+              /* Success State */
               <div className="space-y-4 animate-in zoom-in-95 duration-200">
-                <div className="p-5 rounded-2xl bg-[#f8faf9] border border-emerald-300 text-emerald-950 text-xs space-y-3">
+                <div className="p-6 rounded-2xl bg-[#f8faf9] border border-emerald-300 text-emerald-950 text-xs space-y-3">
                   <div className="flex items-center gap-2 font-bold text-sm text-emerald-900">
                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     <span>Slab Successfully Acquired!</span>
                   </div>
 
-                  <p className="text-neutral-700 leading-relaxed font-sans">
-                    <strong className="text-neutral-900">{selectedCard.name}</strong> has been allocated to{" "}
+                  <p className="text-neutral-700 leading-relaxed font-sans text-xs">
+                    <strong className="text-neutral-900">{selectedCard.name}</strong> has been transferred into{" "}
                     {purchaseResult.destinationType === "vault" ? (
-                      <span className="font-semibold text-[#053b2a]">{purchaseResult.targetVault}</span>
+                      <span className="font-semibold text-[#073525]">{purchaseResult.targetVault}</span>
                     ) : (
-                      <span className="font-semibold text-[#053b2a]">your personal wallet ({connectedAccount || "alierkan.testnet"})</span>
+                      <span className="font-semibold text-[#073525]">your personal wallet ({connectedAccount || "alierkan.testnet"})</span>
                     )}.
                   </p>
 
-                  <div className="p-3.5 rounded-xl bg-white border border-neutral-200 font-mono text-[11px] text-neutral-600 space-y-1 mt-2">
+                  <div className="p-4 rounded-xl bg-white border border-neutral-200 font-mono text-[11px] text-neutral-600 space-y-1.5 mt-2">
                     <div className="flex items-center justify-between">
-                      <span>PSA Grade:</span>
-                      <span className="text-neutral-900 font-bold">{selectedCard.grade || "PSA 10"}</span>
+                      <span>Certification:</span>
+                      <span className="text-neutral-900 font-bold">{selectedCard.grade || "PSA 10"} • #{selectedCard.certNumber}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Solana Custody Mint:</span>
+                      <span className="text-neutral-900 font-bold truncate max-w-[220px]">{selectedCard.id}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Transaction Reference:</span>
-                      <span className="text-neutral-900 font-bold truncate max-w-[200px]">{purchaseResult.txHash}</span>
+                      <span className="text-neutral-900 font-bold truncate max-w-[220px]">{purchaseResult.txHash}</span>
                     </div>
                   </div>
                 </div>
@@ -479,195 +566,242 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
                 </button>
               </div>
             ) : (
-              /* Content: Form State */
-              <div className="space-y-5">
-                {purchaseError && (
-                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
-                    {purchaseError}
+              /* 2-Column Inspector & Purchase Form */
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                {/* Left Column: Slab Visuals & Flip View */}
+                <div className="flex flex-col items-center">
+                  <div className="relative aspect-[3/4] w-full max-w-[280px] rounded-2xl bg-[#fbfdfc] border border-neutral-200 flex items-center justify-center p-3 shadow-inner">
+                    <img
+                      src={activeImageView === "back" && selectedCard.backImageUrl ? selectedCard.backImageUrl : selectedCard.imageUrl}
+                      alt={selectedCard.name}
+                      className="w-full h-full object-contain filter drop-shadow-[0_8px_20px_rgba(0,0,0,0.14)]"
+                    />
                   </div>
-                )}
 
-                {/* Card Slab Preview */}
-                <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200 flex items-center gap-4">
-                  <img
-                    src={selectedCard.imageUrl}
-                    alt=""
-                    className="w-16 h-20 object-contain rounded-xl bg-white p-1 border border-neutral-200 shadow-sm shrink-0"
-                  />
-                  <div className="truncate flex-1">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-neutral-200/70 text-[10px] font-mono text-neutral-800 font-bold mb-1">
+                  {/* Flip Slab Toggle */}
+                  {selectedCard.backImageUrl && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveImageView("front")}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
+                          activeImageView === "front"
+                            ? "bg-[#073525] text-white"
+                            : "bg-neutral-100 text-neutral-600 hover:text-neutral-900"
+                        }`}
+                      >
+                        Front View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveImageView("back")}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                          activeImageView === "back"
+                            ? "bg-[#073525] text-white"
+                            : "bg-neutral-100 text-neutral-600 hover:text-neutral-900"
+                        }`}
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Back View</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column: Slab Metadata & Delivery */}
+                <div className="space-y-4">
+                  {purchaseError && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
+                      {purchaseError}
+                    </div>
+                  )}
+
+                  {/* Slab Header Info */}
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-neutral-100 border border-neutral-200 text-[11px] font-mono font-bold text-neutral-800 mb-2">
                       <span>{selectedCard.grade || "PSA 10"}</span>
                       <span className="text-neutral-400">•</span>
                       <span>{selectedCard.category || "TCG"}</span>
+                      {selectedCard.year && <span>• {selectedCard.year}</span>}
                     </div>
-                    <h4 className="text-xs font-bold text-neutral-900 truncate" title={selectedCard.name}>
+                    <h4 className="text-sm font-bold text-neutral-900 leading-snug">
                       {selectedCard.name}
                     </h4>
-                    <div className="flex items-baseline gap-2 mt-1 font-mono">
-                      <span className="text-base font-bold text-[#053b2a]">
-                        ${Number(selectedCard.insuredUsd || selectedCard.costUsd || 0).toLocaleString()} USDC
+                  </div>
+
+                  {/* On-Chain & Custody Metadata Table */}
+                  <div className="p-3.5 rounded-xl bg-[#f8faf9] border border-neutral-200/80 font-mono text-xs space-y-2">
+                    <div className="flex items-center justify-between text-neutral-600">
+                      <span>Cert Number:</span>
+                      <span className="text-neutral-900 font-semibold">#{selectedCard.certNumber}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-neutral-600">
+                      <span>Physical Custody:</span>
+                      <span className="text-neutral-900 font-semibold truncate max-w-[170px]" title={selectedCard.vaultLocation}>
+                        {selectedCard.vault || "PWCC / Brink's"}
                       </span>
-                      <span className="text-xs text-neutral-500 font-normal">
-                        ({usdToNear(selectedCard.insuredUsd || selectedCard.costUsd || 0)} NEAR)
+                    </div>
+                    <div className="flex items-center justify-between text-neutral-600">
+                      <span>Solana Mint:</span>
+                      <a
+                        href={`https://solscan.io/token/${selectedCard.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[#073525] hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <span>{selectedCard.id.slice(0, 4)}...{selectedCard.id.slice(-4)}</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <div className="flex items-center justify-between text-neutral-600 pt-1 border-t border-neutral-200/60">
+                      <span>Valuation / Price:</span>
+                      <span className="text-sm font-bold text-neutral-900">
+                        ${Number(selectedCard.costUsd || selectedCard.insuredUsd || 50).toLocaleString()} USDC
                       </span>
                     </div>
                   </div>
-                </div>
 
-                {/* Destination Selector: Personal Wallet vs Agent Vault */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-neutral-700 uppercase tracking-wider">
-                    Deliver Slab To:
-                  </label>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setDestination("personal")}
-                      className={`p-3 rounded-xl border text-xs text-left transition flex items-center gap-2.5 cursor-pointer ${
-                        destination === "personal"
-                          ? "bg-emerald-50/80 border-emerald-400 text-emerald-950 font-semibold ring-1 ring-emerald-400/30"
-                          : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50"
-                      }`}
-                    >
-                      <Wallet className="w-4 h-4 text-emerald-700 shrink-0" />
-                      <div>
-                        <div>Personal Wallet</div>
-                        <div className="text-[10px] text-neutral-400 font-normal font-mono truncate">
-                          {connectedAccount || "alierkan.testnet"}
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDestination("vault")}
-                      className={`p-3 rounded-xl border text-xs text-left transition flex items-center gap-2.5 cursor-pointer ${
-                        destination === "vault"
-                          ? "bg-emerald-50/80 border-emerald-400 text-emerald-950 font-semibold ring-1 ring-emerald-400/30"
-                          : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50"
-                      }`}
-                    >
-                      <Bot className="w-4 h-4 text-emerald-700 shrink-0" />
-                      <div>
-                        <div>Agent Vault</div>
-                        <div className="text-[10px] text-neutral-400 font-normal truncate">
-                          Assign to Hunter
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* If Vault Destination: Vault Selector */}
-                {destination === "vault" && (
-                  <div className="space-y-1.5 animate-in fade-in duration-200">
-                    <label className="text-xs font-medium text-neutral-600">Select Target Agent Vault:</label>
-                    <select
-                      value={targetVaultId}
-                      onChange={(e) => setTargetVaultId(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#f8faf9] border border-neutral-200 text-xs text-neutral-900 font-semibold focus:outline-none focus:border-[#073525] cursor-pointer"
-                    >
-                      {vaults.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name} (${v.usdc_balance} USDC Available)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* If Personal Wallet: Payment Method (NEAR vs USDC) */}
-                {destination === "personal" && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-neutral-700 uppercase tracking-wider">
-                      Payment Currency:
+                  {/* Delivery Target Selector */}
+                  <div className="space-y-2 pt-1">
+                    <label className="text-[11px] font-bold text-neutral-700 uppercase tracking-wider block">
+                      Deliver Slab To:
                     </label>
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => setPaymentMethod("NEAR")}
-                        className={`p-3 rounded-xl border text-xs transition flex items-center gap-2.5 cursor-pointer ${
-                          paymentMethod === "NEAR"
-                            ? "bg-[#053b2a] text-white font-semibold shadow-sm"
-                            : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                        onClick={() => setDestination("personal")}
+                        className={`p-2.5 rounded-xl border text-xs text-left transition flex items-center gap-2 cursor-pointer ${
+                          destination === "personal"
+                            ? "border-[#073525] bg-[#f8faf9] ring-1 ring-[#073525]"
+                            : "border-neutral-200 hover:border-neutral-300 bg-white"
                         }`}
                       >
-                        <span className="font-mono font-bold text-xs">NEAR</span>
-                        <div className="text-left font-mono">
-                          <div>{usdToNear(selectedCard.insuredUsd || selectedCard.costUsd || 0)} N</div>
+                        <Wallet className="w-4 h-4 text-neutral-600 shrink-0" />
+                        <div>
+                          <div className="font-semibold text-neutral-900">Personal Wallet</div>
+                          <div className="text-[10px] text-neutral-500">Hold on NEAR</div>
                         </div>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => setPaymentMethod("USDC")}
-                        className={`p-3 rounded-xl border text-xs transition flex items-center gap-2.5 cursor-pointer ${
-                          paymentMethod === "USDC"
-                            ? "bg-[#053b2a] text-white font-semibold shadow-sm"
-                            : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                        onClick={() => setDestination("vault")}
+                        className={`p-2.5 rounded-xl border text-xs text-left transition flex items-center gap-2 cursor-pointer ${
+                          destination === "vault"
+                            ? "border-[#073525] bg-[#f8faf9] ring-1 ring-[#073525]"
+                            : "border-neutral-200 hover:border-neutral-300 bg-white"
                         }`}
                       >
-                        <Coins className="w-4 h-4 shrink-0" />
-                        <div className="text-left font-mono">
-                          <div>${selectedCard.insuredUsd || selectedCard.costUsd || 0} USDC</div>
+                        <Bot className="w-4 h-4 text-[#073525] shrink-0" />
+                        <div>
+                          <div className="font-semibold text-neutral-900">AI Agent Vault</div>
+                          <div className="text-[10px] text-neutral-500">Autonomous Barter</div>
                         </div>
                       </button>
                     </div>
-                  </div>
-                )}
 
-                {/* Wallet Loading Indicator */}
-                {purchaseStep === "awaiting_wallet" && (
-                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2.5 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-                    <span>Please approve the transaction in your Meteor Wallet...</span>
-                  </div>
-                )}
-
-                {purchaseStep === "confirming" && (
-                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2.5 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-                    <span>Settling physical slab ownership on NEAR...</span>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="pt-2 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCard(null)}
-                    disabled={purchaseLoading}
-                    className="px-5 py-2.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold transition disabled:opacity-40 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleConfirmPurchase}
-                    disabled={purchaseLoading}
-                    className="px-6 py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center gap-2 transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
-                  >
-                    {purchaseLoading ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Confirm Acquisition</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </>
+                    {/* Target Vault Dropdown */}
+                    {destination === "vault" && (
+                      <div className="pt-2">
+                        {vaults.length === 0 ? (
+                          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between">
+                            <span>No agent vaults minted yet.</span>
+                            <button
+                              type="button"
+                              onClick={onOpenMint}
+                              className="font-bold underline hover:text-amber-950"
+                            >
+                              Mint One
+                            </button>
+                          </div>
+                        ) : (
+                          <select
+                            value={targetVaultId}
+                            onChange={(e) => setTargetVaultId(e.target.value)}
+                            className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs font-medium text-neutral-900 focus:outline-none focus:border-[#073525]"
+                          >
+                            {vaults.map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.name} ({v.sub_account}) • ${v.usdc_balance} USDC
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
                     )}
-                  </button>
+                  </div>
+
+                  {/* Payment Method Selector (For Personal Wallet) */}
+                  {destination === "personal" && (
+                    <div className="space-y-1.5 pt-1">
+                      <label className="text-[11px] font-bold text-neutral-700 uppercase tracking-wider block">
+                        Payment Currency:
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("NEAR")}
+                          className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                            paymentMethod === "NEAR"
+                              ? "border-[#073525] bg-[#f8faf9] text-[#073525] ring-1 ring-[#073525]"
+                              : "border-neutral-200 text-neutral-700 bg-white"
+                          }`}
+                        >
+                          <span>NEAR Testnet</span>
+                          <span className="text-[10px] font-mono font-normal">
+                            ({usdToNear(selectedCard.costUsd || selectedCard.insuredUsd || 50)} N)
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("USDC")}
+                          className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                            paymentMethod === "USDC"
+                              ? "border-[#073525] bg-[#f8faf9] text-[#073525] ring-1 ring-[#073525]"
+                              : "border-neutral-200 text-neutral-700 bg-white"
+                          }`}
+                        >
+                          <span>USDC Balance</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Purchase Action Button */}
+                  <div className="pt-3">
+                    <button
+                      onClick={handleConfirmPurchase}
+                      disabled={purchaseLoading || (destination === "vault" && vaults.length === 0)}
+                      className="w-full py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+                    >
+                      {purchaseLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>
+                            {purchaseStep === "awaiting_wallet"
+                              ? "Confirm in NEAR Wallet..."
+                              : "Executing Atomic Settlement..."}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span>
+                            {destination === "vault"
+                              ? "Snipe into Agent Vault"
+                              : `Buy Slab with ${paymentMethod}`}
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
-
           </div>
         </div>
       )}
-
     </div>
   );
 }
