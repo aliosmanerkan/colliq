@@ -12,7 +12,9 @@ import {
   Bot,
   RotateCcw,
   ShieldCheck,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import api from "@/lib/api";
 import {
@@ -78,6 +80,83 @@ export default function CollectorCryptCatalog({
   const [sortBy, setSortBy] = useState("listedDateDesc");
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Category horizontal scroll & drag controls
+  const categoryScrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+  const hasMovedRef = useRef(false);
+
+  const checkCategoryScroll = useCallback(() => {
+    if (categoryScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = categoryScrollRef.current;
+      setCanScrollLeft(scrollLeft > 6);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 6);
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = categoryScrollRef.current;
+    if (!el) return;
+
+    checkCategoryScroll();
+    const handleResize = () => checkCategoryScroll();
+    window.addEventListener("resize", handleResize);
+
+    const handleWheel = (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && el.scrollWidth > el.clientWidth) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+        checkCategoryScroll();
+      }
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    el.addEventListener("scroll", checkCategoryScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      el.removeEventListener("wheel", handleWheel);
+      el.removeEventListener("scroll", checkCategoryScroll);
+    };
+  }, [checkCategoryScroll]);
+
+  const scrollCategories = (direction) => {
+    if (categoryScrollRef.current) {
+      categoryScrollRef.current.scrollBy({
+        left: direction === "left" ? -280 : 280,
+        behavior: "smooth"
+      });
+      setTimeout(checkCategoryScroll, 300);
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    if (!categoryScrollRef.current) return;
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    startXRef.current = e.pageX - categoryScrollRef.current.offsetLeft;
+    scrollLeftRef.current = categoryScrollRef.current.scrollLeft;
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDraggingRef.current || !categoryScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - categoryScrollRef.current.offsetLeft;
+    const walk = (x - startXRef.current) * 1.4;
+    if (Math.abs(walk) > 4) {
+      hasMovedRef.current = true;
+    }
+    categoryScrollRef.current.scrollLeft = scrollLeftRef.current - walk;
+    checkCategoryScroll();
+  };
+
+  const handleMouseUpOrLeave = () => {
+    isDraggingRef.current = false;
+  };
 
   // Connected Wallet Account & Live NEAR Balance
   const [connectedAccount, setConnectedAccount] = useState(null);
@@ -296,35 +375,77 @@ export default function CollectorCryptCatalog({
     <div className="space-y-6">
       {/* FILTER & SEARCH CONTROL BAR */}
       <div className="space-y-4">
-        {/* Dynamic Category Chips with Live Counts */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {BASE_CATEGORIES.map((cat) => {
-            const liveCount = cat.id === "ALL" ? findTotal : (categoryCounts[cat.id] || cat.defaultCount);
-            const countLabel = formatCount(liveCount);
-
-            return (
+        {/* Dynamic Category Chips with Horizontal Scroll Controls */}
+        <div className="relative group/chips">
+          {/* Left Arrow Button */}
+          {canScrollLeft && (
+            <div className="absolute left-0 top-0 bottom-0 z-20 flex items-center pr-3 bg-gradient-to-r from-[#fbfdfc] via-[#fbfdfc]/90 to-transparent">
               <button
-                key={cat.id}
-                onClick={() => setCategory(cat.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
-                  category === cat.id
-                    ? "bg-[#073525] text-white shadow-sm font-semibold"
-                    : "bg-white text-neutral-600 hover:text-neutral-900 border border-neutral-200/90 hover:border-neutral-300"
-                }`}
+                type="button"
+                onClick={() => scrollCategories("left")}
+                aria-label="Scroll categories left"
+                className="w-7 h-7 rounded-full bg-white border border-neutral-200/90 shadow-md flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 transition cursor-pointer active:scale-95"
               >
-                <span>{cat.label}</span>
-                {countLabel && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                      category === cat.id ? "bg-white/20 text-white" : "bg-neutral-100 text-neutral-400"
-                    }`}
-                  >
-                    {countLabel}
-                  </span>
-                )}
+                <ChevronLeft className="w-4 h-4" />
               </button>
-            );
-          })}
+            </div>
+          )}
+
+          {/* Category Chips Scroller */}
+          <div
+            ref={categoryScrollRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUpOrLeave}
+            onMouseLeave={handleMouseUpOrLeave}
+            className="flex items-center gap-1.5 overflow-x-auto py-1 scroll-smooth no-scrollbar scrollbar-none cursor-grab active:cursor-grabbing select-none"
+          >
+            {BASE_CATEGORIES.map((cat) => {
+              const liveCount = cat.id === "ALL" ? findTotal : (categoryCounts[cat.id] || cat.defaultCount);
+              const countLabel = formatCount(liveCount);
+
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    if (!hasMovedRef.current) {
+                      setCategory(cat.id);
+                    }
+                  }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                    category === cat.id
+                      ? "bg-[#073525] text-white shadow-sm font-semibold"
+                      : "bg-white text-neutral-600 hover:text-neutral-900 border border-neutral-200/90 hover:border-neutral-300"
+                  }`}
+                >
+                  <span>{cat.label}</span>
+                  {countLabel && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                        category === cat.id ? "bg-white/20 text-white" : "bg-neutral-100 text-neutral-400"
+                      }`}
+                    >
+                      {countLabel}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right Arrow Button */}
+          {canScrollRight && (
+            <div className="absolute right-0 top-0 bottom-0 z-20 flex items-center pl-3 bg-gradient-to-l from-[#fbfdfc] via-[#fbfdfc]/90 to-transparent">
+              <button
+                type="button"
+                onClick={() => scrollCategories("right")}
+                aria-label="Scroll categories right"
+                className="w-7 h-7 rounded-full bg-white border border-neutral-200/90 shadow-md flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 transition cursor-pointer active:scale-95"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Search, Grader, and Sort Bar */}
