@@ -16,7 +16,7 @@ export class NearService {
     constructor() {
         this.networkId = process.env.NEAR_NETWORK || "testnet";
         this.nodeUrl = process.env.NEAR_RPC_URL || "https://rpc.testnet.near.org";
-        this.contractId = process.env.NEAR_CONTRACT_ID || "vaultdeck.testnet";
+        this.contractId = process.env.NEAR_CONTRACT_ID || "colliq.testnet";
         this.provider = new JsonRpcProvider({ url: this.nodeUrl });
     }
 
@@ -69,7 +69,7 @@ export class NearService {
         }
     }
 
-    // Generates human-readable, collision-free sub-account format: <name-slug>-<unique-hash>.vaultdeck.testnet
+    // Generates human-readable, collision-free sub-account format: <name-slug>-<unique-hash>.colliq.testnet
     generateSubAccount(name, customSuffix = null) {
         let slug = String(name || "agent")
             .toLowerCase()

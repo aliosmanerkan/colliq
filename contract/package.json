@@ -1,8 +1,8 @@
 {
-  "name": "vaultdeck-contract",
+  "name": "colliq-contract",
   "version": "1.0.0",
   "private": true,
-  "description": "VaultDeck Autonomous Merchant Vault Smart Contract on NEAR (NEP-171 / NEP-177)",
+  "description": "Colliq Autonomous Merchant Vault Smart Contract on NEAR (NEP-171 / NEP-177)",
   "main": "build/contract.js",
   "scripts": {
     "build": "tsc",

@@ -39,7 +39,7 @@ export default function LandingNavbar() {
             </svg>
           </div>
           <span className="font-display text-xl sm:text-2xl tracking-wide uppercase text-[#043224] hidden sm:inline-block">
-            VaultDeck
+            Colliq
           </span>
         </div>
 

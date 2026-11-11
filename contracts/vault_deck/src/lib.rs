@@ -29,7 +29,7 @@ pub struct MerchantVaultState {
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
-pub struct VaultDeckContract {
+pub struct ColliqContract {
     tokens: NonFungibleToken,
     metadata: LazyOption<NFTContractMetadata>,
     // Track 10: Internal Ledger (LookupMap) mapping TokenId (Vault) -> Vault State
@@ -38,15 +38,15 @@ pub struct VaultDeckContract {
 }
 
 #[near_bindgen]
-impl VaultDeckContract {
+impl ColliqContract {
     #[init]
     pub fn new_default_meta(owner_id: AccountId) -> Self {
         Self::new(
             owner_id,
             NFTContractMetadata {
                 spec: NFT_METADATA_SPEC.to_string(),
-                name: "VaultDeck Merchant Vaults".to_string(),
-                symbol: "VDECK".to_string(),
+                name: "Colliq Merchant Vaults".to_string(),
+                symbol: "COLLIQ".to_string(),
                 icon: None,
                 base_uri: None,
                 reference: None,
@@ -109,7 +109,7 @@ impl VaultDeckContract {
         let metadata = TokenMetadata {
             title: Some(name),
             description: Some(format!("Autonomous Merchant Vault NFT owning {}", sub_account)),
-            media: Some(format!("https://vaultdeck.ai/api/vaults/{}/svg", token_id)),
+            media: Some(format!("https://colliq.xyz/api/vaults/{}/svg", token_id)),
             media_hash: None,
             copies: Some(1),
             issued_at: Some(env::block_timestamp().to_string()),
@@ -219,12 +219,12 @@ impl VaultDeckContract {
     }
 }
 
-near_contract_standards::impl_non_fungible_token_core!(VaultDeckContract, tokens);
-near_contract_standards::impl_non_fungible_token_approval!(VaultDeckContract, tokens);
-near_contract_standards::impl_non_fungible_token_enumeration!(VaultDeckContract, tokens);
+near_contract_standards::impl_non_fungible_token_core!(ColliqContract, tokens);
+near_contract_standards::impl_non_fungible_token_approval!(ColliqContract, tokens);
+near_contract_standards::impl_non_fungible_token_enumeration!(ColliqContract, tokens);
 
 #[near_bindgen]
-impl NonFungibleTokenMetadataProvider for VaultDeckContract {
+impl NonFungibleTokenMetadataProvider for ColliqContract {
     fn nft_metadata(&self) -> NFTContractMetadata {
         self.metadata.get().unwrap()
     }

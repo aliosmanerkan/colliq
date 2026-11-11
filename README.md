@@ -1,4 +1,4 @@
-# 🏛️ VaultDeck Protocol
+# Colliq Protocol
 
 > **Autonomous Merchant Vault NFTs on NEAR Protocol (Track [10 / NFT])**  
 > Physical-Backed RWA Pokémon & TCG Slabs (Collector Crypt / Solana) meets Executable Account Abstraction on NEAR.
@@ -12,10 +12,10 @@
 
 ## 📌 Executive Summary
 
-VaultDeck transforms static NEP-171 NFTs into **Autonomous Merchant Vaults** that trade physical-backed graded Pokémon/TCG cards (sourced from Solana's Collector Crypt).
+Colliq transforms static NEP-171 NFTs into **Autonomous Merchant Vaults** that trade physical-backed graded Pokémon/TCG cards (sourced from Solana's Collector Crypt).
 
 Each minted `MerchantVaultNFT` is an executable account with:
-1. **Its own on-chain identity** (`<token_id>.<contract_id>`, e.g., `vault-1.vaultdeck.testnet`).
+1. **Its own on-chain identity** (`<token_id>.<contract_id>`, e.g., `vault-1.colliq.testnet`).
 2. **Its own USDC treasury** and **RWA card inventory** stored in a synchronous Internal Vault Ledger.
 3. **An autonomous AI Agent brain** that negotiates multi-card + USDC barter swaps with other Merchant NFTs via a stateless event-driven swarm.
 4. **"Business-in-a-Box" Portability:** When an owner transfers the `MerchantVaultNFT` (`nft_transfer`), the entire underlying business (USDC treasury, physical card inventory, and trading reputation) transfers atomically to the new owner, while the previous AI session key is automatically wiped clean on-chain (**Zombie Key Wipe**).
@@ -65,10 +65,10 @@ poke-agent/
 
 ---
 
-## 🎯 How VaultDeck Satisfies Every Requirement of Track [10 / NFT]
+## 🎯 How Colliq Satisfies Every Requirement of Track [10 / NFT]
 
 ### 1. Executable NFTs & Sub-Accounts (`contract/src/contract.ts`)
-* Minting a `MerchantVaultNFT` invokes `mint_merchant_vault`, generating `<token_id>.<contract_id>` (e.g. `vault-1.vaultdeck.testnet`).
+* Minting a `MerchantVaultNFT` invokes `mint_merchant_vault`, generating `<token_id>.<contract_id>` (e.g. `vault-1.colliq.testnet`).
 * Attaches a restricted `FunctionCall` Access Key allowing the off-chain AI Agent to call ONLY `execute_a2a_swap` and `submit_offer`—never owner withdrawal methods.
 * Multi-asset swaps (Cards + USDC) execute in a **Synchronous Internal Vault Ledger (`LookupMap<TokenId, VaultState>`)**, eliminating asynchronous cross-contract promise deadlock risks.
 

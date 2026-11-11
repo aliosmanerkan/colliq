@@ -283,7 +283,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                     <div className="flex items-center gap-2 truncate">
                       <span className="text-[10px] uppercase font-bold text-[#053b2a]">On-Chain Sub-Account:</span>
                       <span className="text-neutral-900 font-semibold truncate">
-                        {getAgentSlug(name)}-{suffixCode}.vaultdeck.testnet
+                        {getAgentSlug(name)}-{suffixCode}.colliq.testnet
                       </span>
                     </div>
                     <button
@@ -594,7 +594,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                 <div className="flex justify-between py-1 border-b border-neutral-200">
                   <span className="text-neutral-500">Dedicated Sub-Account:</span>
                   <span className="font-mono text-[#053b2a] font-semibold">
-                    {getAgentSlug(name)}-{suffixCode}.vaultdeck.testnet
+                    {getAgentSlug(name)}-{suffixCode}.colliq.testnet
                   </span>
                 </div>
 

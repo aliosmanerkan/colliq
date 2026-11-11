@@ -6,11 +6,11 @@ import { fetchCollectorCryptMarketplace, bridgeCollectorCryptCardToNearVault } f
  * Ensures system vault exists for physical vault custody transfers
  */
 async function getOrCreateCollectorCryptVault() {
-    let ccVault = await db.vault.findOne({ where: { sub_account: "collectorcrypt.vaultdeck.testnet" } });
+    let ccVault = await db.vault.findOne({ where: { sub_account: "collectorcrypt.colliq.testnet" } });
     if (!ccVault) {
         ccVault = await db.vault.create({
             vault_id: "v-collectorcrypt-system",
-            sub_account: "collectorcrypt.vaultdeck.testnet",
+            sub_account: "collectorcrypt.colliq.testnet",
             name: "Collector Crypt Vault (PWCC / Brink's)",
             owner_account: "collectorcrypt.testnet",
             usdc_balance: 500000.0,
@@ -144,7 +144,11 @@ export class A2ASwarmService {
                 include: [{ model: db.card, as: "inventory" }]
             });
 
-            const eligibleVaults = vaults.filter(v => v.inventory && v.inventory.length > 0 && v.sub_account !== "collectorcrypt.vaultdeck.testnet");
+            const eligibleVaults = vaults.filter(v => 
+                v.inventory && 
+                v.inventory.length > 0 && 
+                !v.sub_account?.includes("collectorcrypt")
+            );
             if (eligibleVaults.length < 2) {
                 this.isRunning = false;
                 return { status: "SKIPPED", message: "Not enough unlocked vaults with inventory" };
@@ -215,7 +219,7 @@ export class A2ASwarmService {
             });
             const eligibleVaults = vaults.filter(v => 
                 v.usdc_balance >= 25 && 
-                v.sub_account !== "collectorcrypt.vaultdeck.testnet"
+                !v.sub_account?.includes("collectorcrypt")
             );
 
             if (eligibleVaults.length === 0) {

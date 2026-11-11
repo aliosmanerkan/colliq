@@ -104,7 +104,7 @@ function generateOnChainBase64Svg(vault) {
     return `data:image/svg+xml;base64,${base64Svg}`;
 }
 // ==========================================
-// VAULTDECK MAIN SMART CONTRACT
+// COLLIQ MAIN SMART CONTRACT
 // ==========================================
 let MerchantVaultContract = class MerchantVaultContract {
     owner_id = "";
@@ -422,8 +422,8 @@ let MerchantVaultContract = class MerchantVaultContract {
     nft_metadata() {
         return {
             spec: "nft-1.0.0",
-            name: "VaultDeck Merchant Vaults",
-            symbol: "VDECK",
+            name: "Colliq Merchant Vaults",
+            symbol: "COLLIQ",
             icon: null,
             base_uri: null,
             reference: null,

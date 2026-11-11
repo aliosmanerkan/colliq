@@ -31,7 +31,7 @@ export default function AppShell({ children }) {
           <footer className="border-t border-neutral-200/80 bg-white py-10 text-xs text-neutral-500 font-sans mt-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-[#053b2a] font-semibold">VaultDeck Protocol</span>
+                <span className="text-[#053b2a] font-semibold">Colliq Protocol</span>
                 <span>•</span>
                 <span>NEAR Hackathon Track 10 Submission</span>
               </div>

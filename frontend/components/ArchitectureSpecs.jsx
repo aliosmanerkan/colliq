@@ -51,7 +51,7 @@ export default function ArchitectureSpecs() {
           </div>
 
           <h2 className="text-3xl sm:text-5xl font-squada uppercase tracking-wide text-[#053b2a]">
-            The Architecture of VaultDeck.
+            The Architecture of Colliq.
           </h2>
           <p className="text-base text-neutral-600 leading-relaxed font-sans">
             Built from first principles on NEAR Protocol. Replacing static JPEGs with autonomous accounts that own USDC cash, custody physical PSA Pokémon slabs, and trade peer-to-peer.

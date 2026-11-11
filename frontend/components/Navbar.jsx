@@ -98,7 +98,7 @@ export default function Navbar() {
             </svg>
           </div>
           <span className="font-display text-lg sm:text-xl tracking-wide uppercase text-[#043224] hidden sm:inline-block">
-            VaultDeck
+            Colliq
           </span>
         </Link>
 

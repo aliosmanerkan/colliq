@@ -318,7 +318,7 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
                     headers: {
                         "Authorization": `Bearer ${apiKey}`,
                         "HTTP-Referer": "http://localhost:3000",
-                        "X-Title": "VaultDeck NEAR Track 10",
+                        "X-Title": "Colliq NEAR Track 10",
                         "Content-Type": "application/json"
                     },
                     timeout: 8000

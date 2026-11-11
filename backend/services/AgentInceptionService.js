@@ -38,14 +38,14 @@ export class AgentInceptionService {
         const isTurkish = /[çğıöşü]/i.test(lastUserMessage) || 
             /\b(merhaba|selam|bütçe|harcama|satma|takaslama|ürün|kart|fiyat|fırsat|alalım|nedir|nasıl|olsun|yapalım|ne tür)\b/i.test(lastUserMessage);
 
-        const systemPrompt = `You are the Genesis Architect of VaultDeck — an elite, high-conviction AI investment co-pilot and TCG hedge-fund architect on NEAR Protocol (Track 10: NFTs as Accounts).
+        const systemPrompt = `You are the Genesis Architect of Colliq — an elite, high-conviction AI investment co-pilot and TCG hedge-fund architect on NEAR Protocol (Track 10: NFTs as Accounts).
 
 MISSION:
 Your job is to pair-program and converse with the vault owner (@${userAccount}) to design and mint their new Autonomous Merchant Vault.
 You are not a shallow chatbot. You can converse at whatever level of depth the user prefers — from quick, friendly guidance to institutional-grade quantitative hedge-fund discussions.
 
 PROTOCOL & ASSET DOMAIN CONTEXT:
-1. NEAR Protocol Track 10: The vault is an on-chain NFT that owns a dedicated sub-account (e.g. vault-<id>.vaultdeck.testnet) with an MPC access key.
+1. NEAR Protocol Track 10: The vault is an on-chain NFT that owns a dedicated sub-account (e.g. vault-<id>.colliq.testnet) with an MPC access key.
 2. Custody Standard: Controls 1,000 Brink's Vaulted PSA 10, PSA 9, and CGC Pristine slabs bridged from Collector Crypt via NEAR Chain Signatures.
 3. Market Variables:
    - Oracle Appraisal: insuredUsd (fair market appraisal) vs costUsd (listing cost).
@@ -120,7 +120,7 @@ ${JSON.stringify(defaultBlueprint, null, 2)}`;
                     headers: {
                         "Authorization": `Bearer ${apiKey}`,
                         "HTTP-Referer": "http://localhost:3000",
-                        "X-Title": "VaultDeck NEAR Inception",
+                        "X-Title": "Colliq NEAR Inception",
                         "Content-Type": "application/json"
                     },
                     timeout: 30000
@@ -222,7 +222,7 @@ ${JSON.stringify(defaultBlueprint, null, 2)}`;
                 `Minimum Oracle discount spread: %${100 - blueprint.guardrail_min_oracle_fair_value_pct}`
             ];
             reply = isTurkish
-                ? `Tüm parametreler tamamlandı! '${blueprint.name}' (@vault.vaultdeck.testnet) kurgusu hazırlandı. Hazine: $${blueprint.usdc_deposit} USDC, Hedef: ${blueprint.target_category} (${blueprint.min_grade}). Aşağıdaki butondan hemen mint edebiliriz!`
+                ? `Tüm parametreler tamamlandı! '${blueprint.name}' (@vault.colliq.testnet) kurgusu hazırlandı. Hazine: $${blueprint.usdc_deposit} USDC, Hedef: ${blueprint.target_category} (${blueprint.min_grade}). Aşağıdaki butondan hemen mint edebiliriz!`
                 : `All parameters calibrated! Blueprint locked for '${blueprint.name}'. Treasury: $${blueprint.usdc_deposit} USDC, Target: ${blueprint.target_category} (${blueprint.min_grade}). Ready to deploy on NEAR!`;
             chips = isTurkish
                 ? ["🚀 Kurguyu Onayla & Mint Et", "⚙️ Tek İşlem Limitini Değiştir", "🛡️ Karşı Taraf Koruması Ekle"]

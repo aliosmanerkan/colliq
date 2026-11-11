@@ -44,7 +44,7 @@ export default function LandingFooter() {
             links: [
               { label: "About", href: "/how-it-works" },
               { label: "Careers", href: "/portfolio" },
-              { label: "Contact", href: "mailto:contact@vaultdeck.xyz" },
+              { label: "Contact", href: "mailto:contact@colliq.xyz" },
               { label: "Press", href: "/how-it-works" },
             ]
           }

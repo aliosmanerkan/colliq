@@ -36,7 +36,7 @@ export async function initNearWallet() {
 
     const modalOptions = {
       theme: "dark",
-      description: "Connect your Meteor Wallet to trade on VaultDeck",
+      description: "Connect your Meteor Wallet to trade on Colliq",
     };
     if (CONTRACT_ID) {
       modalOptions.contractId = CONTRACT_ID;

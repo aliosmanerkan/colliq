@@ -172,7 +172,7 @@ function generateOnChainBase64Svg(vault: VaultState): string {
 }
 
 // ==========================================
-// VAULTDECK MAIN SMART CONTRACT
+// COLLIQ MAIN SMART CONTRACT
 // ==========================================
 
 @NearBindgen({ requireInit: true })
@@ -638,8 +638,8 @@ export class MerchantVaultContract {
     nft_metadata(): NFTContractMetadata {
         return {
             spec: "nft-1.0.0",
-            name: "VaultDeck Merchant Vaults",
-            symbol: "VDECK",
+            name: "Colliq Merchant Vaults",
+            symbol: "COLLIQ",
             icon: null,
             base_uri: null,
             reference: null,

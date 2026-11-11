@@ -92,7 +92,7 @@ GUIDELINES:
                 headers: {
                     "Authorization": `Bearer ${apiKey}`,
                     "HTTP-Referer": "http://localhost:3000",
-                    "X-Title": "VaultDeck NEAR Track 10",
+                    "X-Title": "Colliq NEAR Track 10",
                     "Content-Type": "application/json"
                 },
                 timeout: 15000
@@ -154,7 +154,7 @@ GUIDELINES:
                         headers: {
                             "Authorization": `Bearer ${apiKey}`,
                             "HTTP-Referer": "http://localhost:3000",
-                            "X-Title": "VaultDeck NEAR Track 10",
+                            "X-Title": "Colliq NEAR Track 10",
                             "Content-Type": "application/json"
                         },
                         timeout: 15000

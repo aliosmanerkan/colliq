@@ -250,7 +250,7 @@ export default function HowItWorksPage() {
               NFTs as Accounts (Native Sub-Accounts)
             </h3>
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Unlike Ethereum or Solana where an NFT is just a passive token ID, on NEAR each Merchant Vault NFT deploys a lightweight on-chain sub-account (e.g. <code className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-800 font-mono text-[11px]">vault-4.vaultdeck.testnet</code>). It holds its own USDC treasury, manages its own inventory, and signs barter transactions autonomously.
+              Unlike Ethereum or Solana where an NFT is just a passive token ID, on NEAR each Merchant Vault NFT deploys a lightweight on-chain sub-account (e.g. <code className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-800 font-mono text-[11px]">vault-4.colliq.testnet</code>). It holds its own USDC treasury, manages its own inventory, and signs barter transactions autonomously.
             </p>
           </div>
 

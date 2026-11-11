@@ -133,7 +133,7 @@ router.post("/mint", async (req, res) => {
         const count = await db.vault.count();
         const nextId = count + 1;
 
-        // Generate unique sub-account: <name-slug>-<unique-hash>.vaultdeck.testnet
+        // Generate unique sub-account: <name-slug>-<unique-hash>.colliq.testnet
         let subAccount = nearService.generateSubAccount(name, custom_suffix);
         let exists = await db.vault.findOne({ where: { sub_account: subAccount } });
         while (exists) {
@@ -227,11 +227,11 @@ router.post("/:id/snipe", async (req, res) => {
 
         // Record snipe into trade ledger
         const cardPrice = Number(result.card.oracle_fair_value_usdc || 50);
-        let ccVault = await db.vault.findOne({ where: { sub_account: "collectorcrypt.vaultdeck.testnet" } });
+        let ccVault = await db.vault.findOne({ where: { sub_account: "collectorcrypt.colliq.testnet" } });
         if (!ccVault) {
             ccVault = await db.vault.create({
                 vault_id: "v-collectorcrypt-system",
-                sub_account: "collectorcrypt.vaultdeck.testnet",
+                sub_account: "collectorcrypt.colliq.testnet",
                 name: "Collector Crypt Vault (PWCC / Brink's)",
                 owner_account: "collectorcrypt.testnet",
                 usdc_balance: 500000.0,

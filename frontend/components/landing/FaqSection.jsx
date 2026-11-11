@@ -29,7 +29,7 @@ export default function FaqSection() {
     },
     {
       q: "What is your return policy?",
-      a: "Every card slab in VaultDeck is authentic, graded by PSA, CGC, or Beckett (BGS), and backed by decentralized Oracle pricing appraisals. Because transactions execute on-chain, all sales are final, but you can re-list or trade any card immediately on the secondary market."
+      a: "Every card slab in Colliq is authentic, graded by PSA, CGC, or Beckett (BGS), and backed by decentralized Oracle pricing appraisals. Because transactions execute on-chain, all sales are final, but you can re-list or trade any card immediately on the secondary market."
     }
   ];
 
@@ -58,7 +58,7 @@ export default function FaqSection() {
             <div className="mt-8 lg:mt-0 text-xs sm:text-sm text-neutral-500 leading-relaxed">
               Can't find what you're looking for?{" "}
               <a 
-                href="mailto:support@vaultdeck.xyz" 
+                href="mailto:support@colliq.xyz" 
                 className="font-bold text-neutral-900 hover:underline cursor-pointer"
               >
                 Contact our customer support team

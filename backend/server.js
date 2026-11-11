@@ -67,10 +67,10 @@ negotiationEngine.setSocket(io);
 agentChatService.setSocket(io);
 
 io.on("connection", (socket) => {
-    console.log(`⚡ Client connected to VaultDeck Live Floor: ${socket.id}`);
+    console.log(`⚡ Client connected to Colliq Live Floor: ${socket.id}`);
 
     socket.emit("connected", {
-        message: "Connected to VaultDeck A2A Swarm Exchange",
+        message: "Connected to Colliq A2A Swarm Exchange",
         socketId: socket.id,
         network: "NEAR Testnet",
         timestamp: new Date().toISOString()
@@ -113,7 +113,7 @@ app.use(logger);
 // Root route
 app.get("/", (req, res) => {
     res.json({
-        service: "VaultDeck • Autonomous Merchant Vaults Protocol",
+        service: "Colliq • Autonomous Merchant Vaults Protocol",
         chain: "NEAR Protocol (Track 10: NFTs as Accounts)",
         version: "1.0.0",
         endpoints: {
@@ -145,7 +145,7 @@ app.use((err, req, res, next) => {
 });
 
 httpServer.listen(port, () => {
-    console.log(`🚀 VaultDeck Protocol Backend running on port ${port}`);
+    console.log(`🚀 Colliq Protocol Backend running on port ${port}`);
     console.log(`📡 A2A Swarm Live Exchange ws://localhost:${port}`);
     // Non-blocking pre-warm of 170k+ Collector Crypt inventory
     warmUpCollectorCryptCache().catch((err) => console.warn("Cache pre-warm notice:", err.message));
