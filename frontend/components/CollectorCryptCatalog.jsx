@@ -33,6 +33,7 @@ const CATEGORIES = [
   { id: "Football", label: "Football" },
   { id: "Magic", label: "Magic: The Gathering" },
   { id: "Yu-Gi-Oh", label: "Yu-Gi-Oh!" },
+  { id: "Dragon Ball", label: "Dragon Ball" },
 ];
 
 const SORT_OPTIONS = [
@@ -318,16 +319,23 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
                   className="group relative rounded-[24px] p-4 bg-white border border-neutral-200/80 hover:border-emerald-300 transition-all duration-300 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(4,50,36,0.06)] hover:-translate-y-1"
                 >
                   <div>
-                    {/* PSA Header Label */}
-                    <div className="mb-3 px-3 py-1.5 rounded-xl bg-[#f8faf9] border border-neutral-200/70 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-black text-red-600 font-mono tracking-tight">PSA</span>
-                        <span className="font-bold text-neutral-900">{card.grade || "GEM MT 10"}</span>
-                      </div>
-                      <span className="text-[10px] text-emerald-800 font-medium bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        Vaulted
-                      </span>
-                    </div>
+                    {/* Slab Header Label */}
+                    {(() => {
+                      const comp = card.grade?.startsWith("CGC") ? "CGC" : card.grade?.startsWith("BGS") ? "BGS" : "PSA";
+                      const cleanGrade = card.grade?.replace(/^(PSA|CGC|BGS)\s*/i, "") || "GEM MT 10";
+                      const badgeColor = comp === "CGC" ? "text-blue-600" : comp === "BGS" ? "text-amber-600" : "text-red-600";
+                      return (
+                        <div className="mb-3 px-3 py-1.5 rounded-xl bg-[#f8faf9] border border-neutral-200/70 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`font-black font-mono tracking-tight ${badgeColor}`}>{comp}</span>
+                            <span className="font-bold text-neutral-900">{cleanGrade}</span>
+                          </div>
+                          <span className="text-[10px] text-emerald-800 font-medium bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            Vaulted
+                          </span>
+                        </div>
+                      );
+                    })()}
 
                     {/* Artwork Container */}
                     <div className="relative aspect-[3/4] w-full rounded-2xl overflow-hidden bg-[#fbfdfc] flex items-center justify-center p-3 border border-neutral-100 mb-3 group-hover:border-neutral-200 transition">

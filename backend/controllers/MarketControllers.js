@@ -61,6 +61,7 @@ router.get("/collector-crypt", (req, res) => {
                 if (catLower.includes("magic") && cLower.includes("magic")) return true;
                 if (catLower.includes("yu-gi") && cLower.includes("yu-gi")) return true;
                 if (catLower.includes("pokemon") && cLower.includes("pokemon")) return true;
+                if (catLower.includes("dragon") && cLower.includes("dragon")) return true;
                 return cLower === catLower;
             });
         }

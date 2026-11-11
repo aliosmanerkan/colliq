@@ -10,20 +10,23 @@ const __dirname = path.dirname(__filename);
 const CC_JSON_PATH = path.join(__dirname, "../collector_crypt_real_cards.json");
 
 let cachedCollectorCryptCards = null;
+let lastMtime = 0;
 
 export function getCollectorCryptInventory() {
-    if (!cachedCollectorCryptCards) {
-        try {
-            if (fs.existsSync(CC_JSON_PATH)) {
+    try {
+        if (fs.existsSync(CC_JSON_PATH)) {
+            const stat = fs.statSync(CC_JSON_PATH);
+            if (!cachedCollectorCryptCards || stat.mtimeMs > lastMtime) {
                 const data = fs.readFileSync(CC_JSON_PATH, "utf-8");
                 cachedCollectorCryptCards = JSON.parse(data);
-            } else {
-                cachedCollectorCryptCards = [];
+                lastMtime = stat.mtimeMs;
             }
-        } catch (err) {
-            console.error("Failed to load collector_crypt_real_cards.json:", err);
+        } else {
             cachedCollectorCryptCards = [];
         }
+    } catch (err) {
+        console.error("Failed to load collector_crypt_real_cards.json:", err);
+        if (!cachedCollectorCryptCards) cachedCollectorCryptCards = [];
     }
     return cachedCollectorCryptCards;
 }
