@@ -59,7 +59,7 @@ export default function MarketplaceHero() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-neutral-100">
           <div className="p-4 rounded-2xl bg-[#fbfdfc] border border-neutral-200/80 space-y-1">
             <div className="text-xs text-neutral-500 font-medium">Indexed Slabs</div>
-            <div className="text-xl font-bold text-neutral-900">1,000 Cards</div>
+            <div className="text-xl font-bold text-neutral-900">5,000 Cards</div>
             <div className="text-[11px] text-neutral-400">From 167k+ Collector Crypt pool</div>
           </div>
 

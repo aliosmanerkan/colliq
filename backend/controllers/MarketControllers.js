@@ -54,7 +54,15 @@ router.get("/collector-crypt", (req, res) => {
         }
 
         if (category && category !== "ALL") {
-            cards = cards.filter(c => c.category?.toLowerCase() === category.toLowerCase());
+            const catLower = category.toLowerCase();
+            cards = cards.filter(c => {
+                if (!c.category) return false;
+                const cLower = c.category.toLowerCase();
+                if (catLower.includes("magic") && cLower.includes("magic")) return true;
+                if (catLower.includes("yu-gi") && cLower.includes("yu-gi")) return true;
+                if (catLower.includes("pokemon") && cLower.includes("pokemon")) return true;
+                return cLower === catLower;
+            });
         }
 
         if (grade && grade !== "ALL") {
@@ -69,6 +77,28 @@ router.get("/collector-crypt", (req, res) => {
             cards = [...cards].sort((a, b) => (b.rareness || 0) - (a.rareness || 0));
         } else if (sortBy === "return") {
             cards = [...cards].sort((a, b) => (b.returnPct || 0) - (a.returnPct || 0));
+        } else if (sortBy === "newest") {
+            cards = [...cards].sort((a, b) => (b.acquiredAt || 0) - (a.acquiredAt || 0));
+        } else if (sortBy === "pop_asc") {
+            const getPop = (c) => (typeof c.population?.atGrade === "number" ? c.population.atGrade : 999999);
+            cards = [...cards].sort((a, b) => getPop(a) - getPop(b));
+        } else if (sortBy === "pop_desc") {
+            const getPop = (c) => (typeof c.population?.atGrade === "number" ? c.population.atGrade : 0);
+            cards = [...cards].sort((a, b) => getPop(b) - getPop(a));
+        } else if (sortBy === "name_asc") {
+            cards = [...cards].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        } else if (sortBy === "name_desc") {
+            cards = [...cards].sort((a, b) => (b.name || "").localeCompare(a.name || ""));
+        } else if (sortBy === "grade_desc") {
+            const getGradeNum = (g) => {
+                if (!g) return 0;
+                if (g.includes("10")) return 10;
+                if (g.includes("9.5")) return 9.5;
+                if (g.includes("9")) return 9;
+                if (g.includes("8")) return 8;
+                return 0;
+            };
+            cards = [...cards].sort((a, b) => getGradeNum(b.grade) - getGradeNum(a.grade));
         }
 
         res.json({

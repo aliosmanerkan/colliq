@@ -25,6 +25,28 @@ import {
   getLiveNearAccountBalance 
 } from "@/lib/near";
 
+const CATEGORIES = [
+  { id: "ALL", label: "All Cards" },
+  { id: "Pokemon", label: "Pokémon" },
+  { id: "One Piece", label: "One Piece" },
+  { id: "Basketball", label: "Basketball" },
+  { id: "Football", label: "Football" },
+  { id: "Magic", label: "Magic: The Gathering" },
+  { id: "Yu-Gi-Oh", label: "Yu-Gi-Oh!" },
+];
+
+const SORT_OPTIONS = [
+  { id: "price_desc", label: "Price: High to Low" },
+  { id: "price_asc", label: "Price: Low to High" },
+  { id: "rareness", label: "Highest Rarity Score" },
+  { id: "pop_asc", label: "Lowest Population (Scarcest)" },
+  { id: "return", label: "Top 30D Gainers (% Return)" },
+  { id: "newest", label: "Recently Vaulted" },
+  { id: "grade_desc", label: "Grade: PSA 10 First" },
+  { id: "name_asc", label: "Name: A → Z" },
+  { id: "name_desc", label: "Name: Z → A" },
+];
+
 export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOpenMint }) {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -214,28 +236,28 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
           
           {/* Category Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-            {["ALL", "Pokemon", "One Piece", "Basketball", "Football"].map((cat) => (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+            {CATEGORIES.map((cat) => (
               <button
-                key={cat}
-                onClick={() => setCategory(cat)}
+                key={cat.id}
+                onClick={() => setCategory(cat.id)}
                 className={`px-4 py-2 rounded-full text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-                  category === cat
+                  category === cat.id
                     ? "bg-[#073525] text-white shadow-sm"
                     : "bg-[#f8faf9] text-neutral-600 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-300"
                 }`}
               >
-                {cat === "ALL" ? "All Cards" : cat}
+                {cat.label}
               </button>
             ))}
           </div>
 
           {/* Search Input & Sort */}
           <div className="flex items-center gap-3">
-            <form onSubmit={handleSearchSubmit} className="relative flex-1 md:w-72">
+            <form onSubmit={handleSearchSubmit} className="relative flex-1 md:w-64">
               <input
                 type="text"
-                placeholder="Search by card, set, or character..."
+                placeholder="Search by card, set, character..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-full bg-[#f8faf9] border border-neutral-200 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#073525] focus:bg-white transition shadow-sm font-sans"
@@ -246,11 +268,13 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2.5 rounded-full bg-[#f8faf9] border border-neutral-200 text-xs font-semibold text-neutral-700 focus:outline-none focus:border-[#073525] transition shadow-sm cursor-pointer shrink-0"
+              className="px-3.5 py-2.5 rounded-full bg-[#f8faf9] border border-neutral-200 text-xs font-semibold text-neutral-700 focus:outline-none focus:border-[#073525] transition shadow-sm cursor-pointer shrink-0"
             >
-              <option value="price_desc">Price: High to Low</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="rareness">Highest Rarity</option>
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -259,7 +283,7 @@ export default function CollectorCryptCatalog({ vaults = [], onCardBridged, onOp
         <div className="pt-3 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-neutral-500">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>Showing <strong className="text-neutral-900 font-semibold">{cards.length} verified slabs</strong></span>
+            <span>Showing <strong className="text-neutral-900 font-semibold">{cards.length.toLocaleString()} verified slabs</strong></span>
             <span className="text-neutral-300">•</span>
             <span>Curated from Collector Crypt's 167k+ physical Solana vault</span>
           </div>
