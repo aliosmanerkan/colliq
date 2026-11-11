@@ -5,7 +5,6 @@ export class A2ASwarmService {
     constructor(io = null) {
         this.io = io;
         this.isRunning = false;
-        this.telemetryInterval = null;
     }
 
     setSocket(io) {
@@ -13,30 +12,6 @@ export class A2ASwarmService {
         if (negotiationEngine) {
             negotiationEngine.setSocket(io);
         }
-        this.startTelemetryHeartbeat();
-    }
-
-    startTelemetryHeartbeat() {
-        if (this.telemetryInterval) return;
-        const telemetryFeed = [
-            { speaker: "ORACLE FEED", category: "oracle", message: "Pyth / DIA price feed verified for PSA 10 slabs. Dispersion < 0.15%." },
-            { speaker: "NEAR CONSENSUS", category: "near_rpc", message: "Testnet block confirmed across validators. Average gas price: 100 TGas." },
-            { speaker: "AGENT RADAR", category: "radar", message: "Autonomous scan: Scanning merchant vaults for valuation arbitrage opportunities." },
-            { speaker: "SOLANA MPC", category: "chain_sig", message: "Cross-chain MPC derivation key verified via NEAR Chain Signatures." },
-            { speaker: "RISK MONITOR", category: "risk", message: "Treasury guardrail check: 100% USDC collateralized, zero liquidation risk." },
-            { speaker: "MEMPOOL PULSE", category: "mempool", message: "Peer handshake active on consensus.market.near: Liquidity depth nominal." }
-        ];
-
-        let index = 0;
-        this.telemetryInterval = setInterval(() => {
-            if (this.isRunning) return;
-            const item = telemetryFeed[index % telemetryFeed.length];
-            index++;
-            this.emitEvent("a2a_telemetry", {
-                ...item,
-                timestamp: Date.now()
-            });
-        }, 5500);
     }
 
     // Runs a single atomic A2A negotiation cycle between 2 eligible vaults

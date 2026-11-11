@@ -69,15 +69,28 @@ export function AppProvider({ children }) {
           if (prev.length > 0) return prev;
           const preloaded = [];
           for (const t of fetchedTrades.slice(0, 4)) {
+            const isRejected = t.status === "REJECTED_GUARDRAIL";
             const txHash = t.tx_hash || "0x9482bf...38a";
-            preloaded.push({
-              id: `settled-${t.id || t.trade_id}`,
-              type: "settled",
-              speaker: "NEAR ATOMIC SETTLEMENT",
-              message: `⚡ Consensus locked! Parity swap executed between ${t.vault_a_name} and ${t.vault_b_name}.`,
-              details: { txHash },
-              timestamp: new Date(t.createdAt).getTime() || Date.now(),
-            });
+
+            if (isRejected) {
+              preloaded.push({
+                id: `rejected-${t.id || t.trade_id}`,
+                type: "rejected",
+                speaker: "GUARDRAIL RISK SYSTEM",
+                message: `⚠️ Trade declined: Terms exceeded risk guardrail limits between ${t.vault_a_name} and ${t.vault_b_name}.`,
+                timestamp: new Date(t.createdAt).getTime() || Date.now(),
+              });
+            } else {
+              preloaded.push({
+                id: `settled-${t.id || t.trade_id}`,
+                type: "settled",
+                speaker: "NEAR ATOMIC SETTLEMENT",
+                message: `⚡ Consensus locked! Parity swap executed between ${t.vault_a_name} and ${t.vault_b_name}.`,
+                details: { txHash },
+                timestamp: new Date(t.createdAt).getTime() || Date.now(),
+              });
+            }
+
             if (Array.isArray(t.negotiation_log)) {
               for (const round of t.negotiation_log) {
                 preloaded.push({
@@ -174,19 +187,6 @@ export function AppProvider({ children }) {
       loadData();
     };
 
-    const onTelemetry = (data) => {
-      setLiveEvents((prev) => [
-        {
-          id: `telemetry-${Date.now()}-${Math.random()}`,
-          type: "telemetry",
-          speaker: data.speaker || data.category || "SYSTEM",
-          message: data.message,
-          timestamp: Date.now(),
-        },
-        ...prev.slice(0, 50),
-      ]);
-    };
-
     const onTradeEvent = (data) => {
       setLiveEvents((prev) => [
         {
@@ -204,10 +204,12 @@ export function AppProvider({ children }) {
     const onTradeRejected = (data) => {
       setLiveEvents((prev) => [
         {
-          id: `evt-${Date.now()}-${Math.random()}`,
+          id: `rejected-${Date.now()}-${Math.random()}`,
           type: "rejected",
-          speaker: "SMART CONTRACT SAFETY",
-          message: `⚠️ Trade declined by agent safety rules between ${data.vaultA} and ${data.vaultB}. Zero loss incurred.`,
+          speaker: "GUARDRAIL RISK SYSTEM",
+          message: data.reason 
+            ? `⚠️ Trade Declined: ${data.reason}` 
+            : `⚠️ Trade declined by agent safety rules between ${data.vaultA || data.buyer} and ${data.vaultB || data.seller}. Zero loss incurred.`,
           timestamp: Date.now(),
         },
         ...prev.slice(0, 50),
@@ -220,7 +222,7 @@ export function AppProvider({ children }) {
     socket.on("a2a_match_found", onMatchFound);
     socket.on("a2a_round_update", onRoundUpdate);
     socket.on("a2a_trade_settled", onTradeSettled);
-    socket.on("a2a_telemetry", onTelemetry);
+    socket.on("a2a_trade_rejected", onTradeRejected);
     socket.on("trade:event", onTradeEvent);
     socket.on("trade:rejected", onTradeRejected);
     socket.on("vault:created", () => loadData());
@@ -233,7 +235,7 @@ export function AppProvider({ children }) {
       socket.off("a2a_match_found", onMatchFound);
       socket.off("a2a_round_update", onRoundUpdate);
       socket.off("a2a_trade_settled", onTradeSettled);
-      socket.off("a2a_telemetry", onTelemetry);
+      socket.off("a2a_trade_rejected", onTradeRejected);
       socket.off("trade:event", onTradeEvent);
       socket.off("trade:rejected", onTradeRejected);
       socket.off("vault:created");

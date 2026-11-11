@@ -330,15 +330,29 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
             const parsed = JSON.parse(cleanJson);
 
             const validDecisions: AgentDecision[] = ["ACCEPT", "COUNTER", "REJECT"];
-            const decision: AgentDecision = validDecisions.includes(parsed.decision?.toUpperCase())
+            let decision: AgentDecision = validDecisions.includes(parsed.decision?.toUpperCase())
                 ? parsed.decision.toUpperCase() as AgentDecision
                 : (turnNumber >= 3 ? "ACCEPT" : "COUNTER");
 
             let cash = Number(parsed.offer_usdc) || 0;
+            if (cash < 0) cash = 0;
+
+            // Enforce on-chain guardrail: If this agent must pay cash and the required spread exceeds their limit, MUST REJECT!
+            if (netSpread > 0 && absSpread > agent.max_spend_per_trade_usdc && turnNumber >= 2) {
+                decision = "REJECT";
+                return {
+                    decision: "REJECT",
+                    offer_usdc: 0,
+                    offer_cards: [],
+                    request_cards: [],
+                    public_argument: `Deal declined by on-chain risk guardrails: Required cash sweetener ($${absSpread} USDC) exceeds my single-trade spend ceiling ($${agent.max_spend_per_trade_usdc} USDC). Deal aborted to protect treasury capital.`,
+                    private_reasoning_for_owner: `Guardrail tripped: Spread $${absSpread} > max spend limit $${agent.max_spend_per_trade_usdc}. Zero loss incurred.`
+                };
+            }
+
             if (cash > agent.max_spend_per_trade_usdc) {
                 cash = agent.max_spend_per_trade_usdc;
             }
-            if (cash < 0) cash = 0;
 
             return {
                 decision,
@@ -447,7 +461,7 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
         await new Promise(r => setTimeout(r, 900));
 
         if (turn2.decision === "REJECT") {
-            return { status: "REJECTED_GUARDRAIL", history: negotiationHistory };
+            return await this.recordRejectedTrade(buyerVault, sellerVault, cardFromBuyer, cardFromSeller, negotiationHistory, turn2.public_argument);
         }
         lastArgument = turn2.public_argument;
 
@@ -476,7 +490,7 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
         await new Promise(r => setTimeout(r, 900));
 
         if (turn3.decision === "REJECT") {
-            return { status: "REJECTED_GUARDRAIL", history: negotiationHistory };
+            return await this.recordRejectedTrade(buyerVault, sellerVault, cardFromBuyer, cardFromSeller, negotiationHistory, turn3.public_argument);
         }
         lastArgument = turn3.public_argument;
 
@@ -586,6 +600,55 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
 
             return { status: "COMPLETED", trade: tradeLog };
         } else {
+            return await this.recordRejectedTrade(buyerVault, sellerVault, cardFromBuyer, cardFromSeller, negotiationHistory, turn4.public_argument || "Final settlement agreement not signed");
+        }
+    }
+
+    async recordRejectedTrade(
+        buyerVault: any,
+        sellerVault: any,
+        cardFromBuyer: any,
+        cardFromSeller: any,
+        negotiationHistory: any[],
+        reason: string
+    ) {
+        try {
+            const tradeLog = await db.trade.create({
+                trade_id: crypto.randomUUID(),
+                vault_a_id: buyerVault.id,
+                vault_b_id: sellerVault.id,
+                vault_a_name: buyerVault.name,
+                vault_b_name: sellerVault.name,
+                cards_from_a: cardFromBuyer ? [cardFromBuyer.toJSON()] : [],
+                cards_from_b: cardFromSeller ? [cardFromSeller.toJSON()] : [],
+                usdc_from_a: 0,
+                usdc_from_b: 0,
+                rounds_count: negotiationHistory.length,
+                negotiation_log: negotiationHistory,
+                status: "REJECTED_GUARDRAIL",
+                protocol_fee_usdc: 0,
+                tx_hash: "0x_GUARDRAIL_DECLINED",
+                near_block: 276399000 + Math.floor(Math.random() * 2000)
+            });
+
+            if (this.io) {
+                this.io.emit("a2a_trade_rejected", {
+                    trade: tradeLog,
+                    buyer: buyerVault.name,
+                    seller: sellerVault.name,
+                    reason,
+                    history: negotiationHistory
+                });
+                this.io.emit("trade:rejected", {
+                    vaultA: buyerVault.name,
+                    vaultB: sellerVault.name,
+                    reason
+                });
+            }
+
+            return { status: "REJECTED_GUARDRAIL", trade: tradeLog, history: negotiationHistory };
+        } catch (err: any) {
+            console.error("Error recording rejected trade:", err);
             return { status: "REJECTED_GUARDRAIL", history: negotiationHistory };
         }
     }
