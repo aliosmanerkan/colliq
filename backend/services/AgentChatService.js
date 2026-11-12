@@ -445,6 +445,13 @@ GUIDELINES:
             this.io.emit("agent_chat_update", result);
         }
 
+        // Trigger market scan if rules, guardrails or strategy changed, or snipe was requested
+        if (["RULE_ADDED", "GUARDRAIL_UPDATED", "STRATEGY_UPDATED"].includes(actionType) || msgLower.includes("snipe") || msgLower.includes("scan") || msgLower.includes("tara")) {
+            import("./A2ASwarmService.js").then(({ a2aSwarm }) => {
+                a2aSwarm.executeMarketSnipeCycle().catch(err => console.warn("Snipe after chat rule notice:", err.message));
+            }).catch(() => {});
+        }
+
         return result;
     }
 

@@ -20,6 +20,9 @@ const router = express.Router();
 router.get("/", async (req, res) => {
     try {
         const vaults = await db.vault.findAll({
+            where: {
+                sub_account: { [db.Sequelize.Op.ne]: "collectorcrypt.colliq.testnet" }
+            },
             include: [{ model: db.card, as: "inventory" }],
             order: [["total_trades", "DESC"]]
         });
@@ -290,7 +293,7 @@ router.post("/:id/snipe", async (req, res) => {
             id: `msg-snipe-${Date.now()}`,
             sender: "agent",
             senderAccount: vault.sub_account,
-            text: `🎯 Direct Market Snipe:\nAcquired ${result.card.name} (${result.card.grade || "PSA 10"}) from Collector Crypt for $${cardPrice.toFixed(2)} USDC.\nPhysical custody secured in PWCC/Brink's vault. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
+            text: `[DIRECT MARKET SNIPE]\nAcquired ${result.card.name} (${result.card.grade || "PSA 10"}) from Collector Crypt for $${cardPrice.toFixed(2)} USDC.\nPhysical custody secured in PWCC/Brink's vault. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
             actionType: "MARKET_SNIPE",
             timestamp: new Date().toISOString()
         });
@@ -354,6 +357,40 @@ router.post("/:id/withdraw-card", async (req, res) => {
     }
 });
 
+// TOGGLE CARD HOLD / PROTECTED STATUS
+router.post("/cards/:cardId/toggle-hold", async (req, res) => {
+    try {
+        const cardId = req.params.cardId;
+        const isNum = !isNaN(Number(cardId));
+        const card = await db.card.findOne({
+            where: isNum
+                ? { [db.Sequelize.Op.or]: [{ id: Number(cardId) }, { card_id: String(cardId) }] }
+                : { card_id: String(cardId) }
+        });
+        if (!card) return res.status(404).json({ error: "Card not found" });
+
+        card.is_hold = !card.is_hold;
+        await card.save();
+
+        req.app.get("io")?.emit("vault:updated", { 
+            vaultId: card.vault_id, 
+            action: "card_hold_toggled", 
+            cardId: card.id, 
+            is_hold: card.is_hold 
+        });
+
+        res.json({
+            status: "SUCCESS",
+            is_hold: card.is_hold,
+            message: card.is_hold ? "Card marked as Protected Hold slab." : "Card unlocked for A2A barter.",
+            card
+        });
+    } catch (err) {
+        console.error("Toggle hold error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // DEPOSIT USDC TO AGENT TREASURY
 router.post("/:id/deposit-treasury", async (req, res) => {
     try {
@@ -389,6 +426,9 @@ router.post("/:id/deposit-treasury", async (req, res) => {
             amount: depositAmt, 
             balance: vault.usdc_balance 
         });
+
+        // Trigger market snipe evaluation upon cash deposit
+        a2aSwarm.executeMarketSnipeCycle().catch((err) => console.warn("Snipe after deposit notice:", err.message));
 
         res.json({
             status: "FUNDED",

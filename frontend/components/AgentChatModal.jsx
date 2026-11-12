@@ -23,10 +23,10 @@ import {
 import api from "@/lib/api";
 
 const QUICK_PROMPTS = [
-  { label: "🔍 Find Charizard slabs", prompt: "Scan the market for underpriced Charizard slabs" },
-  { label: "💰 Max $250 per card", prompt: "Set max spend limit to $250 USDC per deal" },
-  { label: "📊 Portfolio audit", prompt: "Audit our vault balance sheet, treasury, and inventory" },
-  { label: "💎 Target PSA 10 only", prompt: "Add rule: Only buy PSA 10 and Pristine condition slabs" }
+  { label: "Find Charizard slabs", prompt: "Scan the market for underpriced Charizard slabs" },
+  { label: "Max $250 per card", prompt: "Set max spend limit to $250 USDC per deal" },
+  { label: "Portfolio audit", prompt: "Audit our vault balance sheet, treasury, and inventory" },
+  { label: "Target PSA 10 only", prompt: "Add rule: Only buy PSA 10 and Pristine condition slabs" }
 ];
 
 export default function AgentChatModal({ vault, isOpen, onClose, onRulesUpdated }) {

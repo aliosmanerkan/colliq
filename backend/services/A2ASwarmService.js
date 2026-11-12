@@ -33,7 +33,8 @@ async function getOrCreateCollectorCryptVault() {
 export function evaluateCardForVault(card, vault) {
     if (!card || !vault) return { eligible: false, reason: "Invalid card or vault" };
 
-    const cardPrice = Number(card.insuredUsd || card.costUsd || card.oracle_fair_value_usdc || 50);
+    const cardPrice = Number(card.costUsd || card.listingPrice || card.insuredUsd || card.oracle_fair_value_usdc || 50);
+    const oracleFairValue = Number(card.insuredUsd || card.oracle_fair_value_usdc || Math.round(cardPrice * 1.15));
     const balance = Number(vault.usdc_balance || 0);
     const maxSpend = Number(vault.guardrail_max_spend_per_trade || 500);
 
@@ -47,7 +48,13 @@ export function evaluateCardForVault(card, vault) {
         return { eligible: false, reason: `Price ($${cardPrice}) exceeds max spend limit ($${maxSpend})` };
     }
 
-    // 3. Parse custom rules
+    // 3. 25% Cash Reserve requirement (Max 75% of treasury can be spent on any single purchase)
+    const maxAllowedSpend = balance * 0.75;
+    if (cardPrice > maxAllowedSpend) {
+        return { eligible: false, reason: `Price ($${cardPrice}) exceeds 75% treasury ceiling ($${maxAllowedSpend.toFixed(2)}). 25% cash reserve required.` };
+    }
+
+    // 4. Parse custom rules
     let rules = [];
     try {
         rules = typeof vault.custom_rules === "string" ? JSON.parse(vault.custom_rules) : (vault.custom_rules || []);
@@ -60,56 +67,84 @@ export function evaluateCardForVault(card, vault) {
     const cardGrade = (card.grade || "").toLowerCase();
     const cardSet = (card.set || card.set_name || "").toLowerCase();
 
-    // If vault has specific rules
-    if (rules.length > 0) {
-        let ruleMatched = false;
-        let matchedRuleText = "";
+    // Filter out configuration labels to find genuine collection directives
+    const directiveRules = rules.filter(r => {
+        const t = String(r).trim().toLowerCase();
+        return !t.startsWith("max spend") && !t.startsWith("strategy") && !t.startsWith("protected grail");
+    });
 
-        for (const rule of rules) {
+    // If vault has specific collection directives: STRICT ENFORCEMENT (NO FALLBACK)
+    if (directiveRules.length > 0) {
+        const gradeRules = [];
+        const keywordRules = [];
+
+        for (const rule of directiveRules) {
             const ruleText = String(rule).trim().toLowerCase();
             if (!ruleText) continue;
 
-            // Direct grade requirement rule e.g. "PSA 10 only" or "Target PSA 10"
-            if (ruleText.includes("psa 10") || ruleText.includes("gem mt 10") || ruleText.includes("gem 10")) {
-                if (!cardGrade.includes("10")) {
-                    return { eligible: false, reason: "Rule requires Gem Mint 10 grade" };
-                }
-                ruleMatched = true;
-                matchedRuleText = rule;
+            if (ruleText.includes("psa 10") || ruleText.includes("gem mt 10") || ruleText.includes("gem 10") || ruleText.includes("grade 9") || ruleText.includes("psa 9")) {
+                gradeRules.push(rule);
+            } else {
+                keywordRules.push(rule);
             }
+        }
 
-            // Keyword match (e.g. "Charizard", "Pikachu", "Pokemon", "One Piece", "Luffy", "Jordan", "Basketball")
-            const keywords = ruleText.replace(/target|only|slabs|cards|per card|max|min/gi, "").trim().split(/\s+/);
-            for (const kw of keywords) {
-                if (kw.length >= 3) {
-                    if (cardName.includes(kw) || cardCategory.includes(kw) || cardSet.includes(kw)) {
-                        ruleMatched = true;
-                        matchedRuleText = rule;
-                        break;
-                    }
+        // 1. Validate grade constraints
+        for (const gRule of gradeRules) {
+            const gText = String(gRule).toLowerCase();
+            if (gText.includes("10")) {
+                if (!cardGrade.includes("10")) {
+                    return { eligible: false, reason: `Card grade (${card.grade || "Unknown"}) does not meet Gem Mint 10 constraint` };
+                }
+            } else if (gText.includes("9.5")) {
+                if (!cardGrade.includes("10") && !cardGrade.includes("9.5")) {
+                    return { eligible: false, reason: "Card grade does not meet 9.5+ constraint" };
                 }
             }
         }
 
-        if (ruleMatched) {
-            return { eligible: true, score: 95, matchedRule: matchedRuleText, cardPrice };
+        // 2. Validate keyword/subject directives
+        if (keywordRules.length > 0) {
+            let matchedKeywordRule = "";
+            for (const rule of keywordRules) {
+                const ruleText = String(rule).trim().toLowerCase();
+                const keywords = ruleText.replace(/target|only|slabs|cards|per card|max|min/gi, "").trim().split(/\s+/);
+                for (const kw of keywords) {
+                    if (kw.length >= 3) {
+                        if (cardName.includes(kw) || cardCategory.includes(kw) || cardSet.includes(kw)) {
+                            matchedKeywordRule = rule;
+                            break;
+                        }
+                    }
+                }
+                if (matchedKeywordRule) break;
+            }
+
+            if (matchedKeywordRule) {
+                return { eligible: true, score: 95, matchedRule: matchedKeywordRule, cardPrice, oracleFairValue };
+            }
+
+            return { eligible: false, reason: "Card does not match active collection directives" };
+        } else if (gradeRules.length > 0) {
+            // Only grade constraint was set
+            return { eligible: true, score: 90, matchedRule: gradeRules[0], cardPrice, oracleFairValue };
         }
     }
 
-    // If no specific rules match, evaluate strategy
+    // 5. If NO specific collection rules exist, evaluate broad strategy
     const strategy = vault.strategy || "BALANCED_TRADER";
     if (strategy === "AGGRESSIVE_ARBITRAGE") {
         if (cardGrade.includes("10") || cardGrade.includes("9.5")) {
-            return { eligible: true, score: 85, matchedRule: "Arbitrage GEM MT candidate", cardPrice };
+            return { eligible: true, score: 85, matchedRule: "Arbitrage GEM MT candidate", cardPrice, oracleFairValue };
         }
     } else if (strategy === "NICHE_COLLECTOR") {
         if (cardCategory.includes("pokemon") || cardCategory.includes("one piece")) {
-            return { eligible: true, score: 80, matchedRule: "TCG collector directive", cardPrice };
+            return { eligible: true, score: 80, matchedRule: "TCG collector directive", cardPrice, oracleFairValue };
         }
     } else {
         // BALANCED_TRADER: buys if price is <= 40% of treasury
         if (cardPrice <= balance * 0.4) {
-            return { eligible: true, score: 75, matchedRule: "Treasury risk management (under 40% NAV)", cardPrice };
+            return { eligible: true, score: 75, matchedRule: "Treasury risk management (under 40% NAV)", cardPrice, oracleFairValue };
         }
     }
 
@@ -138,7 +173,7 @@ export class A2ASwarmService {
 
         let lockedVaults = [];
         try {
-            // Find two available, unlocked vaults with inventory
+            // Find available, unlocked vaults with inventory (excluding system custodian)
             const vaults = await db.vault.findAll({
                 where: { is_locked: false },
                 include: [{ model: db.card, as: "inventory" }]
@@ -154,10 +189,26 @@ export class A2ASwarmService {
                 return { status: "SKIPPED", message: "Not enough unlocked vaults with inventory" };
             }
 
-            // Shuffle and pick 2 distinct vaults
-            const shuffled = eligibleVaults.sort(() => 0.5 - Math.random());
-            const vaultA = shuffled[0];
-            const vaultB = shuffled[1];
+            // Intelligent Matchmaking: Priority 1 (bidirectional) -> Priority 2 (unilateral+cash) -> Priority 3 (barter)
+            const bestMatch = negotiationEngine.findBestBarterMatch(eligibleVaults);
+            let vaultA, vaultB, cardA, cardB;
+
+            if (bestMatch) {
+                vaultA = bestMatch.vaultA;
+                vaultB = bestMatch.vaultB;
+                cardA = bestMatch.cardA;
+                cardB = bestMatch.cardB;
+            } else {
+                // Fallback: pick two distinct vaults with tradeable cards
+                const validVaults = eligibleVaults.filter(v => (v.inventory || []).some(c => !c.is_hold));
+                if (validVaults.length < 2) {
+                    this.isRunning = false;
+                    return { status: "SKIPPED", message: "No unlocked vaults with tradeable slabs" };
+                }
+                const shuffled = validVaults.sort(() => 0.5 - Math.random());
+                vaultA = shuffled[0];
+                vaultB = shuffled[1];
+            }
 
             // 1. FRONT-RUNNING LOCK (MUTEX)
             vaultA.is_locked = true;
@@ -174,7 +225,7 @@ export class A2ASwarmService {
             });
 
             // 2. Execute negotiation room with strict economic directionality
-            const result = await negotiationEngine.runNegotiationRoom(vaultA, vaultB);
+            const result = await negotiationEngine.runNegotiationRoom(vaultA, vaultB, cardA, cardB);
             return result;
         } catch (err) {
             console.error("A2A Swarm cycle error:", err);
@@ -213,17 +264,19 @@ export class A2ASwarmService {
                 return { status: "NO_CARDS", message: "No live marketplace listings returned" };
             }
 
-            // 2. Get unlocked active vaults with balance
+            // 2. Get unlocked active vaults with balance & check saturation limit (< 4 cards)
             const vaults = await db.vault.findAll({
-                where: { is_locked: false }
+                where: { is_locked: false },
+                include: [{ model: db.card, as: "inventory" }]
             });
             const eligibleVaults = vaults.filter(v => 
                 v.usdc_balance >= 25 && 
+                (v.inventory || []).length < 4 &&
                 !v.sub_account?.includes("collectorcrypt")
             );
 
             if (eligibleVaults.length === 0) {
-                return { status: "NO_ELIGIBLE_VAULTS", message: "No active vaults with sufficient treasury" };
+                return { status: "NO_ELIGIBLE_VAULTS", message: "No active vaults with sufficient treasury or capacity" };
             }
 
             const ccVault = await getOrCreateCollectorCryptVault();
@@ -233,9 +286,10 @@ export class A2ASwarmService {
             const shuffledVaults = [...eligibleVaults].sort(() => 0.5 - Math.random());
 
             for (const vault of shuffledVaults) {
-                // Find first card that matches this vault's directives
+                // Score all candidate cards matching this vault's directives
+                const candidateMatches = [];
+
                 for (const card of candidates) {
-                    // Check if already owned
                     const alreadyOwned = await db.card.findOne({
                         where: db.Sequelize.or({ solana_mint: card.id }, { card_id: card.id })
                     });
@@ -245,92 +299,103 @@ export class A2ASwarmService {
 
                     const evalResult = evaluateCardForVault(card, vault);
                     if (evalResult.eligible) {
-                        vault.is_locked = true;
-                        vault.lock_reason = `MARKET_SNIPE_${card.id}`;
+                        const spread = (evalResult.oracleFairValue || evalResult.cardPrice) - evalResult.cardPrice;
+                        candidateMatches.push({ card, evalResult, spread });
+                    }
+                }
+
+                // Opportunity Scoring: Sort candidate matches by highest spread (most profitable first)
+                candidateMatches.sort((a, b) => b.spread - a.spread);
+
+                if (candidateMatches.length > 0) {
+                    const best = candidateMatches[0];
+                    const card = best.card;
+                    const evalResult = best.evalResult;
+
+                    vault.is_locked = true;
+                    vault.lock_reason = `MARKET_SNIPE_${card.id}`;
+                    await vault.save();
+
+                    try {
+                        const bridgeResult = await bridgeCollectorCryptCardToNearVault(
+                            card.id, 
+                            vault.id, 
+                            vault.owner_account, 
+                            card
+                        );
+                        await vault.reload();
+
+                        const cardPrice = evalResult.cardPrice;
+
+                        // Create atomic Deal History / Trade record
+                        const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+                        const nearBlock = 276399000 + Math.floor(Math.random() * 5000);
+                        const txHash = `0xnear_snipe_${Date.now()}_${card.id.slice(0, 8)}`;
+
+                        await db.trade.create({
+                            trade_id: tradeId,
+                            vault_a_id: vault.id,
+                            vault_b_id: ccVault.id,
+                            vault_a_name: vault.name,
+                            vault_b_name: "Collector Crypt Vault (PWCC / Brink's)",
+                            cards_from_a: [],
+                            cards_from_b: [bridgeResult.card],
+                            usdc_from_a: cardPrice,
+                            usdc_from_b: 0.0,
+                            rounds_count: 1,
+                            negotiation_log: [
+                                {
+                                    round: 1,
+                                    agent: vault.name,
+                                    turn: {
+                                        decision: "ACCEPT",
+                                        public_argument: `Autonomous order execution: Secured ${card.name} (${card.grade || "PSA 10"}) from PWCC physical vault at $${cardPrice.toFixed(2)} USDC.`,
+                                        private_reasoning_for_owner: `Directive Match: "${evalResult.matchedRule}". Sourced within guardrail limits with $${(vault.usdc_balance).toFixed(2)} USDC treasury remaining.`
+                                    }
+                                }
+                            ],
+                            status: "COMPLETED",
+                            protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
+                            tx_hash: txHash,
+                            near_block: nearBlock
+                        });
+
+                        // Append entry to agent's chat history (zero emojis)
+                        let history = [];
+                        try {
+                            history = JSON.parse(vault.chat_history || "[]");
+                        } catch {
+                            history = [];
+                        }
+
+                        history.push({
+                            id: `msg-snipe-${Date.now()}`,
+                            sender: "agent",
+                            senderAccount: vault.sub_account,
+                            text: `[MARKET SNIPE]\nAcquired ${card.name} (${card.grade || "PSA 10"}) from Collector Crypt for $${cardPrice.toFixed(2)} USDC.\n\nMatched Directive: "${evalResult.matchedRule}". Physical slab secured in PWCC/Brink's vault under sub-account @${vault.sub_account}. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
+                            actionType: "MARKET_SNIPE",
+                            timestamp: new Date().toISOString()
+                        });
+
+                        vault.chat_history = JSON.stringify(history);
                         await vault.save();
 
-                        try {
-                            const bridgeResult = await bridgeCollectorCryptCardToNearVault(
-                                card.id, 
-                                vault.id, 
-                                vault.owner_account, 
-                                card
-                            );
-                            await vault.reload();
+                        const snipeEventData = {
+                            vault: { id: vault.id, name: vault.name, sub_account: vault.sub_account, usdc_balance: vault.usdc_balance },
+                            card: bridgeResult.card,
+                            price: cardPrice,
+                            matchedRule: evalResult.matchedRule,
+                            tx_hash: txHash
+                        };
 
-                            const cardPrice = evalResult.cardPrice;
+                        this.emitEvent("market_snipe", snipeEventData);
+                        this.emitEvent("vault:updated", { vaultId: vault.id, newBalance: vault.usdc_balance });
 
-                            // Create atomic Deal History / Trade record
-                            const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-                            const nearBlock = 276399000 + Math.floor(Math.random() * 5000);
-                            const txHash = `0xnear_snipe_${Date.now()}_${card.id.slice(0, 8)}`;
-
-                            await db.trade.create({
-                                trade_id: tradeId,
-                                vault_a_id: vault.id,
-                                vault_b_id: ccVault.id,
-                                vault_a_name: vault.name,
-                                vault_b_name: "Collector Crypt Vault (PWCC / Brink's)",
-                                cards_from_a: [],
-                                cards_from_b: [bridgeResult.card],
-                                usdc_from_a: cardPrice,
-                                usdc_from_b: 0.0,
-                                rounds_count: 1,
-                                negotiation_log: [
-                                    {
-                                        round: 1,
-                                        agent: vault.name,
-                                        turn: {
-                                            decision: "ACCEPT",
-                                            public_argument: `Autonomous order execution: Secured ${card.name} (${card.grade || "PSA 10"}) from PWCC physical vault at $${cardPrice.toFixed(2)} USDC.`,
-                                            private_reasoning_for_owner: `Directive Match: "${evalResult.matchedRule}". Sourced within guardrail limits with $${(vault.usdc_balance).toFixed(2)} USDC treasury remaining.`
-                                        }
-                                    }
-                                ],
-                                status: "COMPLETED",
-                                protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
-                                tx_hash: txHash,
-                                near_block: nearBlock
-                            });
-
-                            // Append entry to agent's chat history
-                            let history = [];
-                            try {
-                                history = JSON.parse(vault.chat_history || "[]");
-                            } catch {
-                                history = [];
-                            }
-
-                            history.push({
-                                id: `msg-snipe-${Date.now()}`,
-                                sender: "agent",
-                                senderAccount: vault.sub_account,
-                                text: `🎯 Autonomous Market Snipe:\nAcquired ${card.name} (${card.grade || "PSA 10"}) from Collector Crypt for $${cardPrice.toFixed(2)} USDC.\n\nMatched Directive: "${evalResult.matchedRule}". Physical slab secured in PWCC/Brink's vault under sub-account @${vault.sub_account}. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
-                                actionType: "MARKET_SNIPE",
-                                timestamp: new Date().toISOString()
-                            });
-
-                            vault.chat_history = JSON.stringify(history);
-                            await vault.save();
-
-                            const snipeEventData = {
-                                vault: { id: vault.id, name: vault.name, sub_account: vault.sub_account, usdc_balance: vault.usdc_balance },
-                                card: bridgeResult.card,
-                                price: cardPrice,
-                                matchedRule: evalResult.matchedRule,
-                                tx_hash: txHash
-                            };
-
-                            this.emitEvent("market_snipe", snipeEventData);
-                            this.emitEvent("vault:updated", { vaultId: vault.id, newBalance: vault.usdc_balance });
-
-                            snipes.push(snipeEventData);
-                            break; // 1 snipe per vault per cycle
-                        } finally {
-                            vault.is_locked = false;
-                            vault.lock_reason = null;
-                            await vault.save();
-                        }
+                        snipes.push(snipeEventData);
+                    } finally {
+                        vault.is_locked = false;
+                        vault.lock_reason = null;
+                        await vault.save();
                     }
                 }
             }
@@ -436,7 +501,7 @@ export class A2ASwarmService {
                         id: `msg-inaugural-${Date.now()}`,
                         sender: "agent",
                         senderAccount: vault.sub_account,
-                        text: `🎉 Inaugural Asset Sniped!\nI immediately scanned Collector Crypt upon deployment and secured our first slab:\n\n• ${card.name} (${card.grade || "PSA 10"})\n• Purchase Price: $${cardPrice.toFixed(2)} USDC\n• Physical Custody: PWCC/Brink's Oregon Vault\n• Remaining Treasury: $${vault.usdc_balance.toFixed(2)} USDC\n\nI am now actively watching the order book for further deals.`,
+                        text: `[INAUGURAL ACQUISITION]\nImmediately scanned Collector Crypt upon deployment and secured inaugural slab:\n\n• ${card.name} (${card.grade || "PSA 10"})\n• Purchase Price: $${cardPrice.toFixed(2)} USDC\n• Physical Custody: PWCC/Brink's Oregon Vault\n• Remaining Treasury: $${vault.usdc_balance.toFixed(2)} USDC\n\nOrder book monitoring active for subsequent barter opportunities.`,
                         actionType: "MARKET_SNIPE",
                         timestamp: new Date().toISOString()
                     });
@@ -476,7 +541,7 @@ export class A2ASwarmService {
                     id: `msg-audit-${Date.now()}`,
                     sender: "agent",
                     senderAccount: vault.sub_account,
-                    text: `🔍 Inception Market Audit Complete:\nScanned Collector Crypt 170k+ inventory for your directives (${rules.length > 0 ? rules.join(", ") : "Balanced strategy"}).\nTreasury liquid with $${Number(vault.usdc_balance).toFixed(2)} USDC. Standing by to snipe newly listed slabs as soon as they hit PWCC/Brink's custody.`,
+                    text: `[INCEPTION AUDIT]\nScanned Collector Crypt 170k+ inventory for directives (${rules.length > 0 ? rules.join(", ") : "Balanced strategy"}).\nTreasury liquid with $${Number(vault.usdc_balance).toFixed(2)} USDC. Standing by to snipe newly listed slabs matching target profile.`,
                     actionType: "SYSTEM_AUDIT",
                     timestamp: new Date().toISOString()
                 });

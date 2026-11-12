@@ -100,6 +100,21 @@ export default function SlabsTab() {
     }
   };
 
+  // Toggle protected hold status (protect from autonomous A2A barter)
+  const handleToggleHold = async (card) => {
+    const cardId = card.id || card.card_id;
+    setActionLoading(`hold-${cardId}`);
+    try {
+      const res = await api.post(`/vaults/cards/${cardId}/toggle-hold`);
+      showNotice(res.data?.message || "Hold status updated.");
+      await loadData();
+    } catch (err) {
+      showNotice(err.message || "Failed to update hold status", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Liquidate card for instant USDC cash
   const handleLiquidate = async (card) => {
     const cardId = card.id || card.card_id;
@@ -239,8 +254,26 @@ export default function SlabsTab() {
                       </span>
                     </div>
 
-                    {/* Top Right: Custody Badge */}
-                    <div className="absolute top-2 right-2 z-10">
+                    {/* Top Right: Custody Badge & Hold Status */}
+                    <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                      {!isPersonal && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleHold(card);
+                          }}
+                          disabled={actionLoading === `hold-${cardKey}`}
+                          title={card.is_hold ? "Protected Hold slab. Not offered in A2A barter. Click to unprotect." : "Click to protect slab from A2A barter."}
+                          className={`px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold border transition cursor-pointer ${
+                            card.is_hold
+                              ? "bg-amber-100 text-amber-900 border-amber-300 shadow-2xs"
+                              : "bg-white/90 text-neutral-500 border-neutral-200 hover:text-neutral-900"
+                          }`}
+                        >
+                          {card.is_hold ? "HOLD" : "OPEN"}
+                        </button>
+                      )}
                       {isPersonal ? (
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
                           Personal

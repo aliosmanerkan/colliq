@@ -21,6 +21,7 @@ export default (sequelize) => {
             barcode: { type: DataTypes.STRING, allowNull: false },
             population_higher: { type: DataTypes.INTEGER, defaultValue: 0 },
             is_locked: { type: DataTypes.BOOLEAN, defaultValue: false },
+            is_hold: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         {
             timestamps: true,

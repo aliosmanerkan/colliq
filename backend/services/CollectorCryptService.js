@@ -456,13 +456,20 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
         throw new Error("Vault is currently locked. Cannot bridge cards.");
     }
 
-    const cardPrice = ccCard.insuredUsd || ccCard.costUsd || 50.0;
+    const cardPrice = ccCard.costUsd || ccCard.insuredUsd || 50.0;
+    const oracleValue = Number(ccCard.insuredUsd) > 0 ? Number(ccCard.insuredUsd) : Math.round(cardPrice * 1.15);
+
     if (vault.usdc_balance < cardPrice) {
         throw new Error(`Insufficient USDC in vault. Required: $${cardPrice}, Available: $${vault.usdc_balance}`);
     }
 
-    // Deduct USDC from vault treasury
+    // Deduct USDC from vault treasury & update mathematical realized PnL
     vault.usdc_balance = Math.round((vault.usdc_balance - cardPrice) * 100) / 100;
+    const snipePnl = Math.round((oracleValue - cardPrice) * 100) / 100;
+    if (snipePnl > 0) {
+        vault.realized_pnl_usdc = Math.round(((vault.realized_pnl_usdc || 0) + snipePnl) * 100) / 100;
+    }
+    vault.total_trades = (vault.total_trades || 0) + 1;
     await vault.save();
 
     // PSA/CGC cert number and barcode
@@ -479,7 +486,8 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
         existingCard.vault_id = vault.id;
         existingCard.owner_account = vault.sub_account;
         existingCard.is_locked = false;
-        existingCard.oracle_fair_value_usdc = cardPrice;
+        existingCard.oracle_fair_value_usdc = oracleValue;
+        existingCard.last_sale_usdc = cardPrice;
         await existingCard.save();
         newCard = existingCard;
     } else {
@@ -494,12 +502,13 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
             set_name: ccCard.set || ccCard.name.split("PSA")[0]?.trim() || "Collector Crypt Vault",
             grade: ccCard.grade || "PSA 10 GEM MT",
             rareness_score: ccCard.rareness || 75,
-            oracle_fair_value_usdc: cardPrice,
-            last_sale_usdc: ccCard.costUsd || cardPrice,
+            oracle_fair_value_usdc: oracleValue,
+            last_sale_usdc: cardPrice,
             image_url: ccCard.imageUrl,
             barcode: barcode,
             population_higher: ccCard.population?.higher || 0,
-            is_locked: false
+            is_locked: false,
+            is_hold: false
         });
     }
 

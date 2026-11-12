@@ -26,6 +26,7 @@ export interface StatelessAgentPersona {
     max_spend_per_trade_usdc: number;
     max_slippage_bps: number;
     persona_system_prompt: string;
+    custom_rules?: string[];
 }
 
 // ==========================================
@@ -44,12 +45,122 @@ export function sanitizeUntrustedInput(input: string): string {
 }
 
 // ==========================================
+// MANDATE & INVENTORY HELPERS
+// ==========================================
+
+export function doesCardMatchDirectives(card: any, rulesJsonOrArray: any): boolean {
+    if (!card) return false;
+    let rules: string[] = [];
+    try {
+        rules = typeof rulesJsonOrArray === "string" ? JSON.parse(rulesJsonOrArray) : (rulesJsonOrArray || []);
+    } catch {
+        rules = [];
+    }
+
+    const directiveRules = rules.filter(r => {
+        const t = String(r).trim().toLowerCase();
+        return !t.startsWith("max spend") && !t.startsWith("strategy") && !t.startsWith("protected grail");
+    });
+
+    // If no directives exist, any card is eligible
+    if (directiveRules.length === 0) return true;
+
+    const cardName = (card.name || "").toLowerCase();
+    const cardCategory = (card.category || "").toLowerCase();
+    const cardGrade = (card.grade || "").toLowerCase();
+    const cardSet = (card.set_name || card.set || "").toLowerCase();
+
+    const gradeRules = [];
+    const keywordRules = [];
+
+    for (const rule of directiveRules) {
+        const ruleText = String(rule).trim().toLowerCase();
+        if (!ruleText) continue;
+        if (ruleText.includes("psa 10") || ruleText.includes("gem mt 10") || ruleText.includes("gem 10") || ruleText.includes("grade 9") || ruleText.includes("psa 9")) {
+            gradeRules.push(rule);
+        } else {
+            keywordRules.push(rule);
+        }
+    }
+
+    // 1. Grade constraints
+    for (const gRule of gradeRules) {
+        const gText = String(gRule).toLowerCase();
+        if (gText.includes("10") && !cardGrade.includes("10")) {
+            return false;
+        }
+    }
+
+    // 2. Keyword directives
+    if (keywordRules.length > 0) {
+        for (const rule of keywordRules) {
+            const ruleText = String(rule).trim().toLowerCase();
+            const keywords = ruleText.replace(/target|only|slabs|cards|per card|max|min/gi, "").trim().split(/\s+/);
+            for (const kw of keywords) {
+                if (kw.length >= 3) {
+                    if (cardName.includes(kw) || cardCategory.includes(kw) || cardSet.includes(kw)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    return true;
+}
+
+export function getTradeableCards(vault: any): any[] {
+    const inventory = vault.inventory || [];
+    if (!Array.isArray(inventory) || inventory.length === 0) return [];
+
+    let rules: string[] = [];
+    try {
+        rules = typeof vault.custom_rules === "string" ? JSON.parse(vault.custom_rules) : (vault.custom_rules || []);
+    } catch {
+        rules = [];
+    }
+
+    const protectedGrailNames = rules
+        .filter(r => r.toLowerCase().includes("protected") || r.toLowerCase().includes("grail") || r.toLowerCase().includes("korumalı"))
+        .map(r => r.toLowerCase());
+
+    // 1. Strict filter: cannot be hold and cannot be marked as protected grail
+    const nonHoldCards = inventory.filter((c: any) => {
+        if (c.is_hold === true) return false;
+        const nameLower = (c.name || "").toLowerCase();
+        const isMarkedProtected = protectedGrailNames.some(p => p.includes(nameLower.split(" ")[0]));
+        return !isMarkedProtected;
+    });
+
+    if (nonHoldCards.length <= 1) {
+        return nonHoldCards;
+    }
+
+    // 2. If multiple cards exist, prefer offering secondary cards (cards that do not match core collection goals)
+    const directiveRules = rules.filter(r => {
+        const t = String(r).trim().toLowerCase();
+        return !t.startsWith("max spend") && !t.startsWith("strategy") && !t.startsWith("protected") && !t.startsWith("korumalı");
+    });
+
+    if (directiveRules.length > 0) {
+        const secondaryCards = nonHoldCards.filter((c: any) => !doesCardMatchDirectives(c, directiveRules));
+        if (secondaryCards.length > 0) {
+            return secondaryCards;
+        }
+    }
+
+    return nonHoldCards;
+}
+
+// ==========================================
 // STATELESS NEGOTIATION ENGINE
 // ==========================================
 
 export class A2ANegotiationEngine {
     private provider: JsonRpcProvider;
     private io: any;
+    private cooldownMap: Map<string, number> = new Map();
 
     constructor(io: any = null) {
         this.io = io;
@@ -60,11 +171,32 @@ export class A2ANegotiationEngine {
         this.io = io;
     }
 
+    isPairInCooldown(cardAId: string, cardBId: string, vaultAId: string | number, vaultBId: string | number): boolean {
+        const now = Date.now();
+        const key1 = `${cardAId}_${vaultAId}_${vaultBId}`;
+        const key2 = `${cardAId}_${vaultBId}_${vaultAId}`;
+        const key3 = `${cardBId}_${vaultAId}_${vaultBId}`;
+        const key4 = `${cardBId}_${vaultBId}_${vaultAId}`;
+
+        return [key1, key2, key3, key4].some(k => {
+            const expiresAt = this.cooldownMap.get(k);
+            return expiresAt !== undefined && expiresAt > now;
+        });
+    }
+
+    setPairCooldown(cardAId: string, cardBId: string, vaultAId: string | number, vaultBId: string | number) {
+        const expiresAt = Date.now() + 300000; // 5-minute anti-ping-pong cooldown (300 seconds)
+        this.cooldownMap.set(`${cardAId}_${vaultAId}_${vaultBId}`, expiresAt);
+        this.cooldownMap.set(`${cardAId}_${vaultBId}_${vaultAId}`, expiresAt);
+        this.cooldownMap.set(`${cardBId}_${vaultAId}_${vaultBId}`, expiresAt);
+        this.cooldownMap.set(`${cardBId}_${vaultBId}_${vaultAId}`, expiresAt);
+    }
+
     /**
-     * Evaluates a turn with strict economic directionality:
+     * Evaluates a turn with strict economic directionality and mandate adherence:
      * - Recognizes who holds the higher-value card
-     * - Correctly determines who pays cash and who receives cash
-     * - Enforces on-chain guardrails without giving away assets for free
+     * - Enforces 80% opening -> 95% counter -> 92% compromise math
+     * - Enforces instant REJECT if offered card violates custom rules
      */
     evaluateTurn(
         agent: StatelessAgentPersona,
@@ -101,7 +233,7 @@ export class A2ANegotiationEngine {
                     private_reasoning_for_owner: `Targeting ${theirCard?.name} ($${theirVal}). Opening with $${openingCash} USDC (80% of $${absSpread} spread) to optimize margins under our $${maxSpend} limit.`
                 };
             } else if (netSpread < 0) {
-                // My card is more expensive: ask for cash top-up
+                // My card is more expensive: ask for cash top-up (~85% of spread)
                 const requestedCash = Math.round(absSpread * 0.85);
                 return {
                     decision: "COUNTER",
@@ -125,19 +257,32 @@ export class A2ANegotiationEngine {
         }
 
         // ----------------------------------------------------
-        // TURN 2: Responder Counter-Offer
+        // TURN 2: Responder Counter-Offer or REJECT
         // ----------------------------------------------------
         if (turnNumber === 2) {
+            // Mandate check: Does their offered card match Responder's directives?
+            if (agent.custom_rules && !doesCardMatchDirectives(theirCard, agent.custom_rules)) {
+                return {
+                    decision: "REJECT",
+                    offer_usdc: 0,
+                    offer_cards: [],
+                    request_cards: [],
+                    public_argument: `Deal declined: Offered card (${theirCard?.name}) does not comply with my owner's strict collection directives.`,
+                    private_reasoning_for_owner: `Directives mandate violation. Aborting trade immediately.`
+                };
+            }
+
             if (netSpread < 0) {
-                // My card is MORE expensive (from Responder perspective, netSpread < 0 means theirVal < myVal).
-                // Counterparty offered previousCashOffer. Stand firm on the full spread!
+                // My card is MORE expensive (from Responder perspective: theirVal < myVal).
+                // Demand 95% of the spread.
+                const counterCash = Math.round(absSpread * 0.95);
                 return {
                     decision: "COUNTER",
                     offer_usdc: 0,
                     offer_cards: myCard ? [myCard.card_id] : [],
                     request_cards: theirCard ? [theirCard.card_id] : [],
-                    public_argument: `I value my ${myCard?.name} at $${myVal} USDC. Your $${previousCashOffer} USDC cash offer is below the $${absSpread} USDC oracle spread. I require the full $${absSpread} USDC cash difference to proceed.`,
-                    private_reasoning_for_owner: `Refusing discount on ${myCard?.name}. Demanding full $${absSpread} USDC spread to protect owner capital.`
+                    public_argument: `I value my ${myCard?.name} at $${myVal} USDC. Your $${previousCashOffer} USDC cash offer is below the $${absSpread} USDC oracle spread. I require $${counterCash} USDC (95% spread coverage) to proceed.`,
+                    private_reasoning_for_owner: `Refusing deep discount on ${myCard?.name}. Demanding $${counterCash} USDC spread to protect owner capital.`
                 };
             } else if (netSpread > 0) {
                 // My card is CHEAPER (I must pay cash).
@@ -151,13 +296,14 @@ export class A2ANegotiationEngine {
                         private_reasoning_for_owner: `Guardrail tripped: required cash $${absSpread} > limit $${maxSpend}. Aborting deal.`
                     };
                 }
+                const agreedCash = Math.round(absSpread * 0.95);
                 return {
                     decision: "COUNTER",
-                    offer_usdc: absSpread,
+                    offer_usdc: agreedCash,
                     offer_cards: myCard ? [myCard.card_id] : [],
                     request_cards: theirCard ? [theirCard.card_id] : [],
-                    public_argument: `Fair assessment. I agree to balance the spread by offering my ${myCard?.name} + $${absSpread} USDC cash for your ${theirCard?.name}.`,
-                    private_reasoning_for_owner: `Valuation validated against Oracle ($${theirVal} vs $${myVal}). $${absSpread} USDC outlay is approved under our $${maxSpend} limit.`
+                    public_argument: `Fair assessment. I agree to balance the spread by offering my ${myCard?.name} + $${agreedCash} USDC cash for your ${theirCard?.name}.`,
+                    private_reasoning_for_owner: `Valuation validated against Oracle ($${theirVal} vs $${myVal}). $${agreedCash} USDC outlay is approved under our $${maxSpend} limit.`
                 };
             } else {
                 // Parity
@@ -173,28 +319,29 @@ export class A2ANegotiationEngine {
         }
 
         // ----------------------------------------------------
-        // TURN 3: Initiator Evaluates Counter & Accepts / Rejects
+        // TURN 3: Initiator Evaluates Counter & Accepts / Rejects (Compromise)
         // ----------------------------------------------------
         if (turnNumber === 3) {
             if (netSpread > 0) {
-                // Initiator must pay cash. Check guardrails for full spread:
-                if (absSpread > maxSpend) {
+                // Initiator must pay cash. Compromise at 92% of spread.
+                const agreedCash = Math.round(absSpread * 0.92);
+                if (agreedCash > maxSpend) {
                     return {
                         decision: "REJECT",
                         offer_usdc: 0,
                         offer_cards: [],
                         request_cards: [],
-                        public_argument: `Cannot accept: Demanded cash ($${absSpread} USDC) violates my owner's on-chain limit ($${maxSpend} USDC).`,
-                        private_reasoning_for_owner: `Counterparty demanded full $${absSpread} USDC spread which exceeds guardrail $${maxSpend}. Aborting.`
+                        public_argument: `Cannot accept: Counterparty cash demand ($${agreedCash} USDC) violates my owner's on-chain limit ($${maxSpend} USDC).`,
+                        private_reasoning_for_owner: `Counterparty demanded $${agreedCash} USDC which exceeds guardrail $${maxSpend}. Aborting.`
                     };
                 }
                 return {
                     decision: "ACCEPT",
-                    offer_usdc: absSpread,
+                    offer_usdc: agreedCash,
                     offer_cards: myCard ? [myCard.card_id] : [],
                     request_cards: theirCard ? [theirCard.card_id] : [],
-                    public_argument: `Terms accepted! Swapping ${myCard?.name} + $${absSpread} USDC for your ${theirCard?.name}. Executing atomic on-chain settlement.`,
-                    private_reasoning_for_owner: `Deal satisfies margin threshold (${agent.mandate_target_margin_pct}%). Total outlay of $${absSpread} USDC approved by guardrails. Signing transaction.`
+                    public_argument: `Compromise terms accepted! Swapping ${myCard?.name} + $${agreedCash} USDC for your ${theirCard?.name}. Executing atomic on-chain settlement.`,
+                    private_reasoning_for_owner: `Deal satisfies margin threshold. Outlay of $${agreedCash} USDC approved by guardrails. Signing transaction.`
                 };
             } else if (netSpread < 0) {
                 // Initiator is receiving cash.
@@ -203,8 +350,8 @@ export class A2ANegotiationEngine {
                     offer_usdc: 0,
                     offer_cards: myCard ? [myCard.card_id] : [],
                     request_cards: theirCard ? [theirCard.card_id] : [],
-                    public_argument: `Terms accepted! Swapping ${myCard?.name} in exchange for your ${theirCard?.name} + $${absSpread} USDC. Executing atomic on-chain settlement.`,
-                    private_reasoning_for_owner: `Counterparty agreed to balance the valuation gap with $${absSpread} USDC cash. Net gain locked. Signing transaction.`
+                    public_argument: `Terms accepted! Swapping ${myCard?.name} in exchange for your ${theirCard?.name} + $${previousCashOffer || Math.round(absSpread * 0.95)} USDC. Executing atomic on-chain settlement.`,
+                    private_reasoning_for_owner: `Counterparty agreed to balance the valuation gap with cash. Net gain locked. Signing transaction.`
                 };
             } else {
                 return {
@@ -228,18 +375,19 @@ export class A2ANegotiationEngine {
                 offer_usdc: 0,
                 offer_cards: myCard ? [myCard.card_id] : [],
                 request_cards: theirCard ? [theirCard.card_id] : [],
-                public_argument: `Terms accepted! Swapping ${myCard?.name} in exchange for ${theirCard?.name} + $${absSpread} USDC. Executing atomic on-chain settlement.`,
-                private_reasoning_for_owner: `Full $${absSpread} USDC spread received alongside ${theirCard?.name}. Margin threshold satisfied (${agent.mandate_target_margin_pct}%). Signing transaction.`
+                public_argument: `Terms accepted! Swapping ${myCard?.name} in exchange for ${theirCard?.name} + $${Math.round(absSpread * 0.92)} USDC. Executing atomic on-chain settlement.`,
+                private_reasoning_for_owner: `Spread cash received alongside ${theirCard?.name}. Margin threshold satisfied. Signing transaction.`
             };
         } else if (netSpread > 0) {
             // Responder pays cash:
+            const cashPay = Math.min(Math.round(absSpread * 0.92), maxSpend);
             return {
                 decision: "ACCEPT",
-                offer_usdc: absSpread,
+                offer_usdc: cashPay,
                 offer_cards: myCard ? [myCard.card_id] : [],
                 request_cards: theirCard ? [theirCard.card_id] : [],
-                public_argument: `Terms accepted! Swapping ${myCard?.name} + $${absSpread} USDC for ${theirCard?.name}. Executing atomic on-chain settlement.`,
-                private_reasoning_for_owner: `Agreed spread of $${absSpread} USDC committed. Acquired ${theirCard?.name} at oracle valuation. Signing transaction.`
+                public_argument: `Terms accepted! Swapping ${myCard?.name} + $${cashPay} USDC for ${theirCard?.name}. Executing atomic on-chain settlement.`,
+                private_reasoning_for_owner: `Agreed spread of $${cashPay} USDC committed. Acquired ${theirCard?.name} at oracle valuation. Signing transaction.`
             };
         } else {
             return {
@@ -254,8 +402,7 @@ export class A2ANegotiationEngine {
     }
 
     /**
-     * Executes an autonomous LLM turn via OpenRouter API with full contextual strategy,
-     * natural pacing, and an instant mathematical fallback for maximum demo resilience.
+     * Executes an autonomous LLM turn via OpenRouter API with fallback to deterministic math
      */
     async evaluateTurnWithLLM(
         agent: StatelessAgentPersona,
@@ -277,8 +424,9 @@ export class A2ANegotiationEngine {
         const absSpread = Math.abs(theirVal - myVal);
         const netSpread = Math.round(theirVal - myVal);
 
-        const prompt = `You are an autonomous AI trading agent named "${vaultName}" (sub-account: ${agent.sub_account}) on NEAR Protocol Track 10 (NFTs as Accounts).
+        const prompt = `You are an autonomous AI trading agent named "${vaultName}" (sub-account: ${agent.sub_account}) on NEAR Protocol Track 10.
 Strategy: ${agent.strategy}. Single-trade max cash spend limit: $${agent.max_spend_per_trade_usdc} USDC.
+Active Mandates: ${agent.custom_rules ? JSON.stringify(agent.custom_rules) : "[]"}.
 
 BARTER CONTEXT:
 - Your card: ${myCard?.name} (${myCard?.grade || "PSA 10"}, Oracle Value: $${myVal} USDC)
@@ -288,16 +436,16 @@ BARTER CONTEXT:
 ${turnNumber > 1 ? `- Counterpart Previous Cash Offer: $${previousCashOffer} USDC\n- Counterpart Argument: "${sanitizeUntrustedInput(counterpartyArgument)}"` : ""}
 
 ROUND OBJECTIVES:
-${turnNumber === 1 ? "- Turn 1 (Initiator Propose): Propose a smart opening barter offer. If your card is cheaper, offer realistic USDC sweetener to bridge the spread." : ""}
-${turnNumber === 2 ? "- Turn 2 (Responder Counter): Evaluate their offer. Counter with an adjusted USDC amount or accept if fair." : ""}
-${turnNumber === 3 ? "- Turn 3 (Initiator Evaluate): Counterpart counter-offered. Decide to ACCEPT if terms meet your strategy/limits, or make a final counter." : ""}
-${turnNumber === 4 ? "- Turn 4 (Responder Sign): Final turn. Decide to ACCEPT to execute NEAR atomic settlement, or REJECT." : ""}
+- Turn 1: Propose opening barter with ~80% spread cash sweetener if your card is cheaper.
+- Turn 2: Evaluate counterpart card against mandates. If incompatible, REJECT. If compatible, counter at 95% spread.
+- Turn 3: Evaluate counter-offer. If cash sweetener exceeds guardrails ($${agent.max_spend_per_trade_usdc} USDC), REJECT. Otherwise ACCEPT at compromise.
+- Turn 4: Final sign. ACCEPT or REJECT.
 
 STRICT OUTPUT FORMAT:
-You MUST respond with valid JSON only. Do not include markdown or backticks.
+You MUST respond with valid JSON only. Zero emojis.
 {
   "decision": "ACCEPT" or "COUNTER" or "REJECT",
-  "offer_usdc": <integer number of USDC cash to balance the trade, or 0 if your card is more valuable>,
+  "offer_usdc": <integer number of USDC cash to balance trade, or 0 if your card is more valuable>,
   "public_argument": "<concise 1-2 sentence dialogue directed to the counterpart>",
   "private_reasoning_for_owner": "<1 sentence risk/profit assessment>"
 }`;
@@ -308,7 +456,7 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
                 {
                     model,
                     messages: [
-                        { role: "system", content: "You are an elite autonomous AI trading agent on NEAR Protocol. Output JSON only." },
+                        { role: "system", content: "You are an autonomous AI trading agent on NEAR Protocol. Output JSON only. Zero emojis." },
                         { role: "user", content: prompt }
                     ],
                     temperature: 0.7,
@@ -339,7 +487,6 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
 
             // Enforce on-chain guardrail: If this agent must pay cash and the required spread exceeds their limit, MUST REJECT!
             if (netSpread > 0 && absSpread > agent.max_spend_per_trade_usdc && turnNumber >= 2) {
-                decision = "REJECT";
                 return {
                     decision: "REJECT",
                     offer_usdc: 0,
@@ -363,13 +510,92 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
                 private_reasoning_for_owner: sanitizeUntrustedInput(parsed.private_reasoning_for_owner || `Autonomous LLM assessment completed under $${agent.max_spend_per_trade_usdc} spend limit.`)
             };
         } catch (err: any) {
-            console.warn(`[A2A LLM] Round ${turnNumber} LLM notice (${err.message}). Using resilient mathematical fallback.`);
+            console.warn(`[A2A LLM] Round ${turnNumber} fallback notice: ${err.message}`);
             return this.evaluateTurn(agent, turnNumber, myCard, theirCard, previousCashOffer, counterpartyArgument);
         }
     }
 
+    /**
+     * Intelligent Matchmaker:
+     * Scans active vaults and finds the best pairing based on:
+     * - Priority 1: Bidirectional directive match
+     * - Priority 2: Unilateral directive match + cash sweetener
+     * - Priority 3: General strategy barter
+     * Filters out cards on Hold and pairs in 5-minute cooldown.
+     */
+    findBestBarterMatch(vaults: any[]): { vaultA: any; vaultB: any; cardA: any; cardB: any } | null {
+        if (!vaults || vaults.length < 2) return null;
+
+        interface MatchCandidate {
+            vaultA: any;
+            vaultB: any;
+            cardA: any;
+            cardB: any;
+            priority: number;
+            spread: number;
+        }
+
+        const candidates: MatchCandidate[] = [];
+
+        for (let i = 0; i < vaults.length; i++) {
+            for (let j = i + 1; j < vaults.length; j++) {
+                const vA = vaults[i];
+                const vB = vaults[j];
+
+                const poolA = getTradeableCards(vA);
+                const poolB = getTradeableCards(vB);
+                if (poolA.length === 0 || poolB.length === 0) continue;
+
+                for (const cA of poolA) {
+                    for (const cB of poolB) {
+                        if (this.isPairInCooldown(cA.card_id, cB.card_id, vA.id, vB.id)) {
+                            continue;
+                        }
+
+                        const valA = Number(cA.oracle_fair_value_usdc || 100);
+                        const valB = Number(cB.oracle_fair_value_usdc || 100);
+                        const absSpread = Math.abs(valB - valA);
+
+                        const matchForA = doesCardMatchDirectives(cB, vA.custom_rules);
+                        const matchForB = doesCardMatchDirectives(cA, vB.custom_rules);
+
+                        // Priority 1: Bidirectional fit
+                        if (matchForA && matchForB) {
+                            candidates.push({ vaultA: vA, vaultB: vB, cardA: cA, cardB: cB, priority: 1, spread: absSpread });
+                        }
+                        // Priority 2: Unilateral fit with cash sweetener
+                        else if (matchForA && vA.usdc_balance >= absSpread && absSpread <= (vA.guardrail_max_spend_per_trade || 500)) {
+                            candidates.push({ vaultA: vA, vaultB: vB, cardA: cA, cardB: cB, priority: 2, spread: absSpread });
+                        } else if (matchForB && vB.usdc_balance >= absSpread && absSpread <= (vB.guardrail_max_spend_per_trade || 500)) {
+                            candidates.push({ vaultA: vB, vaultB: vA, cardA: cB, cardB: cA, priority: 2, spread: absSpread });
+                        }
+                        // Priority 3: General barter within budget limits
+                        else if (absSpread <= Math.min(vA.guardrail_max_spend_per_trade || 500, vB.guardrail_max_spend_per_trade || 500)) {
+                            candidates.push({ vaultA: vA, vaultB: vB, cardA: cA, cardB: cB, priority: 3, spread: absSpread });
+                        }
+                    }
+                }
+            }
+        }
+
+        if (candidates.length === 0) return null;
+
+        // Sort by priority ascending (1 highest), then spread ascending (tightest spread first)
+        candidates.sort((a, b) => {
+            if (a.priority !== b.priority) return a.priority - b.priority;
+            return a.spread - b.spread;
+        });
+
+        return candidates[0];
+    }
+
     // Orchestrates 4-turn A2A barter session
-    async runNegotiationRoom(buyerVault: any, sellerVault: any): Promise<any> {
+    async runNegotiationRoom(buyerVault: any, sellerVault: any, specifiedCardA: any = null, specifiedCardB: any = null): Promise<any> {
+        let rulesA: string[] = [];
+        try { rulesA = typeof buyerVault.custom_rules === "string" ? JSON.parse(buyerVault.custom_rules || "[]") : (buyerVault.custom_rules || []); } catch {}
+        let rulesB: string[] = [];
+        try { rulesB = typeof sellerVault.custom_rules === "string" ? JSON.parse(sellerVault.custom_rules || "[]") : (sellerVault.custom_rules || []); } catch {}
+
         const buyerPersona: StatelessAgentPersona = {
             vault_id: buyerVault.vault_id,
             sub_account: buyerVault.sub_account,
@@ -377,7 +603,8 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
             mandate_target_margin_pct: 12,
             max_spend_per_trade_usdc: buyerVault.guardrail_max_spend_per_trade || 350,
             max_slippage_bps: 1500,
-            persona_system_prompt: "You are an autonomous merchant vault on NEAR trading PSA 10 slabs."
+            persona_system_prompt: "You are an autonomous merchant vault on NEAR trading PSA 10 slabs.",
+            custom_rules: rulesA
         };
 
         const sellerPersona: StatelessAgentPersona = {
@@ -387,25 +614,17 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
             mandate_target_margin_pct: 10,
             max_spend_per_trade_usdc: sellerVault.guardrail_max_spend_per_trade || 500,
             max_slippage_bps: 1500,
-            persona_system_prompt: "You are an autonomous merchant vault on NEAR trading PSA 10 slabs."
+            persona_system_prompt: "You are an autonomous merchant vault on NEAR trading PSA 10 slabs.",
+            custom_rules: rulesB
         };
 
-        // Select eligible cards (respecting protected card rules)
-        let rulesA: string[] = [];
-        try { rulesA = JSON.parse(buyerVault.custom_rules || "[]"); } catch {}
-        let rulesB: string[] = [];
-        try { rulesB = JSON.parse(sellerVault.custom_rules || "[]"); } catch {}
+        // Select eligible tradeable cards
+        const cardFromBuyer = specifiedCardA || getTradeableCards(buyerVault)[0];
+        const cardFromSeller = specifiedCardB || getTradeableCards(sellerVault)[0];
 
-        const protectedA = rulesA.filter(r => r.includes("Korumalı") || r.includes("Protected")).map(r => r.toLowerCase());
-        const eligibleA = buyerVault.inventory.filter((c: any) => !protectedA.some(p => p.includes(c.name.toLowerCase().split(" ")[0])));
-        const poolA = eligibleA.length > 0 ? eligibleA : buyerVault.inventory;
-
-        const protectedB = rulesB.filter(r => r.includes("Korumalı") || r.includes("Protected")).map(r => r.toLowerCase());
-        const eligibleB = sellerVault.inventory.filter((c: any) => !protectedB.some(p => p.includes(c.name.toLowerCase().split(" ")[0])));
-        const poolB = eligibleB.length > 0 ? eligibleB : sellerVault.inventory;
-
-        const cardFromBuyer = poolA[Math.floor(Math.random() * poolA.length)];
-        const cardFromSeller = poolB[Math.floor(Math.random() * poolB.length)];
+        if (!cardFromBuyer || !cardFromSeller) {
+            return { status: "SKIPPED", message: "No non-hold tradeable slabs available in inventory." };
+        }
 
         const negotiationHistory: any[] = [];
         let lastArgument = "";
@@ -436,7 +655,7 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
         lastArgument = turn1.public_argument;
         await new Promise(r => setTimeout(r, 900));
 
-        // TURN 2: Seller (Responder) Counter-Offer
+        // TURN 2: Seller (Responder) Counter-Offer or Instant REJECT
         const turn2 = await this.evaluateTurnWithLLM(
             sellerPersona,
             sellerVault.name,
@@ -465,7 +684,7 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
         }
         lastArgument = turn2.public_argument;
 
-        // TURN 3: Buyer (Initiator) Acceptance
+        // TURN 3: Buyer (Initiator) Acceptance or REJECT_GUARDRAIL
         const turn3 = await this.evaluateTurnWithLLM(
             buyerPersona,
             buyerVault.name,
@@ -520,7 +739,7 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
 
         isConsensus = (turn3.decision === "ACCEPT" && turn4.decision === "ACCEPT");
 
-        // On-chain Atomic Settlement Execution
+        // On-chain Atomic Settlement Execution with EXACT MATHEMATICAL PNL
         if (isConsensus) {
             const valA = Number(cardFromBuyer.oracle_fair_value_usdc || 100);
             const valB = Number(cardFromSeller.oracle_fair_value_usdc || 100);
@@ -531,16 +750,25 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
             let usdcFromSeller = 0;
 
             if (rawSpread > 0) {
-                // Buyer's card is cheaper -> Buyer pays cash difference
-                usdcFromBuyer = absSpread;
+                // Buyer owes cash sweetener (compromise at 92% of spread)
+                usdcFromBuyer = Math.min(Math.round(absSpread * 0.92), buyerVault.guardrail_max_spend_per_trade || 500);
                 usdcFromSeller = 0;
             } else if (rawSpread < 0) {
-                // Seller's card is cheaper -> Seller pays cash difference
+                // Seller owes cash sweetener
                 usdcFromBuyer = 0;
-                usdcFromSeller = absSpread;
+                usdcFromSeller = Math.min(Math.round(absSpread * 0.92), sellerVault.guardrail_max_spend_per_trade || 500);
             }
 
             const protocolFee = Math.round(absSpread * 0.005 * 100) / 100;
+            const halfFee = Math.round((protocolFee / 2) * 100) / 100;
+
+            // Guard against negative balances
+            if (buyerVault.usdc_balance < (usdcFromBuyer + halfFee)) {
+                return await this.recordRejectedTrade(buyerVault, sellerVault, cardFromBuyer, cardFromSeller, negotiationHistory, "Buyer treasury insufficient for cash sweetener and protocol fee.");
+            }
+            if (sellerVault.usdc_balance < (usdcFromSeller + halfFee)) {
+                return await this.recordRejectedTrade(buyerVault, sellerVault, cardFromBuyer, cardFromSeller, negotiationHistory, "Seller treasury insufficient for cash sweetener and protocol fee.");
+            }
 
             // Atomic Internal Ledger Swap of Cards
             cardFromBuyer.vault_id = sellerVault.id;
@@ -552,15 +780,24 @@ You MUST respond with valid JSON only. Do not include markdown or backticks.
             await cardFromSeller.save();
 
             // Settle USDC balances
-            buyerVault.usdc_balance = Math.round((buyerVault.usdc_balance - usdcFromBuyer + usdcFromSeller - (protocolFee / 2)) * 100) / 100;
-            sellerVault.usdc_balance = Math.round((sellerVault.usdc_balance - usdcFromSeller + usdcFromBuyer - (protocolFee / 2)) * 100) / 100;
-            
+            buyerVault.usdc_balance = Math.round((buyerVault.usdc_balance - usdcFromBuyer + usdcFromSeller - halfFee) * 100) / 100;
+            sellerVault.usdc_balance = Math.round((sellerVault.usdc_balance - usdcFromSeller + usdcFromBuyer - halfFee) * 100) / 100;
+
+            // EXACT MATHEMATICAL PNL CALCULATION:
+            // PnL = (Acquired Card Value + Received Cash) - (Given Card Value + Paid Cash + Protocol Fee)
+            const buyerPnl = Math.round(((valB + usdcFromSeller) - (valA + usdcFromBuyer + halfFee)) * 100) / 100;
+            const sellerPnl = Math.round(((valA + usdcFromBuyer) - (valB + usdcFromSeller + halfFee)) * 100) / 100;
+
             buyerVault.total_trades += 1;
             sellerVault.total_trades += 1;
-            buyerVault.realized_pnl_usdc += Math.round(absSpread * 0.1);
-            sellerVault.realized_pnl_usdc += Math.round(absSpread * 0.1);
+            buyerVault.realized_pnl_usdc = Math.round(((buyerVault.realized_pnl_usdc || 0) + buyerPnl) * 100) / 100;
+            sellerVault.realized_pnl_usdc = Math.round(((sellerVault.realized_pnl_usdc || 0) + sellerPnl) * 100) / 100;
+
             await buyerVault.save();
             await sellerVault.save();
+
+            // Register anti-ping-pong cooldown
+            this.setPairCooldown(cardFromBuyer.card_id, cardFromSeller.card_id, buyerVault.id, sellerVault.id);
 
             const txHash = "0x" + crypto.randomBytes(32).toString("hex");
 

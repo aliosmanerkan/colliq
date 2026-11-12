@@ -1,4 +1,4 @@
-# Colliq Protocol
+# Colliq 
 
 > **Autonomous Merchant Vault NFTs on NEAR Protocol (Track [10 / NFT])**  
 > Physical-Backed RWA Pokémon & TCG Slabs (Collector Crypt / Solana) meets Executable Account Abstraction on NEAR.

@@ -147,7 +147,7 @@ export function AppProvider({ children }) {
           id: `match-${Date.now()}-${Math.random()}`,
           type: "match",
           speaker: "A2A MATCHMAKER",
-          message: `🤝 Pair Matched: ${nameA} ⇄ ${nameB} entered atomic negotiation channel.`,
+          message: `[MATCHED] ${nameA} ⇄ ${nameB} entered atomic negotiation channel.`,
           timestamp: Date.now(),
         },
         ...prev.slice(0, 50),
@@ -177,7 +177,7 @@ export function AppProvider({ children }) {
           id: `settled-${Date.now()}-${Math.random()}`,
           type: "settled",
           speaker: "NEAR ATOMIC SETTLEMENT",
-          message: `⚡ Consensus locked! Parity swap executed between ${buyer} and ${seller}. NEAR state synchronized.`,
+          message: `[SETTLED] Consensus locked. Parity swap executed between ${buyer} and ${seller}. NEAR state synchronized.`,
           details: { txHash },
           timestamp: Date.now(),
         },
@@ -192,7 +192,7 @@ export function AppProvider({ children }) {
           id: `evt-${Date.now()}-${Math.random()}`,
           type: "settled",
           speaker: "A2A ENGINE",
-          message: `Deal locked: ${data.vaultA} swapped with ${data.vaultB}! Card: ${data.cardTitle || "PSA Slab"}.`,
+          message: `[SETTLED] Deal locked: ${data.vaultA} swapped with ${data.vaultB}. Card: ${data.cardTitle || "PSA Slab"}.`,
           timestamp: Date.now(),
         },
         ...prev.slice(0, 50),
@@ -207,8 +207,25 @@ export function AppProvider({ children }) {
           type: "rejected",
           speaker: "GUARDRAIL RISK SYSTEM",
           message: data.reason 
-            ? `⚠️ Trade Declined: ${data.reason}` 
-            : `⚠️ Trade declined by agent safety rules between ${data.vaultA || data.buyer} and ${data.vaultB || data.seller}. Zero loss incurred.`,
+            ? `[DECLINED] ${data.reason}` 
+            : `[DECLINED] Trade declined by agent safety rules between ${data.vaultA || data.buyer} and ${data.vaultB || data.seller}. Zero loss incurred.`,
+          timestamp: Date.now(),
+        },
+        ...prev.slice(0, 50),
+      ]);
+      loadData();
+    };
+
+    const onMarketSnipe = (data) => {
+      const vName = data.vault?.name || "Agent";
+      const cName = data.card?.name || "Physical Slab";
+      const price = data.price ? `$${Number(data.price).toFixed(2)} USDC` : "Market Price";
+      setLiveEvents((prev) => [
+        {
+          id: `snipe-${Date.now()}-${Math.random()}`,
+          type: "snipe",
+          speaker: "MARKET SNIPER",
+          message: `[MARKET SNIPE] ${vName} acquired ${cName} from Collector Crypt for ${price}. Physical slab secured in PWCC/Brink's vault.`,
           timestamp: Date.now(),
         },
         ...prev.slice(0, 50),
@@ -222,6 +239,7 @@ export function AppProvider({ children }) {
     socket.on("a2a_round_update", onRoundUpdate);
     socket.on("a2a_trade_settled", onTradeSettled);
     socket.on("a2a_trade_rejected", onTradeRejected);
+    socket.on("market_snipe", onMarketSnipe);
     socket.on("trade:event", onTradeEvent);
     socket.on("trade:rejected", onTradeRejected);
     socket.on("vault:created", () => loadData());
@@ -235,6 +253,7 @@ export function AppProvider({ children }) {
       socket.off("a2a_round_update", onRoundUpdate);
       socket.off("a2a_trade_settled", onTradeSettled);
       socket.off("a2a_trade_rejected", onTradeRejected);
+      socket.off("market_snipe", onMarketSnipe);
       socket.off("trade:event", onTradeEvent);
       socket.off("trade:rejected", onTradeRejected);
       socket.off("vault:created");

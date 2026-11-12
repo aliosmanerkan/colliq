@@ -141,7 +141,24 @@ export default function TradingFloorTerminal({ socketStatus, onTriggerCycle, isT
                 const isMatch = evt.type === "match";
                 const isSettled = evt.type === "settled";
                 const isRejected = evt.type === "rejected";
+                const isSnipe = evt.type === "snipe";
                 const isRound = evt.type === "round";
+
+                // Market Snipe Banner
+                if (isSnipe) {
+                  return (
+                    <div key={idx} className="p-4 rounded-2xl bg-teal-50/90 border border-teal-300 text-teal-950 space-y-1.5 animate-in fade-in duration-200 shadow-sm">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 font-bold text-teal-900">
+                          <Zap className="w-4 h-4 text-teal-600" />
+                          <span>AUTONOMOUS MARKET SNIPE SECURED</span>
+                        </div>
+                        <span className="text-[10px] text-teal-700 font-mono">{formatTime(evt.timestamp)}</span>
+                      </div>
+                      <p className="text-xs leading-relaxed font-sans">{evt.message}</p>
+                    </div>
+                  );
+                }
 
                 // Match Found Banner
                 if (isMatch) {
