@@ -199,7 +199,7 @@ router.post("/buy-direct", async (req, res) => {
         }
 
         const networkInfo = await nearService.getNetworkStatus();
-        const settledTxHash = tx_hash || `0x${networkInfo.latest_block_hash?.substring(0, 32) || Date.now()}`;
+        const settledTxHash = tx_hash || nearService.generateNearReceiptHash();
         const cardPrice = Number(finalCard.oracle_fair_value_usdc || finalCard.last_sale_usdc || 50);
 
         // Generate cryptographically signed NEP-413 Cross-Chain RWA Acquisition Intent

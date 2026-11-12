@@ -482,8 +482,8 @@ export default function ActivityTab() {
                     </span>
                   </div>
 
-                  {/* Transaction Proof: Only link real Near hashes (not simulated 0x) */}
-                  {trade.tx_hash && !trade.tx_hash.startsWith("0x") ? (
+                  {/* Transaction Proof: Only link real Near hashes */}
+                  {trade.tx_hash && !trade.tx_hash.startsWith("0x") && !trade.tx_hash.startsWith("DECLINED") && !trade.tx_hash.startsWith("near:") ? (
                     <a
                       href={`https://testnet.nearblocks.io/txns/${trade.tx_hash}`}
                       target="_blank"

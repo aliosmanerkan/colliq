@@ -83,7 +83,7 @@ export function AppProvider({ children }) {
           const preloaded = [];
           for (const t of fetchedTrades.slice(0, 4)) {
             const isRejected = t.status === "REJECTED_GUARDRAIL";
-            const txHash = t.tx_hash || "0x9482bf...38a";
+            const txHash = t.tx_hash || "8kPn7W...9xY";
 
             if (isRejected) {
               preloaded.push({
@@ -256,7 +256,7 @@ export function AppProvider({ children }) {
     const onTradeSettled = (data) => {
       const buyer = data.buyer || "Agent 1";
       const seller = data.seller || "Agent 2";
-      const txHash = data.txHash || data.trade?.tx_hash || "0x9482bf...38a";
+      const txHash = data.txHash || data.trade?.tx_hash || "8kPn7W...9xY";
       setLiveEvents((prev) => [
         {
           id: `settled-${Date.now()}-${Math.random()}`,

@@ -307,7 +307,7 @@ async function executeMarketplaceRequest(params) {
         const res = await fetch(url, {
             headers: {
                 "Accept": "application/json",
-                "User-Agent": "PokeAgent-NEAR-MPC/1.0"
+                "User-Agent": "Colliq-NEAR-MPC/1.0"
             },
             signal: controller.signal
         });
@@ -542,7 +542,7 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
         solana_holding_address: solanaHoldingAddress,
         vault_custody: `${ccCard.vault || "PWCC / Brink's"} (Collector Crypt Sealed)`,
         near_intent: nearIntent,
-        tx_hash: `0xnear_mpc_${Date.now()}`
+        tx_hash: nearService.generateNearReceiptHash()
     };
 }
 

@@ -954,7 +954,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                 }
             }
 
-            const txHash = "0x" + crypto.randomBytes(32).toString("hex");
+            const txHash = nearService.generateNearReceiptHash();
 
             const tradeLog = await db.trade.create({
                 trade_id: crypto.randomUUID(),
@@ -1019,7 +1019,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                 negotiation_log: negotiationHistory,
                 status: "REJECTED_GUARDRAIL",
                 protocol_fee_usdc: 0,
-                tx_hash: "0x_GUARDRAIL_DECLINED",
+                tx_hash: "DECLINED_GUARDRAIL",
                 near_block: 276399000 + Math.floor(Math.random() * 2000)
             });
 

@@ -71,8 +71,7 @@ export default function FundedAgentVaultsCatalog() {
     try {
       const res = await api.post(`/vaults/${selectedVaultToBuy.id}/buy-vault`, {
         buyer_account: buyerAccount.trim(),
-        payment_method: "USDC_NEAR",
-        tx_hash: `0xacq${Date.now()}`
+        payment_method: "USDC_NEAR"
       });
 
       setAcquireSuccess(res.data);

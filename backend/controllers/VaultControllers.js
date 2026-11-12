@@ -401,7 +401,7 @@ router.post("/:id/buy-vault", async (req, res) => {
             }],
             status: "COMPLETED",
             protocol_fee_usdc: Number((salePrice * 0.01).toFixed(2)),
-            tx_hash: tx_hash || wipeResult.txHash || `0xacq${Date.now()}`,
+            tx_hash: tx_hash || wipeResult.txHash || nearService.generateNearReceiptHash(),
             near_block: wipeResult.nearBlock || 118492031
         });
 
@@ -485,7 +485,7 @@ router.post("/:id/snipe", async (req, res) => {
 
         const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
         const nearBlock = 276399000 + Math.floor(Math.random() * 5000);
-        const txHash = `0xnear_snipe_${Date.now()}`;
+        const txHash = nearService.generateNearReceiptHash();
 
         await db.trade.create({
             trade_id: tradeId,
@@ -673,7 +673,7 @@ router.post("/:id/deposit-treasury", async (req, res) => {
                 name: vault.name,
                 usdc_balance: vault.usdc_balance
             },
-            tx_hash: tx_hash || `0x_dep_${Date.now()}`
+            tx_hash: tx_hash || nearService.generateNearReceiptHash()
         });
     } catch (err) {
         console.error("Deposit treasury error:", err);

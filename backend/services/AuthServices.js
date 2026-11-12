@@ -99,7 +99,7 @@ export const adminLogin = async (req, res) => {
 
         const adminPayload = {
             id: 0,
-            email: "admin@pokeagent.local",
+            email: "admin@colliq.fun",
             role: "admin",
             name: "Super Admin"
         };

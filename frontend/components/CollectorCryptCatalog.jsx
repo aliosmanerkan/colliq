@@ -316,7 +316,7 @@ export default function CollectorCryptCatalog({
           targetVault: selectedVault?.name || res.data?.vault?.name || "Agent Vault",
           near_intent: res.data?.near_intent || null,
           solana_holding_address: res.data?.solana_holding_address || null,
-          txHash: res.data?.tx_hash || res.data?.card?.card_id || "0x_SETTLED_VAULT_ACQUISITION"
+          txHash: res.data?.tx_hash || res.data?.card?.card_id || "near:vault_acq_settled"
         });
         setPurchaseStep("success");
         if (onCardBridged) onCardBridged();
@@ -688,7 +688,7 @@ export default function CollectorCryptCatalog({
                     )}
                     <div className="flex items-center justify-between">
                       <span>Transaction Reference:</span>
-                      {purchaseResult.txHash && !purchaseResult.txHash.startsWith("0x") ? (
+                      {purchaseResult.txHash && !purchaseResult.txHash.startsWith("0x") && !purchaseResult.txHash.startsWith("near:") ? (
                         <a
                           href={`https://testnet.nearblocks.io/txns/${purchaseResult.txHash}`}
                           target="_blank"

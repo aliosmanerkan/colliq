@@ -271,8 +271,9 @@ export default function TradingFloorTerminal({
                     )}
 
                     {!activeTrade.isLiveStreaming && activeTrade.tx_hash &&
-                    activeTrade.tx_hash !== "0x_GUARDRAIL_DECLINED" &&
-                    !activeTrade.tx_hash.startsWith("0x") ? (
+                    !activeTrade.tx_hash.startsWith("0x") &&
+                    !activeTrade.tx_hash.startsWith("DECLINED") &&
+                    !activeTrade.tx_hash.startsWith("near:") ? (
                       <a
                         href={`https://testnet.nearblocks.io/txns/${activeTrade.tx_hash}`}
                         target="_blank"

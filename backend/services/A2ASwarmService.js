@@ -1,6 +1,7 @@
 import db from "../model/model.js";
 import negotiationEngine from "../src/agents/negotiationEngine.ts";
 import { fetchCollectorCryptMarketplace, bridgeCollectorCryptCardToNearVault } from "./CollectorCryptService.js";
+import nearService from "./NearService.js";
 
 /**
  * Ensures system vault exists for physical vault custody transfers
@@ -325,7 +326,7 @@ export class A2ASwarmService {
                         // Create atomic Deal History / Trade record
                         const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
                         const nearBlock = 276399000 + Math.floor(Math.random() * 5000);
-                        const txHash = `0xnear_snipe_${Date.now()}_${card.id.slice(0, 8)}`;
+                        const txHash = nearService.generateNearReceiptHash();
 
                         await db.trade.create({
                             trade_id: tradeId,
@@ -455,7 +456,7 @@ export class A2ASwarmService {
                     // Create trade ledger record
                     const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
                     const nearBlock = 276399000 + Math.floor(Math.random() * 5000);
-                    const txHash = `0xnear_inaugural_${Date.now()}`;
+                    const txHash = nearService.generateNearReceiptHash();
 
                     await db.trade.create({
                         trade_id: tradeId,

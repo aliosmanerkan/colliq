@@ -46,7 +46,7 @@ export default function LandingFooter() {
           {
             title: "Ecosystem",
             links: [
-              { label: "GitHub Repository", href: "https://github.com/aliosmanerkan/poke-agent" },
+              { label: "GitHub Repository", href: "https://github.com/aliosmanerkan/colliq" },
               { label: "Twitter / X", href: "https://x.com" },
               { label: "Documentation", href: "/how-it-works" },
               { label: "Support", href: "mailto:contact@colliq.fun" },
