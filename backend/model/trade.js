@@ -6,8 +6,8 @@ export default (sequelize) => {
         {
             id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
             trade_id: { type: DataTypes.STRING, unique: true, allowNull: false },
-            vault_a_id: { type: DataTypes.INTEGER, allowNull: false },
-            vault_b_id: { type: DataTypes.INTEGER, allowNull: false },
+            vault_a_id: { type: DataTypes.INTEGER, allowNull: true },
+            vault_b_id: { type: DataTypes.INTEGER, allowNull: true },
             vault_a_name: { type: DataTypes.STRING },
             vault_b_name: { type: DataTypes.STRING },
             cards_from_a: { type: DataTypes.JSON, defaultValue: [] },
