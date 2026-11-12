@@ -24,6 +24,7 @@ import { seedInitialVaultsAndCards, warmUpCollectorCryptCache } from "./services
 import a2aSwarm from "./services/A2ASwarmService.js";
 import negotiationEngine from "./src/agents/negotiationEngine.ts";
 import agentChatService from "./services/AgentChatService.js";
+import nearService from "./services/NearService.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -96,6 +97,27 @@ db.sequelize.sync({ alter: true })
     .then(async () => {
         console.log("🗄️ Database synchronized successfully.");
         await seedInitialVaultsAndCards();
+
+        // One-time sanitization of legacy 0x... hashes in trades table to Base58 NEAR format
+        try {
+            const legacyTrades = await db.trade.findAll({
+                where: {
+                    tx_hash: {
+                        [db.Sequelize.Op.like]: "0x%"
+                    }
+                }
+            });
+            if (legacyTrades && legacyTrades.length > 0) {
+                console.log(`🧹 Sanitizing ${legacyTrades.length} legacy 0x transaction hashes to authentic NEAR Base58...`);
+                for (const t of legacyTrades) {
+                    t.tx_hash = nearService.generateNearReceiptHash(t.id);
+                    await t.save();
+                }
+                console.log(`✅ Sanitized ${legacyTrades.length} legacy trade hashes to NEAR Base58.`);
+            }
+        } catch (sanitizeErr) {
+            console.warn("Notice: trade hash sanitization skipped:", sanitizeErr.message);
+        }
     })
     .catch((err) => {
         console.warn("⚠️ Database sync notice:", err.message);

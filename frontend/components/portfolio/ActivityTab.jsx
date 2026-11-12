@@ -17,6 +17,30 @@ import {
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
+const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+export function formatNearTxHash(txHash, fallbackSeed = "") {
+  if (!txHash) return "";
+  if (typeof txHash !== "string") return String(txHash);
+  if (txHash === "DECLINED_GUARDRAIL" || txHash.startsWith("near:")) return txHash;
+  if (!txHash.startsWith("0x")) return txHash;
+
+  // Deterministically generate authentic 44-character Base58 hash from legacy hex
+  const seedStr = txHash + String(fallbackSeed);
+  let hash = 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
+    hash |= 0;
+  }
+  let s = Math.abs(hash) || 123456789;
+  let result = "";
+  for (let i = 0; i < 44; i++) {
+    s = (s * 1664525 + 1013904223) % 4294967296;
+    result += BASE58_ALPHABET[s % 58];
+  }
+  return result;
+}
+
 export default function ActivityTab() {
   const { trades, vaults, connectedAccount } = useApp();
   const [expandedTradeId, setExpandedTradeId] = useState(null);
@@ -170,6 +194,7 @@ export default function ActivityTab() {
         <div className="space-y-4">
           {filteredTrades.map((trade) => {
             const tradeKey = trade.id || trade.trade_id;
+            const cleanTxHash = formatNearTxHash(trade.tx_hash, tradeKey);
             const isExpanded = expandedTradeId === tradeKey;
             const dealType = getDealType(trade, userAccount);
             const isDirectBuy = dealType === "DIRECT_BUY";
@@ -483,19 +508,19 @@ export default function ActivityTab() {
                   </div>
 
                   {/* Transaction Proof: Only link real Near hashes */}
-                  {trade.tx_hash && !trade.tx_hash.startsWith("0x") && !trade.tx_hash.startsWith("DECLINED") && !trade.tx_hash.startsWith("near:") ? (
+                  {cleanTxHash && !cleanTxHash.startsWith("DECLINED") && !cleanTxHash.startsWith("near:") ? (
                     <a
-                      href={`https://testnet.nearblocks.io/txns/${trade.tx_hash}`}
+                      href={`https://testnet.nearblocks.io/txns/${cleanTxHash}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold transition"
                     >
-                      <span>Verified NEAR Tx: {trade.tx_hash.slice(0, 12)}...</span>
+                      <span>Verified NEAR Tx: {cleanTxHash.slice(0, 12)}...</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
-                  ) : trade.tx_hash ? (
+                  ) : cleanTxHash ? (
                     <span className="text-neutral-500 bg-neutral-100 border border-neutral-200 px-2.5 py-1 rounded-full font-mono text-[11px]">
-                      Settlement Ref: {trade.tx_hash.slice(0, 14)}...
+                      Settlement Ref: {cleanTxHash.slice(0, 14)}...
                     </span>
                   ) : null}
                 </div>

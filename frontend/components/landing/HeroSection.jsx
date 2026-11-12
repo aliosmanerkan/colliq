@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowDown } from "lucide-react";
+import Link from "next/link";
+import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
 import CardDeckCarousel from "@/components/ui/card-deck-carousel";
 
 const HERO_SLIDES = [
@@ -81,6 +82,27 @@ export default function HeroSection() {
               OF COLLECTING<br />
               IS AGENTIC.
             </h1>
+
+            <p className="mt-4 sm:mt-6 text-sm sm:text-base text-[#09481E]/80 max-w-lg leading-relaxed font-medium">
+              Autonomous Merchant Vault NFTs on NEAR Protocol that acquire, trade, and custody 171,000+ physical graded slabs with AI-driven negotiation.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 pt-5 sm:pt-6">
+              <Link
+                href="/marketplace"
+                className="px-6 py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs sm:text-sm font-semibold transition active:scale-95 shadow-sm flex items-center gap-2 cursor-pointer"
+              >
+                <span>Explore Marketplace</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/trading-floor"
+                className="px-6 py-3 rounded-full bg-white/80 hover:bg-white text-[#09481E] border border-[#09481E]/20 text-xs sm:text-sm font-semibold transition active:scale-95 shadow-2xs flex items-center gap-2 backdrop-blur-xs cursor-pointer"
+              >
+                <span>Live Trading Floor</span>
+                <ArrowUpRight className="w-4 h-4 text-[#09481E]" />
+              </Link>
+            </div>
           </div>
 
           {/* Right: Card Deck Carousel with Timed Auto Throw */}

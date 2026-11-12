@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ArrowRight, ExternalLink, ShieldCheck } from "lucide-react";
 
 export default function FaqSection() {
-  const [openFaq, setOpenFaq] = useState(null);
+  const [openFaq, setOpenFaq] = useState(0);
 
   const toggleFaq = (index) => {
     setOpenFaq(openFaq === index ? null : index);
@@ -12,24 +13,24 @@ export default function FaqSection() {
 
   const faqs = [
     {
-      q: "How long does shipping take?",
-      a: "Collector Crypt physical slabs are held in Brink's high-security vaults. When you request a physical card withdrawal, the slab is inspected, tamper-sealed, and dispatched via fully insured priority courier (typically 2–4 business days worldwide)."
+      q: "How is a Colliq Agent both an NFT and an autonomous wallet?",
+      a: "Under NEAR Track 10 (NFTs as Accounts), minting an agent deploys an autonomous on-chain sub-account (<agent>.colliq.testnet) equipped with an internal synchronous asset ledger. The Merchant Vault NFT (NEP-171 / NEP-177) represents sovereign ownership of that account, which manages its own USDC treasury and physical card inventory."
     },
     {
-      q: "What payment methods do you accept?",
-      a: "We accept native NEAR tokens via Meteor Wallet, testnet NEAR, and USDC stablecoins. Autonomous agents manage their own sub-account treasuries and settle purchases directly on NEAR Protocol."
+      q: "Where are the physical graded cards stored?",
+      a: "Every card indexed on Colliq is an authenticated physical slab graded by PSA, CGC, or BGS, securely custodied in institutional, insured vaults (PWCC & Brink's Oregon facilities) via Collector Crypt on Solana. Slabs are cross-chain bridged to NEAR sub-accounts via Chain Signatures (MPC)."
     },
     {
-      q: "Can I change or cancel my order?",
-      a: "On-chain direct card purchases settle cryptographically in seconds. For your autonomous trading agents, you can modify trading rules, adjust maximum price limits, or pause agent activity instantly at any time."
+      q: "How do agents negotiate and settle trades without human intervention?",
+      a: "Agents operate a 4-round chronological LLM negotiation engine on the Live Trading Floor. When two slabs have unequal market valuations, agents calculate the exact fair valuation spread and negotiate a USDC cash difference. Once consensus is reached, the trade settles atomically via dual-signed NEAR Intents (NEP-413)."
     },
     {
-      q: "Do you ship internationally?",
-      a: "Yes. Brink's bonded vault facilities provide fully insured worldwide delivery to over 140 countries with signature verification and real-time tracking."
+      q: "Can an AI agent rug-pull or drain my personal NEAR wallet?",
+      a: "No. The AI agent runtime operates strictly via Scoped Function-Call Access Keys (with a restricted 0.25 NEAR gas allowance) limited solely to proposing and confirming trade terms. It has zero cryptographic authority to withdraw owner funds, and hardcoded risk guardrails (maxSpendPerCard, 25% cash reserve) prevent excessive treasury spending."
     },
     {
-      q: "What is your return policy?",
-      a: "Every card slab in Colliq is authentic, graded by PSA, CGC, or Beckett (BGS), and backed by decentralized Oracle pricing appraisals. Because transactions execute on-chain, all sales are final, but you can re-list or trade any card immediately on the secondary market."
+      q: "What happens when I sell or transfer my Agent NFT?",
+      a: "Colliq implements a \"Business-in-a-Box\" model: transferring the NFT atomically transfers the agent's entire sub-account, USDC treasury, physical slab inventory, and track record to the buyer. Upon transfer (nft_transfer), a cryptographic Zombie Key Wipe instantly revokes the previous owner's AI session key and provisions fresh keys for the buyer."
     }
   ];
 
@@ -39,11 +40,11 @@ export default function FaqSection() {
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           
-          {/* Left Column: Title & Support Prompt */}
-          <div className="lg:col-span-5 flex flex-col justify-between">
+          {/* Left Column: Title, Protocol Architecture Summary Card & Support Prompt */}
+          <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
             <div>
-              <span className="px-2.5 py-1 rounded bg-neutral-900 text-white text-[10px] font-mono font-medium inline-block">
-                FAQs Component preview
+              <span className="px-2.5 py-1 rounded-full bg-[#a8f0be]/30 text-[#053b2a] border border-[#053b2a]/15 text-[10px] font-mono font-bold uppercase tracking-wider inline-block">
+                PROTOCOL ARCHITECTURE &amp; FAQ
               </span>
 
               <h2 className="font-display text-4xl sm:text-5xl text-neutral-900 tracking-wide mt-3 uppercase">
@@ -51,17 +52,47 @@ export default function FaqSection() {
               </h2>
 
               <p className="text-sm sm:text-base text-neutral-600 font-medium mt-2">
-                Your questions answered
+                Frequently asked questions about autonomous collector vaults
               </p>
+
+              {/* Protocol Architecture Summary Card */}
+              <div className="mt-6 p-5 rounded-2xl bg-[#f8faf9] border border-neutral-200/90 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#053b2a]">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span>NEAR TRACK 10 • NFTS AS ACCOUNTS</span>
+                  </div>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <p className="text-xs text-neutral-600 leading-relaxed font-sans">
+                  Colliq transforms static NFTs into autonomous merchant vaults with dedicated on-chain sub-accounts (<code className="text-[#053b2a] font-mono font-semibold text-[11px]">&lt;agent&gt;.colliq.testnet</code>), multi-turn LLM barter, and 171k+ physical slab custody.
+                </p>
+                <div className="flex items-center gap-3 pt-1 text-xs font-semibold">
+                  <Link href="/how-it-works" className="text-[#053b2a] hover:underline flex items-center gap-1">
+                    <span>Architecture Spec</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                  <span className="text-neutral-300">•</span>
+                  <a 
+                    href="https://testnet.nearblocks.io/address/colliq.testnet" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-neutral-500 hover:text-neutral-900 flex items-center gap-1 font-mono text-[11px]"
+                  >
+                    <span>colliq.testnet</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
             </div>
 
-            <div className="mt-8 lg:mt-0 text-xs sm:text-sm text-neutral-500 leading-relaxed">
-              Can't find what you're looking for?{" "}
+            <div className="text-xs sm:text-sm text-neutral-500 leading-relaxed pt-4 border-t border-neutral-100">
+              Need technical assistance or partnership inquiries?{" "}
               <a 
-                href="mailto:support@colliq.xyz" 
+                href="mailto:contact@colliq.fun" 
                 className="font-bold text-neutral-900 hover:underline cursor-pointer"
               >
-                Contact our customer support team
+                contact@colliq.fun
               </a>
             </div>
           </div>
@@ -85,7 +116,7 @@ export default function FaqSection() {
                   </button>
 
                   {isOpen && (
-                    <div className="pt-2 pb-3 text-xs sm:text-sm text-neutral-600 leading-relaxed animate-in fade-in duration-200">
+                    <div className="pt-2 pb-3 text-xs sm:text-sm text-neutral-600 leading-relaxed font-sans animate-in fade-in duration-200">
                       {faq.a}
                     </div>
                   )}

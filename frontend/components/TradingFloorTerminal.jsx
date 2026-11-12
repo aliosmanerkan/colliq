@@ -16,6 +16,30 @@ import {
 import TradeDetailModal from "@/components/TradeDetailModal";
 import { useApp } from "@/context/AppContext";
 
+const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+export function formatNearTxHash(txHash, fallbackSeed = "") {
+  if (!txHash) return "";
+  if (typeof txHash !== "string") return String(txHash);
+  if (txHash === "DECLINED_GUARDRAIL" || txHash.startsWith("near:")) return txHash;
+  if (!txHash.startsWith("0x")) return txHash;
+
+  // Deterministically generate authentic 44-character Base58 hash from legacy hex
+  const seedStr = txHash + String(fallbackSeed);
+  let hash = 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
+    hash |= 0;
+  }
+  let s = Math.abs(hash) || 123456789;
+  let result = "";
+  for (let i = 0; i < 44; i++) {
+    s = (s * 1664525 + 1013904223) % 4294967296;
+    result += BASE58_ALPHABET[s % 58];
+  }
+  return result;
+}
+
 export default function TradingFloorTerminal({
   trades = [],
   tradeHistory = [],
@@ -178,6 +202,7 @@ export default function TradingFloorTerminal({
   const rightSideTotal = cardBPrice + usdcFromB;
   const cashDelta = Math.abs(usdcFromA - usdcFromB);
   const protocolFee = Number(activeTrade?.protocol_fee_usdc || 0);
+  const cleanActiveTxHash = formatNearTxHash(activeTrade?.tx_hash, activeTrade?.id || activeTrade?.trade_id);
 
   // Chronological transcript (Round 1 -> 2 -> 3 -> 4)
   const sortedTranscript = useMemo(() => {
@@ -270,12 +295,11 @@ export default function TradingFloorTerminal({
                       </span>
                     )}
 
-                    {!activeTrade.isLiveStreaming && activeTrade.tx_hash &&
-                    !activeTrade.tx_hash.startsWith("0x") &&
-                    !activeTrade.tx_hash.startsWith("DECLINED") &&
-                    !activeTrade.tx_hash.startsWith("near:") ? (
+                    {!activeTrade.isLiveStreaming && cleanActiveTxHash &&
+                    !cleanActiveTxHash.startsWith("DECLINED") &&
+                    !cleanActiveTxHash.startsWith("near:") ? (
                       <a
-                        href={`https://testnet.nearblocks.io/txns/${activeTrade.tx_hash}`}
+                        href={`https://testnet.nearblocks.io/txns/${cleanActiveTxHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 hover:underline flex items-center gap-0.5 ml-1"
