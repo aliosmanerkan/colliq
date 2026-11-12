@@ -292,7 +292,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
                       className="text-[10px] text-neutral-600 hover:text-neutral-900 px-2 py-0.5 rounded-full bg-white hover:bg-neutral-100 border border-neutral-200 transition shrink-0 ml-2 shadow-sm"
                       title="Shuffle unique tag"
                     >
-                      🎲 Tag #{suffixCode}
+                      Tag #{suffixCode}
                     </button>
                   </div>
                 </div>

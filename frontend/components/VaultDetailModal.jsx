@@ -315,9 +315,9 @@ export default function VaultDetailModal({ vault, isOpen, onClose, onOpenChat })
                                 <span className="text-neutral-500 font-sans">Method:</span>
                                 <span className="text-[#053b2a] font-semibold truncate max-w-[200px]">
                                   {provenance.type === "barter" ? (
-                                    `🔁 Swapped with ${provenance.counterpart}`
+                                    `Swapped with ${provenance.counterpart}`
                                   ) : (
-                                    "📥 Deposited to Agent"
+                                    "Deposited to Agent"
                                   )}
                                 </span>
                               </div>

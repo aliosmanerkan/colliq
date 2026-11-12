@@ -27,6 +27,7 @@ export function AppProvider({ children }) {
   const [inspectVault, setInspectVault] = useState(null);
   const [chatVault, setChatVault] = useState(null);
   const [isTriggering, setIsTriggering] = useState(false);
+  const [isSniping, setIsSniping] = useState(false);
 
   // Trigger manual A2A trading cycle
   const handleTriggerSwarm = async () => {
@@ -37,6 +38,18 @@ export function AppProvider({ children }) {
       console.error("Trigger swarm error:", err);
     } finally {
       setTimeout(() => setIsTriggering(false), 800);
+    }
+  };
+
+  // Trigger manual Collector Crypt market snipe cycle
+  const handleTriggerSnipe = async () => {
+    setIsSniping(true);
+    try {
+      await api.post("/trades/trigger-sniper");
+    } catch (err) {
+      console.error("Trigger snipe error:", err);
+    } finally {
+      setTimeout(() => setIsSniping(false), 800);
     }
   };
 
@@ -76,7 +89,7 @@ export function AppProvider({ children }) {
                 id: `rejected-${t.id || t.trade_id}`,
                 type: "rejected",
                 speaker: "GUARDRAIL RISK SYSTEM",
-                message: `⚠️ Trade declined: Terms exceeded risk guardrail limits between ${t.vault_a_name} and ${t.vault_b_name}.`,
+                message: `[GUARDRAIL VETO] Trade declined: Terms exceeded risk guardrail limits between ${t.vault_a_name} and ${t.vault_b_name}.`,
                 timestamp: new Date(t.createdAt).getTime() || Date.now(),
               });
             } else {
@@ -84,7 +97,7 @@ export function AppProvider({ children }) {
                 id: `settled-${t.id || t.trade_id}`,
                 type: "settled",
                 speaker: "NEAR ATOMIC SETTLEMENT",
-                message: `⚡ Consensus locked! Parity swap executed between ${t.vault_a_name} and ${t.vault_b_name}.`,
+                message: `[SETTLED] Consensus locked. Parity swap executed between ${t.vault_a_name} and ${t.vault_b_name}.`,
                 details: { txHash },
                 timestamp: new Date(t.createdAt).getTime() || Date.now(),
               });
@@ -152,6 +165,7 @@ export function AppProvider({ children }) {
         },
         ...prev.slice(0, 50),
       ]);
+      loadData();
     };
 
     const onRoundUpdate = (data) => {
@@ -166,6 +180,7 @@ export function AppProvider({ children }) {
         },
         ...prev.slice(0, 50),
       ]);
+      loadData();
     };
 
     const onTradeSettled = (data) => {
@@ -301,6 +316,8 @@ export function AppProvider({ children }) {
         connectedAccount,
         isTriggering,
         handleTriggerSwarm,
+        isSniping,
+        handleTriggerSnipe,
         loadData,
         openMint,
         closeMint,
