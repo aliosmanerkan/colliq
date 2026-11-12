@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import logoImg from "@/assets/logo.png";
 import { usePathname } from "next/navigation";
 import {
   User,
@@ -80,26 +82,18 @@ export default function Navbar() {
     <div className="sticky top-0 z-50 w-full bg-[#B9EFC6] border-b border-[#043021]/15 backdrop-blur-md">
       <header className="relative w-full px-6 sm:px-10 lg:px-14 xl:px-16 h-18 sm:h-20 flex items-center justify-between">
 
-        {/* Left: 8-Leaf Swirl / Pinwheel Logo from Frame 1.png */}
+        {/* Left: Brand Logo from assets/logo.png */}
         <Link
           href="/"
           onClick={scrollToTop}
-          className="cursor-pointer flex items-center gap-2 select-none group"
+          className="cursor-pointer flex items-center select-none group"
         >
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-transform group-hover:rotate-45 duration-500">
-            <svg
-              viewBox="0 0 24 24"
-              className="w-6 h-6 sm:w-7 sm:h-7 text-[#043224] fill-current"
-            >
-              <path d="M12 2C12.5 5 15 7.5 18 8C15 8.5 12.5 11 12 14C11.5 11 9 8.5 6 8C9 7.5 11.5 5 12 2Z" opacity="0.9" />
-              <path d="M22 12C19 12.5 16.5 15 16 18C15.5 15 13 12.5 10 12C13 11.5 15.5 9 16 6C16.5 9 19 11.5 22 12Z" opacity="0.9" />
-              <path d="M12 22C11.5 19 9 16.5 6 16C9 15.5 11.5 13 12 10C12.5 13 15 15.5 18 16C15 16.5 12.5 19 12 22Z" opacity="0.9" />
-              <path d="M2 12C5 11.5 7.5 9 8 6C8.5 9 11 11.5 14 12C11 12.5 8.5 15 8 18C7.5 15 5 12.5 2 12Z" opacity="0.9" />
-            </svg>
-          </div>
-          <span className="font-display text-lg sm:text-xl tracking-wide uppercase text-[#043224] hidden sm:inline-block">
-            Colliq
-          </span>
+          <Image
+            src={logoImg}
+            alt="Colliq"
+            priority
+            className="h-8 sm:h-9 w-auto object-contain transition-transform group-hover:scale-105 duration-300"
+          />
         </Link>
 
         {/* Center: Exactly Centered Page Links with Reduced Font Size */}
