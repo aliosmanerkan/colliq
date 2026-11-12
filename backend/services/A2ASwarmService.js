@@ -325,7 +325,8 @@ export class A2ASwarmService {
 
                         // Create atomic Deal History / Trade record
                         const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-                        const nearBlock = 276399000 + Math.floor(Math.random() * 5000);
+                        const netStatus = await nearService.getNetworkStatus();
+                        const nearBlock = netStatus.latest_block_height;
                         const txHash = nearService.generateNearReceiptHash();
 
                         await db.trade.create({
@@ -455,7 +456,8 @@ export class A2ASwarmService {
 
                     // Create trade ledger record
                     const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-                    const nearBlock = 276399000 + Math.floor(Math.random() * 5000);
+                    const netStatus = await nearService.getNetworkStatus();
+                    const nearBlock = netStatus.latest_block_height;
                     const txHash = passedTxHash || nearService.generateNearReceiptHash();
 
                     await db.trade.create({

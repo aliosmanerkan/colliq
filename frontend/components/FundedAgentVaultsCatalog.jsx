@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { useApp } from "@/context/AppContext";
+import { executeNearPayment, initNearWallet, usdToNear } from "@/lib/near";
 import TransferVaultModal from "@/components/TransferVaultModal";
 
 export default function FundedAgentVaultsCatalog() {
@@ -69,9 +70,35 @@ export default function FundedAgentVaultsCatalog() {
     setAcquireSuccess(null);
 
     try {
+      let txHash = null;
+      let effectiveBuyer = buyerAccount.trim();
+
+      try {
+        const wallet = await initNearWallet();
+        if (wallet?.accountId) {
+          effectiveBuyer = wallet.accountId;
+          const nearAmt = usdToNear(selectedVaultToBuy.sale_price_usdc || 100);
+          const payment = await executeNearPayment({
+            receiverId: "colliq.testnet",
+            amountNear: nearAmt
+          });
+          if (payment?.txHash) {
+            txHash = payment.txHash;
+          }
+        }
+      } catch (walletErr) {
+        console.warn("Wallet on-chain confirmation notice:", walletErr.message);
+        if (walletErr.message?.includes("User rejected") || walletErr.message?.includes("cancelled")) {
+          setAcquireError("Transaction was cancelled in wallet. Vault purchase aborted.");
+          setAcquiring(false);
+          return;
+        }
+      }
+
       const res = await api.post(`/vaults/${selectedVaultToBuy.id}/buy-vault`, {
-        buyer_account: buyerAccount.trim(),
-        payment_method: "USDC_NEAR"
+        buyer_account: effectiveBuyer,
+        payment_method: txHash ? "NEAR_WALLET" : "USDC_NEAR",
+        tx_hash: txHash
       });
 
       setAcquireSuccess(res.data);

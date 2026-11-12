@@ -1,5 +1,5 @@
 import db from "../model/model.js";
-import { getCollectorCryptInventory, bridgeCollectorCryptCardToNearVault } from "./CollectorCryptService.js";
+import { getCollectorCryptInventory, bridgeCollectorCryptCardToNearVault, fetchCollectorCryptMarketplace } from "./CollectorCryptService.js";
 import nearService from "./NearService.js";
 import { generateVaultDynamicSvg } from "./DynamicSvgService.js";
 
@@ -21,7 +21,7 @@ export const AGENT_TOOLS_SCHEMA = [
         type: "function",
         function: {
             name: "market_scan_inventory",
-            description: "Scan the 1,000 Brink's-vaulted PSA slabs in the Collector Crypt marketplace for investment opportunities, arbitrage spreads, undervalued cards below market fair value, or hunt targets.",
+            description: "Scan the 171,000+ Brink's & PWCC-vaulted PSA slabs in the Collector Crypt marketplace for investment opportunities, arbitrage spreads, undervalued cards below market fair value, or hunt targets.",
             parameters: {
                 type: "object",
                 properties: {
@@ -161,6 +161,33 @@ export const AGENT_TOOLS_SCHEMA = [
             }
         }
     },
+    {
+        type: "function",
+        function: {
+            name: "update_agent_directives",
+            description: "Add, remove, or update natural language collection rules and trading constraints in the vault's custom_rules.",
+            parameters: {
+                type: "object",
+                properties: {
+                    action: {
+                        type: "string",
+                        enum: ["ADD", "REMOVE", "REPLACE_ALL"],
+                        description: "Action to perform on vault directives: 'ADD' to append a rule, 'REMOVE' to delete a rule matching keyword, or 'REPLACE_ALL' to overwrite all rules"
+                    },
+                    directive: {
+                        type: "string",
+                        description: "The directive text to add or remove (e.g. 'Target PSA 10 Pikachu cards under $200')"
+                    },
+                    directives_list: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Full list of directives when action is 'REPLACE_ALL'"
+                    }
+                },
+                required: ["action"]
+            }
+        }
+    },
 
     // -------------------------------------------------------------
     // LAYER 3: EXECUTION & CROSS-CHAIN SETTLEMENT
@@ -228,6 +255,34 @@ export const AGENT_TOOLS_SCHEMA = [
             }
         }
     },
+    {
+        type: "function",
+        function: {
+            name: "list_vault_for_sale",
+            description: "List this autonomous Merchant Vault on the Business-in-a-Box secondary marketplace for a specified USDC asking price. Sets anti-front-running lock until sold or delisted.",
+            parameters: {
+                type: "object",
+                properties: {
+                    sale_price_usdc: {
+                        type: "number",
+                        description: "Asking price in USDC to buy this entire vault (sub-account + treasury + vaulted inventory)"
+                    }
+                },
+                required: ["sale_price_usdc"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "unlist_vault_from_sale",
+            description: "Delist this autonomous Merchant Vault from the Business-in-a-Box secondary marketplace and release the mutex lock, reactivating trading.",
+            parameters: {
+                type: "object",
+                properties: {}
+            }
+        }
+    },
 
     // -------------------------------------------------------------
     // LAYER 4: TELEMETRY & ACCOUNTING
@@ -265,8 +320,31 @@ export async function executeAgentTool(vault, toolName, args = {}) {
     switch (toolName) {
         // 1. SCAN MARKETPLACE
         case "market_scan_inventory": {
-            let cards = getCollectorCryptInventory();
             let { query, category, max_price_usdc, min_grade, sort_by, deal_type, within_budget, min_discount_pct } = args;
+
+            let liveCards = [];
+            try {
+                const apiRes = await fetchCollectorCryptMarketplace({
+                    search: query || undefined,
+                    category: category && category !== "ALL" ? category : undefined,
+                    limit: 36
+                });
+                if (apiRes && Array.isArray(apiRes.cards)) {
+                    liveCards = apiRes.cards;
+                }
+            } catch (err) {
+                console.warn("[AgentTools] Live market search fallback:", err.message);
+            }
+
+            const localCards = getCollectorCryptInventory();
+            const cardMap = new Map();
+            for (const c of liveCards) {
+                if (c && c.id) cardMap.set(c.id, c);
+            }
+            for (const c of localCards) {
+                if (c && c.id && !cardMap.has(c.id)) cardMap.set(c.id, c);
+            }
+            let cards = Array.from(cardMap.values());
 
             // Handle query and ranking/superlative/undervalued terms
             if (query) {
@@ -593,6 +671,40 @@ export async function executeAgentTool(vault, toolName, args = {}) {
             };
         }
 
+        // UPDATE AGENT DIRECTIVES
+        case "update_agent_directives": {
+            const { action, directive, directives_list } = args;
+            let rules = [];
+            try {
+                rules = typeof vault.custom_rules === "string" ? JSON.parse(vault.custom_rules || "[]") : (vault.custom_rules || []);
+            } catch {
+                rules = [];
+            }
+
+            const cleanAction = String(action || "ADD").toUpperCase();
+            if (cleanAction === "ADD" && directive) {
+                if (!rules.includes(directive.trim())) {
+                    rules.push(directive.trim());
+                }
+            } else if (cleanAction === "REMOVE" && directive) {
+                const target = directive.toLowerCase().trim();
+                rules = rules.filter(r => !r.toLowerCase().includes(target));
+            } else if (cleanAction === "REPLACE_ALL" && Array.isArray(directives_list)) {
+                rules = directives_list.map(d => String(d).trim()).filter(Boolean);
+            }
+
+            vault.custom_rules = JSON.stringify(rules);
+            await vault.save();
+
+            return {
+                status: "DIRECTIVES_UPDATED",
+                action: cleanAction,
+                total_directives: rules.length,
+                active_directives: rules,
+                summary: `Vault directives updated: ${rules.length} active collection rules.`
+            };
+        }
+
         // 7. SNIPE RWA SLAB
         case "trade_snipe_rwa_slab": {
             const { card_id } = args;
@@ -710,6 +822,52 @@ export async function executeAgentTool(vault, toolName, args = {}) {
                 payout_received_usdc: payout,
                 new_usdc_treasury: vault.usdc_balance,
                 summary: `Successfully liquidated '${cardName}' for $${payout} USDC cash. Treasury updated to $${vault.usdc_balance} USDC.`
+            };
+        }
+
+        // LIST VAULT FOR SALE (SECONDARY MARKETPLACE)
+        case "list_vault_for_sale": {
+            const { sale_price_usdc } = args;
+            const price = Number(sale_price_usdc);
+            if (!price || price <= 0) {
+                return {
+                    status: "ERROR",
+                    error: "Invalid sale price. Please specify a positive USDC price to list the vault for sale."
+                };
+            }
+
+            vault.is_listed_for_sale = true;
+            vault.sale_price_usdc = price;
+            vault.is_locked = true;
+            vault.lock_reason = "LISTED_FOR_SALE";
+            await vault.save();
+
+            return {
+                status: "LISTED_FOR_SALE",
+                vault_id: vault.id,
+                sub_account: vault.sub_account,
+                sale_price_usdc: price,
+                is_locked: true,
+                lock_reason: "LISTED_FOR_SALE",
+                summary: `Vault @${vault.sub_account} listed on Business-in-a-Box marketplace for $${price.toFixed(2)} USDC. Anti-front-running lock engaged.`
+            };
+        }
+
+        // UNLIST VAULT FROM SALE
+        case "unlist_vault_from_sale": {
+            vault.is_listed_for_sale = false;
+            vault.sale_price_usdc = null;
+            vault.is_locked = false;
+            vault.lock_reason = null;
+            await vault.save();
+
+            return {
+                status: "UNLISTED_FROM_SALE",
+                vault_id: vault.id,
+                sub_account: vault.sub_account,
+                is_locked: false,
+                lock_reason: null,
+                summary: `Vault @${vault.sub_account} delisted from secondary marketplace. Mutex lock released and trading active.`
             };
         }
 

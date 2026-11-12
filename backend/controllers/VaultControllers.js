@@ -157,7 +157,7 @@ router.post("/mint", async (req, res) => {
             id: `msg-welcome-${Date.now()}`,
             sender: "agent",
             senderAccount: subAccount,
-            text: `Welcome! I am ${name} (@${subAccount}), your autonomous NEAR Merchant Vault trading agent.\n\nInitialized with a $${Number(usdc_deposit) || 500} USDC treasury and calibrated for ${strategy || "BALANCED_TRADER"}.${rulesArray.length > 0 ? `\n\nActive Inception Directives:\n${rulesArray.map(r => `• ${r}`).join("\n")}` : ""}\n\nI am connected to 1,000+ Brink's Vaulted PSA slabs and the A2A barter exchange. How would you like me to begin?`,
+            text: `Welcome! I am ${name} (@${subAccount}), your autonomous NEAR Merchant Vault trading agent.\n\nInitialized with a $${Number(usdc_deposit) || 500} USDC treasury and calibrated for ${strategy || "BALANCED_TRADER"}.${rulesArray.length > 0 ? `\n\nActive Inception Directives:\n${rulesArray.map(r => `• ${r}`).join("\n")}` : ""}\n\nI am connected to 171,000+ Brink's & PWCC Vaulted PSA slabs and the A2A barter exchange. How would you like me to begin?`,
             actionType: "GREETING",
             timestamp: new Date().toISOString()
         };
@@ -403,7 +403,7 @@ router.post("/:id/buy-vault", async (req, res) => {
             status: "COMPLETED",
             protocol_fee_usdc: Number((salePrice * 0.01).toFixed(2)),
             tx_hash: tx_hash || wipeResult.txHash || nearService.generateNearReceiptHash(),
-            near_block: wipeResult.nearBlock || 118492031
+            near_block: wipeResult.nearBlock || (await nearService.getNetworkStatus()).latest_block_height
         });
 
         // 4. Record into Chat History
@@ -485,7 +485,8 @@ router.post("/:id/snipe", async (req, res) => {
         }
 
         const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-        const nearBlock = 276399000 + Math.floor(Math.random() * 5000);
+        const netStatus = await nearService.getNetworkStatus();
+        const nearBlock = netStatus.latest_block_height;
         const txHash = nearService.generateNearReceiptHash();
 
         await db.trade.create({

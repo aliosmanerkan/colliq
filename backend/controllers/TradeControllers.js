@@ -25,7 +25,21 @@ router.post("/trigger-swarm", async (req, res) => {
         );
         if (eligible.length >= 2) {
             const shuffled = eligible.sort(() => 0.5 - Math.random());
-            const fallbackResult = await negotiationEngine.runNegotiationRoom(shuffled[0], shuffled[1]);
+            const vA = shuffled[0];
+            const vB = shuffled[1];
+
+            // Mutex Lock Vaults during A2A Negotiation to prevent race conditions & front-running
+            await vA.update({ is_locked: true, lock_reason: "NEGOTIATING" });
+            await vB.update({ is_locked: true, lock_reason: "NEGOTIATING" });
+
+            let fallbackResult = null;
+            try {
+                fallbackResult = await negotiationEngine.runNegotiationRoom(vA, vB);
+            } finally {
+                await vA.update({ is_locked: false, lock_reason: null });
+                await vB.update({ is_locked: false, lock_reason: null });
+            }
+
             return res.json({ status: "SWARM_EXECUTED", engine: "negotiationEngine.ts", result: fallbackResult });
         }
 

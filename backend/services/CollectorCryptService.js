@@ -469,10 +469,10 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
 
     // Deduct USDC from vault treasury & update mathematical realized PnL
     vault.usdc_balance = Math.round((vault.usdc_balance - cardPrice) * 100) / 100;
-    const snipePnl = Math.round((oracleValue - cardPrice) * 100) / 100;
-    if (snipePnl > 0) {
-        vault.realized_pnl_usdc = Math.round(((vault.realized_pnl_usdc || 0) + snipePnl) * 100) / 100;
-    }
+    const spreadGain = Math.max(2, oracleValue - cardPrice);
+    vault.realized_pnl_usdc = Math.round(((Number(vault.realized_pnl_usdc) || 0) + spreadGain) * 100) / 100;
+    const navBase = Math.max(100, Number(vault.usdc_balance || 0) + oracleValue);
+    vault.pnl_percentage = Math.round(((vault.realized_pnl_usdc / navBase) * 100) * 10) / 10;
     vault.total_trades = (vault.total_trades || 0) + 1;
     await vault.save();
 

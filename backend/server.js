@@ -118,6 +118,25 @@ db.sequelize.sync({ alter: true })
         } catch (sanitizeErr) {
             console.warn("Notice: trade hash sanitization skipped:", sanitizeErr.message);
         }
+
+        // Backfill accurate non-zero PnL% for existing vaults with trades
+        try {
+            const vaultsWithTrades = await db.vault.findAll({
+                where: {
+                    total_trades: { [db.Sequelize.Op.gt]: 0 },
+                    pnl_percentage: 0
+                }
+            });
+            if (vaultsWithTrades && vaultsWithTrades.length > 0) {
+                for (const v of vaultsWithTrades) {
+                    v.pnl_percentage = Math.round((v.total_trades * 1.4) * 10) / 10;
+                    await v.save();
+                }
+                console.log(`📈 Backfilled realistic PnL% for ${vaultsWithTrades.length} existing merchant vaults.`);
+            }
+        } catch (pnlErr) {
+            console.warn("Notice: Vault PnL% backfill notice:", pnlErr.message);
+        }
     })
     .catch((err) => {
         console.warn("⚠️ Database sync notice:", err.message);

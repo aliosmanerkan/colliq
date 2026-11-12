@@ -509,7 +509,7 @@ export default function ActivityTab() {
 
                   {/* Transaction Proof: Only link real Near hashes */}
                   {cleanTxHash && !cleanTxHash.startsWith("DECLINED") && !cleanTxHash.startsWith("near:") ? (
-                    isDirectBuy ? (
+                    (isDirectBuy || trade.negotiation_log?.[0]?.payment_method === "NEAR_WALLET" || trade.payment_method === "NEAR_WALLET" || trade.payment_method === "NEAR") ? (
                       <a
                         href={`https://testnet.nearblocks.io/txns/${cleanTxHash}`}
                         target="_blank"
@@ -527,7 +527,7 @@ export default function ActivityTab() {
                         className="text-[#053b2a] bg-[#a8f0be]/30 hover:bg-[#a8f0be]/50 border border-[#a8f0be] px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold transition font-mono text-[11px]"
                         title="View contract on NEAR Explorer"
                       >
-                        <span>Receipt: {cleanTxHash.slice(0, 10)}...</span>
+                        <span>Solver Receipt • colliq.testnet ({cleanTxHash.slice(0, 8)}...)</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     )

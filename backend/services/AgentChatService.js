@@ -403,6 +403,14 @@ GUIDELINES:
             }
         }
 
+        // Reload vault state and existingRules so tool modifications to rules/guardrails are never stale
+        try {
+            await vault.reload();
+            existingRules = typeof vault.custom_rules === "string" ? JSON.parse(vault.custom_rules || "[]") : (vault.custom_rules || []);
+        } catch (reloadErr) {
+            console.warn("[AgentChat] Rules reload notice:", reloadErr.message);
+        }
+
         // Save agent response to history
         const agentMsgRecord = {
             id: `msg-${Date.now()}-a`,
@@ -485,7 +493,7 @@ GUIDELINES:
                 id: `msg-welcome-${vault.id}`,
                 sender: "agent",
                 senderAccount: vault.sub_account,
-                text: `Welcome. I am ${vault.name} (@${vault.sub_account}), your autonomous NEAR Merchant Vault trading agent.\n\nConnected to 1,000+ Brink's Vaulted PSA slabs and equipped with 10 on-chain tools (Marketplace Scanner, Oracle Valuation, A2A Barter, Grail Lock, and Balance Sheet Audit). Give me any command to execute.`,
+                text: `Welcome. I am ${vault.name} (@${vault.sub_account}), your autonomous NEAR Merchant Vault trading agent.\n\nConnected to 171,000+ Brink's & PWCC Vaulted PSA slabs and equipped with 12 on-chain tools (Marketplace Scanner, Oracle Valuation, A2A Barter, Grail Lock, and Balance Sheet Audit). Give me any command to execute.`,
                 actionType: "GREETING",
                 timestamp: new Date().toISOString()
             };

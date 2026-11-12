@@ -60,9 +60,15 @@ export default function VaultCard({ vault, onInspect, onTransfer, onChat }) {
           </div>
 
           <div>
-            {isLocked ? (
+            {vault.is_listed_for_sale ? (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 text-purple-800 text-[10px] font-semibold border border-purple-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                <span>Listed (${vault.sale_price_usdc || 100} USDC)</span>
+              </span>
+            ) : isLocked ? (
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-[10px] font-medium border border-amber-200">
-                <span>Negotiating...</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span>In Trade...</span>
               </span>
             ) : (
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-medium border border-emerald-200">

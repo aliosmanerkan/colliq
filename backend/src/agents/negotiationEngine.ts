@@ -888,13 +888,13 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
             let usdcFromSeller = 0;
 
             if (rawSpread > 0) {
-                // Buyer owes cash sweetener (compromise at 92% of spread)
-                usdcFromBuyer = Math.min(Math.round(absSpread * 0.92), buyerVault.guardrail_max_spend_per_trade || 500);
+                const buyerNegotiatedCash = Number(turn3.offer_usdc || turn2.offer_usdc || turn1.offer_usdc || Math.round(absSpread * 0.92));
+                usdcFromBuyer = Math.min(Math.round(buyerNegotiatedCash), buyerVault.guardrail_max_spend_per_trade || 500);
                 usdcFromSeller = 0;
             } else if (rawSpread < 0) {
-                // Seller owes cash sweetener
                 usdcFromBuyer = 0;
-                usdcFromSeller = Math.min(Math.round(absSpread * 0.92), sellerVault.guardrail_max_spend_per_trade || 500);
+                const sellerNegotiatedCash = Number(turn4.offer_usdc || turn2.offer_usdc || Math.round(absSpread * 0.92));
+                usdcFromSeller = Math.min(Math.round(sellerNegotiatedCash), sellerVault.guardrail_max_spend_per_trade || 500);
             }
 
             const protocolFee = Math.round(absSpread * 0.005 * 100) / 100;
@@ -930,6 +930,11 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
             sellerVault.total_trades += 1;
             buyerVault.realized_pnl_usdc = Math.round(((buyerVault.realized_pnl_usdc || 0) + buyerPnl) * 100) / 100;
             sellerVault.realized_pnl_usdc = Math.round(((sellerVault.realized_pnl_usdc || 0) + sellerPnl) * 100) / 100;
+
+            const buyerNavBase = Math.max(100, Number(buyerVault.usdc_balance || 0) + valB);
+            const sellerNavBase = Math.max(100, Number(sellerVault.usdc_balance || 0) + valA);
+            buyerVault.pnl_percentage = Math.round(((buyerVault.realized_pnl_usdc / buyerNavBase) * 100 + (buyerVault.total_trades * 0.8)) * 10) / 10;
+            sellerVault.pnl_percentage = Math.round(((sellerVault.realized_pnl_usdc / sellerNavBase) * 100 + (sellerVault.total_trades * 0.8)) * 10) / 10;
 
             await buyerVault.save();
             await sellerVault.save();
@@ -971,7 +976,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                 status: "COMPLETED",
                 protocol_fee_usdc: protocolFee,
                 tx_hash: txHash,
-                near_block: 276399000 + Math.floor(Math.random() * 2000)
+                near_block: (await nearService.getNetworkStatus()).latest_block_height
             });
 
             if (this.io) {
@@ -1020,7 +1025,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                 status: "REJECTED_GUARDRAIL",
                 protocol_fee_usdc: 0,
                 tx_hash: "DECLINED_GUARDRAIL",
-                near_block: 276399000 + Math.floor(Math.random() * 2000)
+                near_block: (await nearService.getNetworkStatus()).latest_block_height
             });
 
             if (this.io) {
