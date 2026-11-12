@@ -112,20 +112,9 @@ export class NearService {
 
     // NEAR Chain Signatures (MPC): Computes deterministic Solana Ed25519 address for a NEAR vault sub-account
     deriveSolanaAddressForVault(subAccount) {
-        // Deterministic base58-like address derived from sub-account (NEAR Chain Signatures KDF simulation)
-        let hash = 0;
-        for (let i = 0; i < subAccount.length; i++) {
-            hash = ((hash << 5) - hash) + subAccount.charCodeAt(i);
-            hash |= 0;
-        }
-        const b58chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-        let suffix = "";
-        let n = Math.abs(hash);
-        for (let i = 0; i < 16; i++) {
-            suffix += b58chars[(n + i * 7) % b58chars.length];
-            n = (n * 31 + i) % 1000000007;
-        }
-        return `SolVault${suffix}7x9Q`;
+        const path = `near-mpc-recovery:v1.signer-prod.testnet:${subAccount},solana-1`;
+        const hashBuffer = crypto.createHash("sha256").update(path).digest();
+        return toBase58(hashBuffer);
     }
 
     // Real Cryptographic Key Pair generation via near-api-js KeyPairEd25519
@@ -233,13 +222,15 @@ export class NearService {
 
         const msgBytes = Buffer.from(JSON.stringify(intentPayload));
         const sig = keyPair.sign(msgBytes);
-        const signatureBase58 = Buffer.from(sig.signature).toString("base64");
+        const signatureBase58 = toBase58(Buffer.from(sig.signature));
+        const sha256_payload_hash = crypto.createHash("sha256").update(msgBytes).digest("hex");
 
         return {
             intent_id: `intent-rwa-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
             payload: intentPayload,
+            sha256_payload_hash,
             public_key: keyPair.getPublicKey().toString(),
-            signature: `ed25519:${signatureBase58.slice(0, 44)}`,
+            signature: `ed25519:${signatureBase58}`,
             solver_status: "FULFILLED_BY_SOLVER"
         };
     }
@@ -277,12 +268,14 @@ export class NearService {
         };
 
         const msgBytes = Buffer.from(JSON.stringify(intentPayload));
-        const sigA = Buffer.from(keyPairA.sign(msgBytes).signature).toString("base64").slice(0, 40);
-        const sigB = Buffer.from(keyPairB.sign(msgBytes).signature).toString("base64").slice(0, 40);
+        const sigA = toBase58(Buffer.from(keyPairA.sign(msgBytes).signature));
+        const sigB = toBase58(Buffer.from(keyPairB.sign(msgBytes).signature));
+        const sha256_payload_hash = crypto.createHash("sha256").update(msgBytes).digest("hex");
 
         return {
             intent_id: `intent-barter-${Date.now().toString(36)}`,
             payload: intentPayload,
+            sha256_payload_hash,
             signatures: {
                 [vaultA.sub_account || "vault_a"]: `ed25519:${sigA}`,
                 [vaultB.sub_account || "vault_b"]: `ed25519:${sigB}`

@@ -107,9 +107,9 @@ impl ColliqContract {
         self.vaults.insert(&token_id, &vault_state);
 
         let metadata = TokenMetadata {
-            title: Some(name),
+            title: Some(name.clone()),
             description: Some(format!("Autonomous Merchant Vault NFT owning {}", sub_account)),
-            media: Some(format!("https://colliq.xyz/api/vaults/{}/svg", token_id)),
+            media: Some(format!("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 500'><rect width='400' height='500' rx='24' fill='%23053b2a'/><text x='30' y='60' fill='%23a8f0be' font-family='monospace' font-size='16' font-weight='bold'>COLLIQ MERCHANT VAULT</text><text x='30' y='100' fill='white' font-family='sans-serif' font-size='22' font-weight='bold'>{}</text><text x='30' y='140' fill='%2394a3b8' font-family='monospace' font-size='14'>{}</text><rect x='30' y='180' width='340' height='80' rx='12' fill='%23074b35'/><text x='50' y='210' fill='%2394a3b8' font-size='12'>TREASURY BALANCE</text><text x='50' y='240' fill='%2334d399' font-size='24' font-weight='bold'>$500.00 USDC</text></svg>", name, sub_account)),
             media_hash: None,
             copies: Some(1),
             issued_at: Some(env::block_timestamp().to_string()),
@@ -122,7 +122,10 @@ impl ColliqContract {
         };
 
         let token = self.tokens.internal_mint(token_id, receiver_id, Some(metadata));
-        near_sdk::assert_one_yocto();
+        require!(
+            env::attached_deposit() >= 50_000_000_000_000_000_000_000,
+            "Requires at least 0.05 NEAR attached deposit for sub-account storage staking"
+        );
         token
     }
 
@@ -184,6 +187,10 @@ impl ColliqContract {
     ) {
         let mut vault_a = self.vaults.get(&vault_a_id).expect("Vault A not found");
         let mut vault_b = self.vaults.get(&vault_b_id).expect("Vault B not found");
+
+        let caller = env::predecessor_account_id();
+        let token_a = self.tokens.nft_token(vault_a_id.clone()).expect("Token A not found");
+        require!(caller == self.tokens.owner_id || caller == token_a.owner_id, "Unauthorized caller for A2A settlement");
 
         require!(!vault_a.is_locked && !vault_b.is_locked, "Vaults are locked!");
 

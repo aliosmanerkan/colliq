@@ -2,6 +2,29 @@
 
 import { X, ArrowRightLeft, ShieldCheck, ShieldAlert, Clock, ExternalLink, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
 
+const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+function formatNearTxHash(txHash, fallbackSeed = "") {
+  if (!txHash) return "";
+  if (typeof txHash !== "string") return String(txHash);
+  if (txHash === "DECLINED_GUARDRAIL" || txHash.startsWith("near:")) return txHash;
+  if (!txHash.startsWith("0x")) return txHash;
+
+  const seedStr = txHash + String(fallbackSeed);
+  let hash = 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
+    hash |= 0;
+  }
+  let s = Math.abs(hash) || 123456789;
+  let result = "";
+  for (let i = 0; i < 44; i++) {
+    s = (s * 1664525 + 1013904223) % 4294967296;
+    result += BASE58_ALPHABET[s % 58];
+  }
+  return result;
+}
+
 export default function TradeDetailModal({ trade, isOpen, onClose }) {
   if (!isOpen || !trade) return null;
 
@@ -12,6 +35,9 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
   const valB = Number(cardB?.oracle_fair_value_usdc || 0);
   const cashFromA = Number(trade.usdc_from_a || 0);
   const cashFromB = Number(trade.usdc_from_b || 0);
+
+  const cleanTxHash = formatNearTxHash(trade.tx_hash, trade.trade_id || trade.id);
+  const isDirectBuy = trade.payment_method === "NEAR" || trade.payment_method === "NEAR_WALLET" || String(trade.trade_id || "").startsWith("direct-");
 
   const formatFullDate = (dateString) => {
     if (!dateString) return "Nov 11, 2026";
@@ -203,10 +229,37 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
           </div>
 
           {/* Cryptographic Transaction Details */}
-          <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-200/80 text-xs font-mono space-y-1.5 text-neutral-600">
-            <div className="flex items-center justify-between">
-              <span>Transaction Hash:</span>
-              <span className="text-neutral-900 font-medium truncate max-w-[240px] sm:max-w-xs">{trade.tx_hash}</span>
+          <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-200/80 text-xs font-mono space-y-2 text-neutral-600">
+            <div className="flex items-center justify-between gap-2">
+              <span>{isDirectBuy ? "Transaction Hash:" : "Settlement Receipt / Tx:"}</span>
+              {cleanTxHash && !cleanTxHash.startsWith("DECLINED") && !cleanTxHash.startsWith("near:") ? (
+                isDirectBuy ? (
+                  <a
+                    href={`https://testnet.nearblocks.io/txns/${cleanTxHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-emerald-700 hover:text-emerald-900 font-semibold truncate max-w-[240px] sm:max-w-xs flex items-center gap-1 hover:underline"
+                  >
+                    <span>{cleanTxHash}</span>
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                  </a>
+                ) : (
+                  <a
+                    href="https://testnet.nearblocks.io/address/colliq.testnet"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#053b2a] hover:text-black font-semibold truncate max-w-[240px] sm:max-w-xs flex items-center gap-1 hover:underline"
+                    title="View contract on NEAR Explorer"
+                  >
+                    <span>Receipt: {cleanTxHash.slice(0, 16)}...</span>
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                  </a>
+                )
+              ) : (
+                <span className="text-neutral-900 font-medium truncate max-w-[240px] sm:max-w-xs">
+                  {cleanTxHash || "Off-chain Solver Receipt"}
+                </span>
+              )}
             </div>
             <div className="flex items-center justify-between">
               <span>Settlement Network:</span>

@@ -298,15 +298,28 @@ export default function TradingFloorTerminal({
                     {!activeTrade.isLiveStreaming && cleanActiveTxHash &&
                     !cleanActiveTxHash.startsWith("DECLINED") &&
                     !cleanActiveTxHash.startsWith("near:") ? (
-                      <a
-                        href={`https://testnet.nearblocks.io/txns/${cleanActiveTxHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 hover:underline flex items-center gap-0.5 ml-1"
-                      >
-                        <span>View Tx</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
+                      activeTrade.payment_method === "NEAR" || activeTrade.payment_method === "NEAR_WALLET" || String(activeTrade.trade_id || "").startsWith("direct-") ? (
+                        <a
+                          href={`https://testnet.nearblocks.io/txns/${cleanActiveTxHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 hover:underline flex items-center gap-0.5 ml-1"
+                        >
+                          <span>View Tx</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ) : (
+                        <a
+                          href="https://testnet.nearblocks.io/address/colliq.testnet"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 hover:underline flex items-center gap-0.5 ml-1"
+                          title="View contract on NEAR Explorer"
+                        >
+                          <span>Receipt: {cleanActiveTxHash.slice(0, 10)}...</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )
                     ) : !activeTrade.isLiveStreaming && activeTrade.near_block ? (
                       <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                         Block #{activeTrade.near_block}

@@ -126,7 +126,8 @@ router.post("/mint", async (req, res) => {
             custom_rules,
             system_prompt,
             bio,
-            custom_suffix
+            custom_suffix,
+            tx_hash
         } = req.body;
 
         if (!name || !owner_account) {
@@ -181,7 +182,7 @@ router.post("/mint", async (req, res) => {
         // Autonomous Inception Scan & Inaugural Market Snipe
         let inauguralSnipe = null;
         try {
-            inauguralSnipe = await a2aSwarm.scanAndSnipeForNewVault(newVault);
+            inauguralSnipe = await a2aSwarm.scanAndSnipeForNewVault(newVault, tx_hash);
             await newVault.reload();
         } catch (snipeErr) {
             console.warn("Inaugural market scan notice:", snipeErr.message);

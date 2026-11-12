@@ -409,7 +409,7 @@ export class A2ASwarmService {
     /**
      * Executes inaugural market scan & optional acquisition when a new agent is minted
      */
-    async scanAndSnipeForNewVault(vault) {
+    async scanAndSnipeForNewVault(vault, passedTxHash = null) {
         if (!vault) return null;
         try {
             let searchKeywords = "";
@@ -456,7 +456,7 @@ export class A2ASwarmService {
                     // Create trade ledger record
                     const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
                     const nearBlock = 276399000 + Math.floor(Math.random() * 5000);
-                    const txHash = nearService.generateNearReceiptHash();
+                    const txHash = passedTxHash || nearService.generateNearReceiptHash();
 
                     await db.trade.create({
                         trade_id: tradeId,

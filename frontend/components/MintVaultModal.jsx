@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, ArrowRight, ArrowLeft, Send, Check, Trash2, Plus } from "lucide-react";
 import api from "@/lib/api";
-import { initNearWallet } from "@/lib/near";
+import { initNearWallet, executeNearPayment } from "@/lib/near";
 
 export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
   // Step 1: Capital & Identity, Step 2: Strategy & Rules (Chat + Rules Split), Step 3: Review & Deploy
@@ -150,15 +150,41 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
     setError("");
 
     try {
+      let txHash = null;
+      let effectiveOwner = connectedAccount || "alierkan.testnet";
+
+      try {
+        const wallet = await initNearWallet();
+        if (wallet?.accountId) {
+          effectiveOwner = wallet.accountId;
+          // Trigger genuine on-chain payment for merchant vault sub-account deployment / storage staking
+          const payment = await executeNearPayment({
+            receiverId: "colliq.testnet",
+            amountNear: "0.10"
+          });
+          if (payment?.txHash) {
+            txHash = payment.txHash;
+          }
+        }
+      } catch (walletErr) {
+        console.warn("Wallet on-chain confirmation notice:", walletErr.message);
+        if (walletErr.message?.includes("User rejected") || walletErr.message?.includes("cancelled")) {
+          setError("Transaction was cancelled in wallet. Deployment aborted.");
+          setLoading(false);
+          return;
+        }
+      }
+
       const res = await api.post("/vaults/mint", {
         name: name.trim(),
         custom_suffix: suffixCode,
-        owner_account: connectedAccount || "alierkan.testnet",
+        owner_account: effectiveOwner,
         usdc_deposit: parseFloat(usdcDeposit) || 500,
         strategy: "BALANCED_TRADER",
         guardrail_max_spend: parseFloat(maxSpend) || 175,
         custom_rules: rules,
-        bio: `Autonomous Merchant Vault (${rules.length} active directives).`
+        bio: `Autonomous Merchant Vault (${rules.length} active directives).`,
+        tx_hash: txHash
       });
 
       if (res.data?.status === "MINTED") {

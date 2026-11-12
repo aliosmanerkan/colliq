@@ -509,15 +509,28 @@ export default function ActivityTab() {
 
                   {/* Transaction Proof: Only link real Near hashes */}
                   {cleanTxHash && !cleanTxHash.startsWith("DECLINED") && !cleanTxHash.startsWith("near:") ? (
-                    <a
-                      href={`https://testnet.nearblocks.io/txns/${cleanTxHash}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold transition"
-                    >
-                      <span>Verified NEAR Tx: {cleanTxHash.slice(0, 12)}...</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+                    isDirectBuy ? (
+                      <a
+                        href={`https://testnet.nearblocks.io/txns/${cleanTxHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold transition"
+                      >
+                        <span>Verified NEAR Tx: {cleanTxHash.slice(0, 12)}...</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <a
+                        href="https://testnet.nearblocks.io/address/colliq.testnet"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[#053b2a] bg-[#a8f0be]/30 hover:bg-[#a8f0be]/50 border border-[#a8f0be] px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold transition font-mono text-[11px]"
+                        title="View contract on NEAR Explorer"
+                      >
+                        <span>Receipt: {cleanTxHash.slice(0, 10)}...</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )
                   ) : cleanTxHash ? (
                     <span className="text-neutral-500 bg-neutral-100 border border-neutral-200 px-2.5 py-1 rounded-full font-mono text-[11px]">
                       Settlement Ref: {cleanTxHash.slice(0, 14)}...
