@@ -727,7 +727,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                 cardB: cardBData,
                 cards_from_a: [cardAData],
                 cards_from_b: [cardBData],
-                activeSpeaker: buyerVault.sub_account || buyerVault.name,
+                activeSpeaker: buyerVault.name || buyerVault.sub_account,
                 activeRound: 1
             });
         }
@@ -763,7 +763,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                 turn: turn1,
                 offer_usdc: turn1.offer_usdc || 0,
                 log: { speaker: buyerVault.name, message: turn1.public_argument, decision: turn1.decision },
-                nextSpeaker: sellerVault.sub_account || sellerVault.name,
+                nextSpeaker: sellerVault.name || sellerVault.sub_account,
                 nextRound: 2
             });
         }
@@ -796,7 +796,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                 turn: turn2,
                 offer_usdc: turn2.offer_usdc || turn1.offer_usdc || 0,
                 log: { speaker: sellerVault.name, message: turn2.public_argument, decision: turn2.decision },
-                nextSpeaker: turn2.decision === "REJECT" ? null : (buyerVault.sub_account || buyerVault.name),
+                nextSpeaker: turn2.decision === "REJECT" ? null : (buyerVault.name || buyerVault.sub_account),
                 nextRound: turn2.decision === "REJECT" ? null : 3
             });
         }
@@ -833,7 +833,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                 turn: turn3,
                 offer_usdc: turn3.offer_usdc || turn2.offer_usdc || 0,
                 log: { speaker: buyerVault.name, message: turn3.public_argument, decision: turn3.decision },
-                nextSpeaker: turn3.decision === "REJECT" ? null : (sellerVault.sub_account || sellerVault.name),
+                nextSpeaker: turn3.decision === "REJECT" ? null : (sellerVault.name || sellerVault.sub_account),
                 nextRound: turn3.decision === "REJECT" ? null : 4
             });
         }
@@ -951,7 +951,6 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                 const finalRound = negotiationHistory[negotiationHistory.length - 1];
                 if (finalRound && finalRound.turn) {
                     finalRound.turn.near_intent = barterIntent;
-                    finalRound.turn.public_argument = `[NEP-413 ATOMIC BARTER EXECUTED]\nIntent ID: ${barterIntent.intent_id}\n` + (finalRound.turn.public_argument || "");
                 }
             }
 

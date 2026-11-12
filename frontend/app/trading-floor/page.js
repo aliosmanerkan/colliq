@@ -47,23 +47,23 @@ export default function TradingFloorPage() {
         {/* Left Side: Title & Inline Metrics */}
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
-            Live Barter & Settlement Floor
+            Live Agent Trading Floor
           </h1>
           <div className="text-xs text-slate-500 flex flex-wrap items-center gap-3 sm:gap-4 mt-1">
             <span>
-              <strong className="text-slate-700 font-semibold">Active Vaults:</strong> {userVaultsCount}
+              <strong className="text-slate-700 font-semibold">Active Agents:</strong> {userVaultsCount}
             </span>
             <span className="text-slate-300">•</span>
             <span>
-              <strong className="text-slate-700 font-semibold">Settled Swaps:</strong> {settledTradesCount}
+              <strong className="text-slate-700 font-semibold">Completed Trades:</strong> {settledTradesCount}
             </span>
             <span className="text-slate-300">•</span>
             <span>
-              <strong className="text-slate-700 font-semibold">Guardrail Vetoes:</strong> {vetoedTradesCount}
+              <strong className="text-slate-700 font-semibold">Declined Offers:</strong> {vetoedTradesCount}
             </span>
             <span className="text-slate-300">•</span>
             <span>
-              <strong className="text-slate-700 font-semibold">24h Volume:</strong> ${Number(volume).toLocaleString()} USDC
+              <strong className="text-slate-700 font-semibold">Total Volume:</strong> ${Number(volume).toLocaleString()} USDC
             </span>
           </div>
         </div>
@@ -78,7 +78,7 @@ export default function TradingFloorPage() {
                 ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-sm"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             }`}
-            title="When enabled, agents continuously negotiate trades every 14 seconds"
+            title="When enabled, agents continuously trade and find deals every 14 seconds"
           >
             <span
               className={`w-2 h-2 rounded-full ${
@@ -88,26 +88,26 @@ export default function TradingFloorPage() {
             <span>Auto-Pilot: {isAutoRunning ? "ON" : "OFF"}</span>
           </button>
 
-          {/* Snipe Market Button */}
+          {/* Find Market Deals Button */}
           <button
             onClick={handleTriggerSnipe}
             disabled={isSniping}
             className="px-3.5 py-1.5 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50 shadow-2xs cursor-pointer"
-            title="Trigger Collector Crypt market sniper to scan 170k+ slabs against agent directives"
+            title="Scan 170k+ Collector Crypt physical slabs against agent buying directives"
           >
             <Target className={`w-3.5 h-3.5 text-slate-600 ${isSniping ? "animate-spin" : ""}`} />
-            <span>{isSniping ? "Sniping..." : "Snipe Market"}</span>
+            <span>{isSniping ? "Scanning Market..." : "Find Market Deals"}</span>
           </button>
 
-          {/* Run Match Cycle Button */}
+          {/* Start Agent Trade Button */}
           <button
             onClick={handleTriggerSwarm}
             disabled={isTriggering}
             className="px-4 py-1.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50 shadow-sm cursor-pointer"
-            title="Trigger atomic A2A barter negotiation cycle between eligible vaults"
+            title="Start an autonomous trade negotiation between two agents"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isTriggering ? "animate-spin" : ""}`} />
-            <span>{isTriggering ? "Matching..." : "Run Match Cycle"}</span>
+            <span>{isTriggering ? "Starting Trade..." : "Start Agent Trade"}</span>
           </button>
         </div>
       </div>

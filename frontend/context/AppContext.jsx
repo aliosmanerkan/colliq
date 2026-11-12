@@ -89,16 +89,16 @@ export function AppProvider({ children }) {
               preloaded.push({
                 id: `rejected-${t.id || t.trade_id}`,
                 type: "rejected",
-                speaker: "GUARDRAIL RISK SYSTEM",
-                message: `[GUARDRAIL VETO] Trade declined: Terms exceeded risk guardrail limits between ${t.vault_a_name} and ${t.vault_b_name}.`,
+                speaker: "AGENT GUARDRAILS",
+                message: `[DECLINED] Trade declined: Terms exceeded safety limits between ${t.vault_a_name} and ${t.vault_b_name}.`,
                 timestamp: new Date(t.createdAt).getTime() || Date.now(),
               });
             } else {
               preloaded.push({
                 id: `settled-${t.id || t.trade_id}`,
                 type: "settled",
-                speaker: "NEAR ATOMIC SETTLEMENT",
-                message: `[SETTLED] Consensus locked. Parity swap executed between ${t.vault_a_name} and ${t.vault_b_name}.`,
+                speaker: "NEAR SETTLEMENT",
+                message: `[COMPLETED] Trade agreed. Card swap executed between ${t.vault_a_name} and ${t.vault_b_name}.`,
                 details: { txHash },
                 timestamp: new Date(t.createdAt).getTime() || Date.now(),
               });
@@ -110,7 +110,7 @@ export function AppProvider({ children }) {
                   id: `round-${t.id}-${round.round}`,
                   type: "round",
                   speaker: `${round.agent || "Agent"} (Round ${round.round})`,
-                  message: round.turn?.public_argument || "Barter terms proposed.",
+                  message: round.turn?.public_argument || "Offer proposed.",
                   decision: round.turn?.decision || null,
                   timestamp: new Date(t.createdAt).getTime() || Date.now(),
                 });
@@ -154,14 +154,14 @@ export function AppProvider({ children }) {
     const onDisconnect = () => setSocketStatus("disconnected");
 
     const onMatchFound = (data) => {
-      const nameA = data.vaultA?.name || data.vaultA?.sub_account || "Agent A";
-      const nameB = data.vaultB?.name || data.vaultB?.sub_account || "Agent B";
+      const nameA = data.vaultA?.name || data.vaultA?.sub_account || "Agent 1";
+      const nameB = data.vaultB?.name || data.vaultB?.sub_account || "Agent 2";
       setLiveEvents((prev) => [
         {
           id: `match-${Date.now()}-${Math.random()}`,
           type: "match",
-          speaker: "A2A MATCHMAKER",
-          message: `[MATCHED] ${nameA} ⇄ ${nameB} entered atomic negotiation channel.`,
+          speaker: "MATCHMAKER",
+          message: `[MATCHED] ${nameA} ⇄ ${nameB} started a card trade negotiation.`,
           timestamp: Date.now(),
         },
         ...prev.slice(0, 50),
@@ -177,25 +177,25 @@ export function AppProvider({ children }) {
         status: "NEGOTIATING",
         vault_a_id: data.vaultA?.id,
         vault_b_id: data.vaultB?.id,
-        vault_a_name: data.vaultA?.sub_account || data.vaultA?.name || "Initiator Agent",
-        vault_b_name: data.vaultB?.sub_account || data.vaultB?.name || "Counterparty Agent",
+        vault_a_name: data.vaultA?.name || data.vaultA?.sub_account || "Agent 1",
+        vault_b_name: data.vaultB?.name || data.vaultB?.sub_account || "Agent 2",
         vault_a_owner: data.vaultA?.owner_id || data.vaultA?.owner_account,
         vault_b_owner: data.vaultB?.owner_id || data.vaultB?.owner_account,
         cards_from_a: cardA ? [cardA] : [],
         cards_from_b: cardB ? [cardB] : [],
-        card_a_name: cardA?.name || "Initiator Slab",
+        card_a_name: cardA?.name || "Card 1",
         card_a_image: cardA?.image_url,
         card_a_company: cardA?.grading_company,
         card_a_grade: cardA?.grade,
         card_a_oracle: cardA?.oracle_price || cardA?.oracle_fair_value_usdc,
-        card_b_name: cardB?.name || "Counterparty Slab",
+        card_b_name: cardB?.name || "Card 2",
         card_b_image: cardB?.image_url,
         card_b_company: cardB?.grading_company,
         card_b_grade: cardB?.grade,
         card_b_oracle: cardB?.oracle_price || cardB?.oracle_fair_value_usdc,
         usdc_from_a: 0,
         usdc_from_b: 0,
-        activeSpeaker: data.activeSpeaker || data.vaultA?.sub_account || data.vaultA?.name || "Initiator Agent",
+        activeSpeaker: data.activeSpeaker || data.vaultA?.name || data.vaultA?.sub_account || "Agent 1",
         activeRound: data.activeRound || 1,
         negotiation_log: [],
         createdAt: new Date().toISOString()
@@ -254,15 +254,15 @@ export function AppProvider({ children }) {
     };
 
     const onTradeSettled = (data) => {
-      const buyer = data.buyer || "Agent A";
-      const seller = data.seller || "Agent B";
+      const buyer = data.buyer || "Agent 1";
+      const seller = data.seller || "Agent 2";
       const txHash = data.txHash || data.trade?.tx_hash || "0x9482bf...38a";
       setLiveEvents((prev) => [
         {
           id: `settled-${Date.now()}-${Math.random()}`,
           type: "settled",
-          speaker: "NEAR ATOMIC SETTLEMENT",
-          message: `[SETTLED] Consensus locked. Parity swap executed between ${buyer} and ${seller}. NEAR state synchronized.`,
+          speaker: "NEAR SETTLEMENT",
+          message: `[COMPLETED] Trade agreed. Card swap executed between ${buyer} and ${seller}. NEAR state synchronized.`,
           details: { txHash },
           timestamp: Date.now(),
         },
@@ -277,8 +277,8 @@ export function AppProvider({ children }) {
         {
           id: `evt-${Date.now()}-${Math.random()}`,
           type: "settled",
-          speaker: "A2A ENGINE",
-          message: `[SETTLED] Deal locked: ${data.vaultA} swapped with ${data.vaultB}. Card: ${data.cardTitle || "PSA Slab"}.`,
+          speaker: "TRADE ENGINE",
+          message: `[COMPLETED] Trade completed: ${data.vaultA} swapped cards with ${data.vaultB}. Card: ${data.cardTitle || "Graded Card"}.`,
           timestamp: Date.now(),
         },
         ...prev.slice(0, 50),
@@ -292,7 +292,7 @@ export function AppProvider({ children }) {
         {
           id: `rejected-${Date.now()}-${Math.random()}`,
           type: "rejected",
-          speaker: "GUARDRAIL RISK SYSTEM",
+          speaker: "AGENT GUARDRAILS",
           message: data.reason 
             ? `[DECLINED] ${data.reason}` 
             : `[DECLINED] Trade declined by agent safety rules between ${data.vaultA || data.buyer} and ${data.vaultB || data.seller}. Zero loss incurred.`,
@@ -306,14 +306,14 @@ export function AppProvider({ children }) {
 
     const onMarketSnipe = (data) => {
       const vName = data.vault?.name || "Agent";
-      const cName = data.card?.name || "Physical Slab";
+      const cName = data.card?.name || "Graded Card";
       const price = data.price ? `$${Number(data.price).toFixed(2)} USDC` : "Market Price";
       setLiveEvents((prev) => [
         {
           id: `snipe-${Date.now()}-${Math.random()}`,
           type: "snipe",
-          speaker: "MARKET SNIPER",
-          message: `[MARKET SNIPE] ${vName} acquired ${cName} from Collector Crypt for ${price}. Physical slab secured in PWCC/Brink's vault.`,
+          speaker: "MARKET PURCHASE",
+          message: `[PURCHASE] ${vName} bought ${cName} from Collector Crypt for ${price}. Graded card secured in PWCC/Brink's vault.`,
           timestamp: Date.now(),
         },
         ...prev.slice(0, 50),

@@ -75,7 +75,7 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
           {/* Swapped Cards Summary Card */}
           <div className="p-5 rounded-2xl bg-[#fbfdfc] border border-neutral-200/80 space-y-4">
             <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
-              <span>Asset Barter Structure</span>
+              <span>Trade Summary</span>
               <span>{formatFullDate(trade.createdAt)}</span>
             </div>
 
@@ -90,8 +90,8 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
                   <h4 className="text-xs font-semibold text-neutral-900 truncate" title={cardA?.name}>{cardA?.name || "Physical Slab"}</h4>
                   <div className="text-[11px] text-neutral-500 mt-0.5">{cardA?.grade || "PSA 10"} • ${valA} USDC</div>
                   {cashFromA > 0 && (
-                    <div className="text-[10px] text-amber-700 font-mono font-medium mt-1">
-                      + ${cashFromA} USDC Sweetener
+                    <div className="text-[10px] text-emerald-700 font-mono font-medium mt-1">
+                      + ${cashFromA} USDC Cash Added
                     </div>
                   )}
                 </div>
@@ -107,8 +107,8 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
                   <h4 className="text-xs font-semibold text-neutral-900 truncate" title={cardB?.name}>{cardB?.name || "Physical Slab"}</h4>
                   <div className="text-[11px] text-neutral-500 mt-0.5">{cardB?.grade || "PSA 10"} • ${valB} USDC</div>
                   {cashFromB > 0 && (
-                    <div className="text-[10px] text-amber-700 font-mono font-medium mt-1">
-                      + ${cashFromB} USDC Sweetener
+                    <div className="text-[10px] text-emerald-700 font-mono font-medium mt-1">
+                      + ${cashFromB} USDC Cash Added
                     </div>
                   )}
                 </div>
@@ -137,7 +137,7 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-700">
               <FileText className="w-3.5 h-3.5 text-[#053b2a]" />
-              <span>Agent-to-Agent Negotiation Transcript</span>
+              <span>Agent Conversation Transcript</span>
             </div>
 
             {Array.isArray(trade.negotiation_log) && trade.negotiation_log.length > 0 ? (
@@ -145,7 +145,13 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
                 {trade.negotiation_log.map((turnItem, idx) => {
                   const turn = turnItem.turn || {};
                   const isAccept = turn.decision === "ACCEPT";
-                  const isReject = turn.decision === "REJECT";
+                  const isReject = turn.decision === "REJECT" || turn.decision === "REJECT_GUARDRAIL";
+                  const cleanDialog = (turn.public_argument || "Offer presented.")
+                    .replace(/\[NEP-413.*?\]/gs, "")
+                    .replace(/Intent ID:.*?\n?/g, "")
+                    .replace(/^["']|["']$/g, "")
+                    .trim();
+
                   return (
                     <div
                       key={idx}
@@ -162,7 +168,7 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
                           <span className="font-bold text-neutral-900 uppercase font-sans">
                             {turnItem.agent || `Round ${turnItem.round || idx + 1}`}
                           </span>
-                          <span className="text-neutral-400 font-sans">Round {turnItem.round || idx + 1}</span>
+                          <span className="text-neutral-400 font-sans">Step {turnItem.round || idx + 1}</span>
                         </div>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                           isAccept
@@ -171,18 +177,18 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
                             ? "bg-rose-100 text-rose-800 border-rose-300"
                             : "bg-amber-100 text-amber-800 border-amber-300"
                         }`}>
-                          {turn.decision || "PROPOSAL"}
+                          {isAccept ? "DEAL AGREED" : isReject ? "DECLINED" : (turnItem.round === 1 ? "OPENING OFFER" : "COUNTER-OFFER")}
                         </span>
                       </div>
 
                       <p className="text-xs leading-relaxed font-sans text-neutral-800">
-                        {turn.public_argument || "Barter terms presented."}
+                        {cleanDialog}
                       </p>
 
                       {turn.private_reasoning_for_owner && (
                         <div className="mt-2 pt-2 border-t border-neutral-200/60 text-[11px] text-neutral-500 font-sans italic">
-                          <span className="font-medium not-italic text-neutral-700">Internal Risk Audit: </span>
-                          {turn.private_reasoning_for_owner}
+                          <span className="font-medium not-italic text-neutral-700">Note to Owner: </span>
+                          &ldquo;{turn.private_reasoning_for_owner}&rdquo;
                         </div>
                       )}
                     </div>
@@ -191,7 +197,7 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
               </div>
             ) : (
               <div className="p-4 rounded-xl bg-neutral-50 text-neutral-500 text-xs text-center font-sans">
-                Full negotiation transcript not recorded for this legacy trade.
+                Full negotiation transcript not recorded for this trade.
               </div>
             )}
           </div>

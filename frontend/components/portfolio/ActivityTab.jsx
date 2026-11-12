@@ -102,10 +102,10 @@ export default function ActivityTab() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-neutral-100">
         <div>
           <h3 className="text-sm font-semibold text-neutral-800">
-            Autonomous Deal Ledger
+            Trade & Purchase History
           </h3>
           <p className="text-xs text-neutral-500 font-poppins mt-0.5">
-            Verified A2A atomic swaps, autonomous snipes, and direct personal wallet acquisitions.
+            Verified agent card trades, marketplace acquisitions, and direct purchases.
           </p>
         </div>
 
@@ -129,7 +129,7 @@ export default function ActivityTab() {
                 : "hover:text-neutral-900"
             }`}
           >
-            A2A Barter ({barterCount})
+            Card Trades ({barterCount})
           </button>
           <button
             onClick={() => setFilter("snipes")}
@@ -139,7 +139,7 @@ export default function ActivityTab() {
                 : "hover:text-neutral-900"
             }`}
           >
-            Agent Snipes ({snipesCount})
+            Market Purchases ({snipesCount})
           </button>
           <button
             onClick={() => setFilter("direct")}
@@ -149,7 +149,7 @@ export default function ActivityTab() {
                 : "hover:text-neutral-900"
             }`}
           >
-            Direct Buys ({directCount})
+            Direct Purchases ({directCount})
           </button>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function ActivityTab() {
           <p className="text-sm font-semibold text-neutral-800">No transactions found for this filter</p>
           <p className="text-xs text-neutral-500 max-w-sm mx-auto">
             {filter === "all"
-              ? "Your agents will autonomously negotiate barter deals and market snipes according to your active directives."
+              ? "Your agents will autonomously negotiate card trades and market purchases according to your active directives."
               : `No deals currently match the selected "${filter}" category.`}
           </p>
         </div>
@@ -231,15 +231,15 @@ export default function ActivityTab() {
                           </span>
                         ) : isAgentSnipe ? (
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-900 text-white font-bold uppercase tracking-wide">
-                            AUTONOMOUS SNIPE
+                            MARKET PURCHASE
                           </span>
                         ) : isVaultAcq ? (
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-50 text-purple-900 border border-purple-200 font-bold uppercase tracking-wide">
-                            VAULT ACQUISITION
+                            VAULT PURCHASE
                           </span>
                         ) : (
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#a8f0be]/30 text-[#053b2a] border border-[#053b2a]/20 font-bold uppercase tracking-wide">
-                            A2A ATOMIC BARTER
+                            AGENT CARD TRADE
                           </span>
                         )}
                       </div>
@@ -247,12 +247,12 @@ export default function ActivityTab() {
                       {/* Subtitle */}
                       <div className="text-xs text-neutral-500 font-mono">
                         {isDirectBuy
-                          ? "Settled via NEAR Wallet & NEP-413 Cross-Chain Intent • Brink's / PWCC Custody"
+                          ? "Settled via NEAR Wallet & NEP-413 Intent • Brink's / PWCC Custody"
                           : isAgentSnipe
-                          ? "Autonomous Market Snipe • Physical PWCC / Brink's Custody"
+                          ? "Collector Crypt Market Purchase • Physical PWCC / Brink's Custody"
                           : isVaultAcq
                           ? "Zombie Key Wipe Executed • Full Sub-Account & Inventory Transferred"
-                          : `${trade.rounds_count || 4}-Round OpenRouter Negotiation • Atomic NEP-413 Settlement`}
+                          : `${trade.rounds_count || 4}-Round Agent Negotiation • Verified NEAR Intent`}
                       </div>
                     </div>
                   </div>
@@ -351,14 +351,14 @@ export default function ActivityTab() {
                           </span>
                         </div>
                         <h5 className="text-xs font-bold text-neutral-900 truncate">
-                          {cardA?.name || "Direct Cash Barter"}
+                          {cardA?.name || "Direct Cash Offer"}
                         </h5>
                         <div className="text-[11px] font-mono text-neutral-500">
                           Oracle: ${Number(cardA?.oracle_fair_value_usdc || cardA?.oracle_price || 0).toFixed(0)} USDC
                         </div>
                         {Number(trade.usdc_from_a || 0) > 0 && (
                           <div className="text-[10px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 mt-1 inline-block">
-                            + ${Number(trade.usdc_from_a).toFixed(2)} USDC Sweetener
+                            + ${Number(trade.usdc_from_a).toFixed(2)} USDC Cash Added
                           </div>
                         )}
                       </div>
@@ -402,7 +402,7 @@ export default function ActivityTab() {
                         </div>
                         {Number(trade.usdc_from_b || 0) > 0 && (
                           <div className="text-[10px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 mt-1 inline-block">
-                            + ${Number(trade.usdc_from_b).toFixed(2)} USDC Sweetener
+                            + ${Number(trade.usdc_from_b).toFixed(2)} USDC Cash Added
                           </div>
                         )}
                       </div>
@@ -469,10 +469,10 @@ export default function ActivityTab() {
                         {isExpanded
                           ? "Hide Details"
                           : isA2ABarter
-                          ? `View Agent Dialogue (${logRounds.length || trade.rounds_count || 4} Rounds)`
+                          ? `View Agent Conversation (${logRounds.length || trade.rounds_count || 4} Steps)`
                           : isVaultAcq
                           ? "View Zombie Key Wipe Proof"
-                          : "View NEP-413 Intent & Receipt"}
+                          : "View Purchase Receipt & Intent"}
                       </span>
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
                     </button>
@@ -507,71 +507,80 @@ export default function ActivityTab() {
                       <Bot className="w-3.5 h-3.5 text-[#053b2a]" />
                       <span>
                         {isA2ABarter
-                          ? "Autonomous Multi-Turn Barter Dialogue"
+                          ? "Agent Conversation"
                           : isVaultAcq
                           ? "On-Chain Ownership Transfer & Zombie Key Wipe Audit"
-                          : "NEP-413 Cross-Chain RWA Acquisition Intent & Receipt"}
+                          : "Verified Purchase Receipt & NEAR Intent"}
                       </span>
                     </div>
 
                     {isA2ABarter ? (
                       logRounds.length === 0 ? (
                         <p className="text-xs text-neutral-500 italic p-3 bg-[#f8faf9] rounded-xl border border-neutral-200">
-                          Negotiation rounds settled in atomic memory.
+                          Negotiation settled in atomic memory.
                         </p>
                       ) : (
                         <div className="space-y-2">
-                          {logRounds.map((turnItem, idx) => (
-                            <div
-                              key={idx}
-                              className="p-3.5 rounded-xl bg-[#f8faf9] border border-neutral-200/80 text-xs font-mono space-y-1.5"
-                            >
-                              <div className="flex items-center justify-between pb-1 border-b border-neutral-200/50">
-                                <span className="font-bold text-neutral-900 flex items-center gap-1.5">
-                                  <span className="w-4 h-4 rounded-full bg-[#073525] text-white text-[10px] flex items-center justify-center font-bold">
-                                    {turnItem.round || idx + 1}
-                                  </span>
-                                  <span>{turnItem.agent || (idx % 2 === 0 ? trade.vault_a_name : trade.vault_b_name)}</span>
-                                </span>
-                                <span
-                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                                    turnItem.turn?.decision === "ACCEPT"
-                                      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                                      : "bg-amber-100 text-amber-800 border-amber-300"
-                                  }`}
-                                >
-                                  {turnItem.turn?.decision || "COUNTER"}
-                                </span>
-                              </div>
+                          {logRounds.map((turnItem, idx) => {
+                            const rawDialog = turnItem.turn?.public_argument || turnItem.turn?.message || "";
+                            const cleanDialog = rawDialog
+                              .replace(/\[NEP-413.*?\]/gs, "")
+                              .replace(/Intent ID:.*?\n?/g, "")
+                              .replace(/^["']|["']$/g, "")
+                              .trim();
 
-                              <p className="text-neutral-800 leading-relaxed font-sans text-xs">
-                                "{turnItem.turn?.public_argument}"
-                              </p>
-
-                              {turnItem.turn?.near_intent && (
-                                <div className="mt-2 p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200 text-[10.5px] font-mono text-emerald-950 space-y-0.5">
-                                  <div className="flex items-center justify-between font-bold text-emerald-800 uppercase">
-                                    <span>Verified NEP-413 TokenDiff Barter Intent</span>
-                                    <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-300">
-                                      {turnItem.turn.near_intent.solver_status || "FULFILLED"}
+                            return (
+                              <div
+                                key={idx}
+                                className="p-3.5 rounded-xl bg-[#f8faf9] border border-neutral-200/80 text-xs font-mono space-y-1.5"
+                              >
+                                <div className="flex items-center justify-between pb-1 border-b border-neutral-200/50">
+                                  <span className="font-bold text-neutral-900 flex items-center gap-1.5">
+                                    <span className="w-4 h-4 rounded-full bg-[#073525] text-white text-[10px] flex items-center justify-center font-bold">
+                                      {turnItem.round || idx + 1}
                                     </span>
-                                  </div>
-                                  <div className="text-emerald-800 truncate">
-                                    <strong>Intent ID:</strong> {turnItem.turn.near_intent.intent_id}
-                                  </div>
-                                </div>
-                              )}
-
-                              {turnItem.turn?.private_reasoning_for_owner && (
-                                <div className="pt-1.5 border-t border-neutral-200/60 text-[11px] text-neutral-600 font-sans italic flex items-start gap-1.5 bg-white p-2.5 rounded-lg border border-neutral-100">
-                                  <span className="font-semibold text-neutral-800 not-italic shrink-0">
-                                    Internal Directive Telemetry:
+                                    <span>{turnItem.agent || (idx % 2 === 0 ? trade.vault_a_name : trade.vault_b_name)}</span>
                                   </span>
-                                  <span>{turnItem.turn.private_reasoning_for_owner}</span>
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                      turnItem.turn?.decision === "ACCEPT"
+                                        ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                                        : "bg-amber-100 text-amber-800 border-amber-300"
+                                    }`}
+                                  >
+                                    {turnItem.turn?.decision === "ACCEPT" ? "DEAL AGREED" : (turnItem.round === 1 ? "OPENING OFFER" : "COUNTER-OFFER")}
+                                  </span>
                                 </div>
-                              )}
-                            </div>
-                          ))}
+
+                                <p className="text-neutral-800 leading-relaxed font-sans text-xs">
+                                  &ldquo;{cleanDialog || "Offer presented."}&rdquo;
+                                </p>
+
+                                {turnItem.turn?.near_intent && (
+                                  <div className="mt-2 p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200 text-[10.5px] font-mono text-emerald-950 space-y-0.5">
+                                    <div className="flex items-center justify-between font-bold text-emerald-800 uppercase">
+                                      <span>Verified NEP-413 TokenDiff Barter Intent</span>
+                                      <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-300">
+                                        {turnItem.turn.near_intent.solver_status || "FULFILLED"}
+                                      </span>
+                                    </div>
+                                    <div className="text-emerald-800 truncate">
+                                      <strong>Intent ID:</strong> {turnItem.turn.near_intent.intent_id}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {turnItem.turn?.private_reasoning_for_owner && (
+                                  <div className="pt-1.5 border-t border-neutral-200/60 text-[11px] text-neutral-600 font-sans italic flex items-start gap-1.5 bg-white p-2.5 rounded-lg border border-neutral-100">
+                                    <span className="font-semibold text-neutral-800 not-italic shrink-0">
+                                      Note to Owner:
+                                    </span>
+                                    <span>&ldquo;{turnItem.turn.private_reasoning_for_owner}&rdquo;</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )
                     ) : (
@@ -588,12 +597,19 @@ export default function ActivityTab() {
                         </div>
 
                         <p className="text-neutral-800 leading-relaxed font-sans text-xs">
-                          {finalTurn?.public_argument || 
-                            (isDirectBuy 
-                              ? `Direct user purchase executed. Physical slab secured in PWCC/Brink's Oregon vault.`
-                              : isVaultAcq
-                              ? `Zombie Key Wipe & Atomic Ownership Transfer executed. Sub-account access keys successfully revoked.`
-                              : `Autonomous agent acquisition executed according to active directives.`)}
+                          {(() => {
+                            const raw = finalTurn?.public_argument || 
+                              (isDirectBuy 
+                                ? `Direct user purchase executed. Graded card secured in PWCC/Brink's Oregon vault.`
+                                : isVaultAcq
+                                ? `Zombie Key Wipe & Atomic Ownership Transfer executed. Sub-account access keys successfully revoked.`
+                                : `Autonomous agent acquisition executed according to active directives.`);
+                            return raw
+                              .replace(/\[NEP-413.*?\]/gs, "")
+                              .replace(/Intent ID:.*?\n?/g, "")
+                              .replace(/^["']|["']$/g, "")
+                              .trim();
+                          })()}
                         </p>
 
                         {finalTurn?.near_intent && (
@@ -618,9 +634,9 @@ export default function ActivityTab() {
                         {finalTurn?.private_reasoning_for_owner && (
                           <div className="pt-2 border-t border-neutral-200/60 text-[11px] text-neutral-600 font-sans italic flex items-start gap-1.5 bg-white p-2.5 rounded-lg border border-neutral-100">
                             <span className="font-semibold text-neutral-800 not-italic shrink-0">
-                              Directives Audit:
+                              Note to Owner:
                             </span>
-                            <span>{finalTurn.private_reasoning_for_owner}</span>
+                            <span>&ldquo;{finalTurn.private_reasoning_for_owner}&rdquo;</span>
                           </div>
                         )}
                       </div>
