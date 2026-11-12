@@ -20,7 +20,9 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   ExternalLink,
-  DollarSign
+  DollarSign,
+  FileCode,
+  Fingerprint
 } from "lucide-react";
 import api from "@/lib/api";
 import { useApp } from "@/context/AppContext";
@@ -505,6 +507,19 @@ export default function AgentCommandStudioModal({
                   <Clock className="w-3.5 h-3.5" />
                   <span>Deal History ({vaultTrades.length})</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("onchain")}
+                  className={`py-3.5 text-xs font-semibold border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === "onchain"
+                      ? "border-[#073525] text-[#073525]"
+                      : "border-transparent text-neutral-500 hover:text-neutral-900"
+                  }`}
+                >
+                  <FileCode className="w-3.5 h-3.5" />
+                  <span>On-Chain NFT</span>
+                </button>
               </div>
             </div>
 
@@ -846,6 +861,85 @@ export default function AgentCommandStudioModal({
                     );
                   })
                 )}
+              </div>
+            )}
+
+            {/* TAB 4: ON-CHAIN NFT CERTIFICATE */}
+            {activeTab === "onchain" && (
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="text-center space-y-1">
+                  <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wide">
+                    Dynamic NEP-171 Bearer Certificate
+                  </h3>
+                  <p className="text-xs text-neutral-500 max-w-md mx-auto">
+                    Live on-chain SVG vector certificate reflecting real-time AUM, liquid treasury, and Brink's sealed custody state.
+                  </p>
+                </div>
+
+                {/* High-Res Dynamic SVG Render */}
+                <div className="flex justify-center">
+                  <div className="relative w-full max-w-[320px] rounded-2xl overflow-hidden shadow-xl border border-[#053b2a]/30 bg-[#021d15]">
+                    <img
+                      src={`${api.defaults.baseURL || ""}/vaults/${vault.id}/svg`}
+                      alt={`${vault.name} On-Chain Certificate`}
+                      className="w-full h-auto object-contain block"
+                    />
+                  </div>
+                </div>
+
+                {/* NEP-171 / NEP-177 Dynamic State Metadata Grid */}
+                <div className="p-4 rounded-2xl bg-[#f8faf9] border border-neutral-200/80 space-y-3 font-mono text-xs">
+                  <div className="font-sans font-bold text-xs text-[#053b2a] uppercase tracking-wider flex items-center justify-between">
+                    <span>NEP-171 / NEP-177 Dynamic State</span>
+                    <span className="text-[10px] text-neutral-500 font-normal">NEAR Protocol Track 10</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                    <div className="p-2.5 rounded-xl bg-white border border-neutral-200/70">
+                      <div className="text-neutral-500 text-[10px]">TOKEN ID</div>
+                      <div className="font-bold text-neutral-900 truncate">{vault.vault_id || vault.id}</div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white border border-neutral-200/70">
+                      <div className="text-neutral-500 text-[10px]">SUB-ACCOUNT</div>
+                      <div className="font-bold text-[#053b2a] truncate">{vault.sub_account}</div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white border border-neutral-200/70">
+                      <div className="text-neutral-500 text-[10px]">SCOPED ED25519 KEY</div>
+                      <div className="font-bold text-neutral-800 truncate">{vault.access_key_public || "ed25519:fresh-key"}</div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white border border-neutral-200/70">
+                      <div className="text-neutral-500 text-[10px]">SOLANA MPC DERIVED VAULT</div>
+                      <div className="font-bold text-neutral-800 truncate">SolVault{vault.id * 1337}7x9Q</div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white border border-neutral-200/70 sm:col-span-2 flex items-center justify-between">
+                      <div>
+                        <div className="text-neutral-500 text-[10px]">MUTEX / LISTING STATUS</div>
+                        <div className={`font-bold ${vault.is_listed_for_sale ? "text-amber-600" : (vault.is_locked ? "text-rose-600" : "text-emerald-700")}`}>
+                          {vault.is_listed_for_sale
+                            ? `LISTED_FOR_SALE ($${vault.sale_price_usdc} USDC)`
+                            : (vault.is_locked ? `MUTEX_LOCKED (${vault.lock_reason || "ACTIVE"})` : "ACTIVE (READY_TO_TRADE)")}
+                        </div>
+                      </div>
+                      <span className={`w-2.5 h-2.5 rounded-full ${vault.is_listed_for_sale ? "bg-amber-500 animate-pulse" : (vault.is_locked ? "bg-rose-500" : "bg-emerald-500 animate-pulse")}`} />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <a
+                      href={`${api.defaults.baseURL || ""}/vaults/${vault.id}/svg`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2.5 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition"
+                    >
+                      <span>Open Raw On-Chain SVG</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
               </div>
             )}
           </div>

@@ -4,7 +4,7 @@ import DitheredFooter from "@/components/ui/dithered-footer";
 
 export default function LandingFooter() {
   return (
-    <div 
+    <div
       className="w-full"
       style={{
         "--background": "#a8f0be",
@@ -14,8 +14,8 @@ export default function LandingFooter() {
         "--input": "rgba(4, 50, 36, 0.3)"
       }}
     >
-      <DitheredFooter 
-        brand="Colliq"
+      <DitheredFooter
+        brand="COLLIQ"
         brandHref="/"
         tagline="Autonomous AI agent vaults collecting, sniping, and trading physical graded card slabs 24/7 on NEAR Protocol."
         accent="#043224"

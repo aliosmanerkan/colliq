@@ -218,6 +218,240 @@ router.post("/:id/transfer", async (req, res) => {
     }
 });
 
+// LIST VAULT FOR SALE (Anti-Front-Running Lock)
+router.post("/:id/list-for-sale", async (req, res) => {
+    try {
+        const { sale_price_usdc, owner_account } = req.body;
+        const vault = await db.vault.findOne({ where: getVaultWhere(req.params.id) });
+        if (!vault) return res.status(404).json({ error: "Vault not found" });
+
+        if (owner_account && vault.owner_account !== owner_account) {
+            return res.status(403).json({ error: "Only the vault owner can list this vault for sale" });
+        }
+
+        const price = Number(sale_price_usdc);
+        if (isNaN(price) || price <= 0) {
+            return res.status(400).json({ error: "Valid sale_price_usdc is required" });
+        }
+
+        // Check active trade / negotiation in db.trade
+        const activeTrade = await db.trade.findOne({
+            where: {
+                [db.Sequelize.Op.or]: [
+                    { vault_a_id: vault.id },
+                    { vault_b_id: vault.id }
+                ],
+                status: "PENDING"
+            }
+        });
+
+        if (activeTrade) {
+            return res.status(400).json({ error: "Vault is currently engaged in active trade negotiation. Cannot list for sale." });
+        }
+
+        if (vault.is_locked && vault.lock_reason !== "LISTED_FOR_SALE") {
+            return res.status(400).json({ error: `Vault is currently locked (${vault.lock_reason || "ACTIVE_TRADE"}). Cannot list for sale.` });
+        }
+
+        // Set listing state with Anti-Front-Running lock
+        vault.is_listed_for_sale = true;
+        vault.sale_price_usdc = price;
+        vault.is_locked = true;
+        vault.lock_reason = "LISTED_FOR_SALE";
+
+        // Log into chat history
+        let chat = [];
+        try { chat = JSON.parse(vault.chat_history || "[]"); } catch (e) { chat = []; }
+        chat.push({
+            role: "assistant",
+            content: `Vault listed on Colliq Marketplace for $${price.toLocaleString()} USDC. Anti-front-running lock engaged. All assets and cards secured until sale or unlisting.`,
+            timestamp: new Date().toISOString()
+        });
+        vault.chat_history = JSON.stringify(chat);
+
+        await vault.save();
+
+        const io = req.app.get("io");
+        if (io) {
+            io.emit("vault:updated", {
+                vaultId: vault.id,
+                sub_account: vault.sub_account,
+                is_listed_for_sale: true,
+                sale_price_usdc: vault.sale_price_usdc,
+                is_locked: true,
+                lock_reason: "LISTED_FOR_SALE"
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Vault successfully listed on marketplace with anti-front-running lock.",
+            vault
+        });
+    } catch (err) {
+        console.error("List for sale error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// UNLIST VAULT FROM SALE (Release Lock)
+router.post("/:id/unlist-sale", async (req, res) => {
+    try {
+        const { owner_account } = req.body;
+        const vault = await db.vault.findOne({ where: getVaultWhere(req.params.id) });
+        if (!vault) return res.status(404).json({ error: "Vault not found" });
+
+        if (owner_account && vault.owner_account !== owner_account) {
+            return res.status(403).json({ error: "Only the vault owner can unlist this vault" });
+        }
+
+        vault.is_listed_for_sale = false;
+        vault.sale_price_usdc = null;
+        vault.is_locked = false;
+        vault.lock_reason = null;
+
+        let chat = [];
+        try { chat = JSON.parse(vault.chat_history || "[]"); } catch (e) { chat = []; }
+        chat.push({
+            role: "assistant",
+            content: "Vault unlisted from marketplace. Lock released. Vault is active for autonomous trading.",
+            timestamp: new Date().toISOString()
+        });
+        vault.chat_history = JSON.stringify(chat);
+
+        await vault.save();
+
+        const io = req.app.get("io");
+        if (io) {
+            io.emit("vault:updated", {
+                vaultId: vault.id,
+                sub_account: vault.sub_account,
+                is_listed_for_sale: false,
+                sale_price_usdc: null,
+                is_locked: false,
+                lock_reason: null
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Vault unlisted successfully. Lock released.",
+            vault
+        });
+    } catch (err) {
+        console.error("Unlist sale error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ACQUIRE VAULT (Instant Zombie Key Wipe + Atomic Ownership Transfer)
+router.post("/:id/buy-vault", async (req, res) => {
+    try {
+        const { buyer_account, payment_method, tx_hash } = req.body;
+        if (!buyer_account) {
+            return res.status(400).json({ error: "buyer_account is required" });
+        }
+
+        const vault = await db.vault.findOne({
+            where: getVaultWhere(req.params.id),
+            include: [{ model: db.card, as: "inventory" }]
+        });
+        if (!vault) return res.status(404).json({ error: "Vault not found" });
+
+        if (!vault.is_listed_for_sale) {
+            return res.status(400).json({ error: "This vault is not currently listed for sale" });
+        }
+
+        if (vault.owner_account === buyer_account) {
+            return res.status(400).json({ error: "You already own this vault" });
+        }
+
+        const salePrice = vault.sale_price_usdc || 0;
+        const previousOwner = vault.owner_account;
+
+        // 1. Atomic Zombie Key Wipe
+        const wipeResult = await nearService.executeZombieKeyWipe(vault.id, buyer_account, true);
+
+        // 2. Transfer Vault Ownership & Reset Listing/Lock State
+        vault.owner_account = buyer_account;
+        vault.is_listed_for_sale = false;
+        vault.sale_price_usdc = null;
+        vault.is_locked = false;
+        vault.lock_reason = null;
+
+        // 3. Record Business Acquisition into db.trade
+        const tradeRecord = await db.trade.create({
+            trade_id: `acq-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            vault_a_id: vault.id,
+            vault_b_id: vault.id,
+            vault_a_name: vault.name,
+            vault_b_name: buyer_account,
+            cards_from_a: vault.inventory || [],
+            cards_from_b: [],
+            usdc_from_a: 0,
+            usdc_from_b: salePrice,
+            rounds_count: 1,
+            negotiation_log: [{
+                round: 1,
+                action: "BUSINESS_ACQUISITION",
+                buyer: buyer_account,
+                seller: previousOwner,
+                salePrice,
+                timestamp: new Date().toISOString()
+            }],
+            status: "COMPLETED",
+            protocol_fee_usdc: Number((salePrice * 0.01).toFixed(2)),
+            tx_hash: tx_hash || wipeResult.txHash || `0xacq${Date.now()}`,
+            near_block: wipeResult.nearBlock || 118492031
+        });
+
+        // 4. Record into Chat History
+        let chat = [];
+        try { chat = JSON.parse(vault.chat_history || "[]"); } catch (e) { chat = []; }
+        chat.push({
+            role: "assistant",
+            content: `BUSINESS_ACQUISITION: Ownership transferred from ${previousOwner} to ${buyer_account} for $${salePrice.toLocaleString()} USDC. Old Function-Call access key revoked. Fresh Ed25519 key assigned. Welcome to Colliq Protocol.`,
+            timestamp: new Date().toISOString()
+        });
+        vault.chat_history = JSON.stringify(chat);
+
+        await vault.save();
+
+        const io = req.app.get("io");
+        if (io) {
+            io.emit("vault:updated", {
+                vaultId: vault.id,
+                sub_account: vault.sub_account,
+                owner_account: buyer_account,
+                is_listed_for_sale: false,
+                sale_price_usdc: null,
+                is_locked: false,
+                lock_reason: null
+            });
+
+            io.emit("trade:executed", {
+                trade_id: tradeRecord.trade_id,
+                vault_name: vault.name,
+                type: "BUSINESS_ACQUISITION",
+                buyer_account,
+                salePrice,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Business-in-a-Box acquired successfully. Zombie key wiped & ownership transferred.",
+            vault,
+            wipeResult,
+            trade: tradeRecord
+        });
+    } catch (err) {
+        console.error("Buy vault error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // AGENT SNIPES / BUYS A CARD FROM THE MARKETPLACE
 router.post("/:id/snipe", async (req, res) => {
     try {

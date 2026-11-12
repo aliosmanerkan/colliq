@@ -123,11 +123,11 @@ export class NearService {
     }
 
     // ZOMBIE KEY WIPE: Revokes old AI Function-Call Access Key & assigns a fresh cryptographic ed25519 key
-    async executeZombieKeyWipe(vaultId, newOwnerAccount) {
+    async executeZombieKeyWipe(vaultId, newOwnerAccount, allowListedLock = false) {
         const vault = await db.vault.findOne({ where: { id: vaultId } });
         if (!vault) throw new Error("Vault not found");
 
-        if (vault.is_locked) {
+        if (vault.is_locked && (!allowListedLock || vault.lock_reason !== "LISTED_FOR_SALE")) {
             throw new Error("Vault is locked by active trade or mutex. Transfer blocked.");
         }
 
@@ -138,10 +138,10 @@ export class NearService {
         // Fetch live NEAR Testnet block
         const networkInfo = await this.getNetworkStatus();
 
-        console.log(`🧹 [NEAR TESTNET ON-CHAIN] ZOMBIE KEY WIPE for ${vault.sub_account}:`);
-        console.log(`   ❌ Revoking old public key: ${oldKey}`);
-        console.log(`   ✅ Authorized fresh key: ${newKeyPair.publicKey}`);
-        console.log(`   📦 Settled on NEAR Testnet block #${networkInfo.latest_block_height}`);
+        console.log(`[NEAR TESTNET ON-CHAIN] ZOMBIE KEY WIPE for ${vault.sub_account}:`);
+        console.log(`   Revoking old public key: ${oldKey}`);
+        console.log(`   Authorized fresh key: ${newKeyPair.publicKey}`);
+        console.log(`   Settled on NEAR Testnet block #${networkInfo.latest_block_height}`);
 
         vault.owner_account = newOwnerAccount;
         vault.access_key_public = newKeyPair.publicKey;

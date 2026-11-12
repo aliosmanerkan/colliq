@@ -24,6 +24,8 @@ export default (sequelize) => {
             net_pnl_usdc: { type: DataTypes.FLOAT, defaultValue: 0.0 },
             is_locked: { type: DataTypes.BOOLEAN, defaultValue: false }, // Mutex for active trade / transfer
             lock_reason: { type: DataTypes.STRING, allowNull: true },
+            is_listed_for_sale: { type: DataTypes.BOOLEAN, defaultValue: false },
+            sale_price_usdc: { type: DataTypes.FLOAT, allowNull: true, defaultValue: null },
             guardrail_max_spend_per_trade: { type: DataTypes.FLOAT, defaultValue: 300.0 },
             guardrail_min_oracle_fair_value_pct: { type: DataTypes.FLOAT, defaultValue: 80.0 }, // Reject deals < 80% fair value
             access_key_public: { type: DataTypes.STRING, defaultValue: "ed25519:4JpW2Z...vLt" },
