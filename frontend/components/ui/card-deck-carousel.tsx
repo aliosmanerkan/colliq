@@ -38,6 +38,9 @@ export type CardDeckCarouselProps = {
   ink?: string;
   showButtons?: boolean;
   showCount?: boolean;
+  showCaption?: boolean;
+  showMeta?: boolean;
+  showBadge?: boolean;
   onChange?: (index: number) => void;
   className?: string;
   style?: React.CSSProperties;
@@ -192,12 +195,12 @@ const CD_CSS = [
   ".cd-root{position:relative;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;overflow:visible;background:var(--cd-bg);color:var(--cd-ink);outline:none;padding:12px 0;box-sizing:border-box}",
   ".cd-root:focus-visible{box-shadow:none}",
   ".cd-deck{position:relative;width:var(--cd-w);aspect-ratio:var(--cd-aspect);max-width:100%;touch-action:pan-y;user-select:none;perspective:1000px}",
-  ".cd-card{position:absolute;inset:0;border-radius:24px;overflow:hidden;background:#06080d;border:2px solid rgba(255,255,255,0.45);box-shadow:0 12px 36px rgba(0,0,0,0.22),0 32px 64px -16px rgba(4,50,36,0.38);transition:transform .6s cubic-bezier(.2,.8,.2,1),opacity .4s ease,filter .4s ease;will-change:transform}",
+  ".cd-card{position:absolute;inset:0;border-radius:18px;overflow:hidden;background:#06080d;border:1.5px solid rgba(255,255,255,0.25);box-shadow:0 12px 36px rgba(0,0,0,0.22),0 32px 64px -16px rgba(4,50,36,0.38);transition:transform .6s cubic-bezier(.2,.8,.2,1),opacity .4s ease,filter .4s ease;will-change:transform}",
   ".cd-card[data-top='1']{cursor:grab}",
   ".cd-card[data-drag='1']{cursor:grabbing;transition:none}",
   ".cd-card[data-fly='1']{transition:transform .45s cubic-bezier(.3,.5,.3,1),opacity .45s ease}",
   ".cd-card[data-snap='1']{transition:none}",
-  ".cd-card img{position:absolute;inset:0;width:100%;height:100%;max-width:none;object-fit:cover;display:block;pointer-events:none;user-select:none}",
+  ".cd-card img{position:absolute;inset:0;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;display:block;pointer-events:none;user-select:none}",
   ".cd-meta{display:flex;align-items:center;justify-content:center;gap:14px;width:min(var(--cd-w),100%);max-width:440px}",
   ".cd-cap{flex:1;min-width:0;overflow:hidden;text-align:center}",
   ".cd-cap>*{display:block;animation:cd-in .5s cubic-bezier(.2,.8,.2,1) both}",
@@ -220,13 +223,16 @@ export default function CardDeckCarousel({
   slides = [],
   height = "auto",
   cardWidth = "min(82vw, 340px)",
-  aspect = "3.2 / 4.3",
+  aspect = "1 / 1.63",
   scatter = 7,
   autoplay = 3400,
   background = "transparent",
   ink = "#043224",
   showButtons = false,
   showCount = true,
+  showCaption = true,
+  showMeta = true,
+  showBadge = false,
   onChange,
   className,
   style,
@@ -395,7 +401,7 @@ export default function CardDeckCarousel({
               onPointerUp={isTop ? onUp : undefined}
               onPointerCancel={isTop ? onUp : undefined}
             >
-              {sl.category && (
+              {showBadge && sl.category && (
                 <div className="cd-badge">
                   {sl.category} {sl.grade && `• ${sl.grade}`}
                 </div>
@@ -408,51 +414,55 @@ export default function CardDeckCarousel({
                 />
               ) : null}
               {/* Subtle protective slab sheen */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/10 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/10 pointer-events-none" />
             </div>
           );
         })}
       </div>
 
-      {/* Underneath: Card Name & Set Information (Arrows omitted as requested) */}
-      <div className="cd-meta">
-        {showButtons && (
-          <button 
-            type="button" 
-            className="cd-btn" 
-            aria-label="Previous card" 
-            onClick={() => ((lastTouch.current = performance.now()), pullBack())}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M10 3 5 8l5 5" stroke="currentColor" strokeWidth="1.4" />
-            </svg>
-          </button>
-        )}
+      {/* Underneath: Card Name & Set Information (hidden when showMeta is false) */}
+      {showMeta && (showCaption || showButtons || showCount) ? (
+        <div className="cd-meta">
+          {showButtons && (
+            <button 
+              type="button" 
+              className="cd-btn" 
+              aria-label="Previous card" 
+              onClick={() => ((lastTouch.current = performance.now()), pullBack())}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M10 3 5 8l5 5" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
+            </button>
+          )}
 
-        <div className="cd-cap" key={top} aria-hidden="true">
-          {s.title ? <span className="cd-title">{s.title}</span> : null}
-          {s.caption ? <span className="cd-sub">{s.caption}</span> : null}
+          {showCaption && (
+            <div className="cd-cap" key={top} aria-hidden="true">
+              {s.title ? <span className="cd-title">{s.title}</span> : null}
+              {s.caption ? <span className="cd-sub">{s.caption}</span> : null}
+            </div>
+          )}
+
+          {showCount && (
+            <span className="cd-count" aria-hidden="true">
+              <b>{pad2(top + 1)}</b> / {pad2(n)}
+            </span>
+          )}
+
+          {showButtons && (
+            <button 
+              type="button" 
+              className="cd-btn" 
+              aria-label="Next card" 
+              onClick={() => ((lastTouch.current = performance.now()), throwTop(1))}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="m6 3 5 5-5 5" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
+            </button>
+          )}
         </div>
-
-        {showCount && (
-          <span className="cd-count" aria-hidden="true">
-            <b>{pad2(top + 1)}</b> / {pad2(n)}
-          </span>
-        )}
-
-        {showButtons && (
-          <button 
-            type="button" 
-            className="cd-btn" 
-            aria-label="Next card" 
-            onClick={() => ((lastTouch.current = performance.now()), throwTop(1))}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="m6 3 5 5-5 5" stroke="currentColor" strokeWidth="1.4" />
-            </svg>
-          </button>
-        )}
-      </div>
+      ) : null}
 
       <div className="cd-sr" aria-live="polite">
         {"Card " + (top + 1) + " of " + n + (s.title ? ": " + s.title : "")}

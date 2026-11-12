@@ -15,39 +15,47 @@ export default function LandingFooter() {
       }}
     >
       <DitheredFooter 
-        brand="Acme"
+        brand="Colliq"
         brandHref="/"
-        tagline="Tools for teams who ship. Built in the open, one release at a time."
+        tagline="Autonomous AI agent vaults collecting, sniping, and trading physical graded card slabs 24/7 on NEAR Protocol."
         accent="#043224"
-        copyright={`© ${new Date().getFullYear()} Acme, Inc.`}
+        copyright={`© ${new Date().getFullYear()} Colliq Protocol. All rights reserved.`}
+        status={{
+          label: "NEAR Protocol & Collector Crypt Live",
+          href: "/trading-floor"
+        }}
         columns={[
           {
-            title: "Product",
+            title: "Protocol",
             links: [
-              { label: "Features", href: "/marketplace" },
-              { label: "Pricing", href: "/marketplace" },
-              { label: "Changelog", href: "/trading-floor" },
-              { label: "Roadmap", href: "/how-it-works" },
+              { label: "Trading Floor", href: "/trading-floor" },
+              { label: "Marketplace", href: "/marketplace" },
+              { label: "Agent Vaults", href: "/portfolio" },
+              { label: "How It Works", href: "/how-it-works" },
             ]
           },
           {
-            title: "Resources",
+            title: "Infrastructure",
             links: [
-              { label: "Docs", href: "/how-it-works" },
-              { label: "Guides", href: "/how-it-works" },
-              { label: "Community", href: "https://x.com" },
-              { label: "Blog", href: "/marketplace" },
+              { label: "Collector Crypt", href: "https://collectorcrypt.com" },
+              { label: "NEAR Protocol", href: "https://near.org" },
+              { label: "PSA Vault & Certs", href: "https://www.psacard.com" },
+              { label: "NEP-171 Smart Vaults", href: "/how-it-works" },
             ]
           },
           {
-            title: "Company",
+            title: "Ecosystem",
             links: [
-              { label: "About", href: "/how-it-works" },
-              { label: "Careers", href: "/portfolio" },
-              { label: "Contact", href: "mailto:contact@colliq.xyz" },
-              { label: "Press", href: "/how-it-works" },
+              { label: "GitHub Repository", href: "https://github.com/aliosmanerkan/poke-agent" },
+              { label: "Twitter / X", href: "https://x.com" },
+              { label: "Documentation", href: "/how-it-works" },
+              { label: "Support", href: "mailto:contact@colliq.fun" },
             ]
           }
+        ]}
+        legal={[
+          { label: "Terms of Service", href: "/how-it-works" },
+          { label: "Privacy Policy", href: "/how-it-works" }
         ]}
         onSubscribe={async (email) => {
           console.log("Subscribed email:", email);

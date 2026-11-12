@@ -69,10 +69,10 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative w-full bg-[#B9EFC6] pt-8 sm:pt-14 pb-20 sm:pb-28 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12">
+    <section className="relative w-full bg-[#B9EFC6] min-h-[calc(100vh-4.5rem)] sm:min-h-[calc(100vh-5rem)] flex flex-col justify-between overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 w-full flex-1 flex flex-col justify-between py-6 sm:py-8 lg:py-10">
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center min-h-[480px] sm:min-h-[540px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center w-full my-auto py-4 sm:py-6">
 
           {/* Left: Huge Display Typography */}
           <div className="lg:col-span-7 flex flex-col justify-center">
@@ -84,16 +84,19 @@ export default function HeroSection() {
           </div>
 
           {/* Right: Card Deck Carousel with Timed Auto Throw */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="w-full max-w-[320px] sm:max-w-[360px] lg:max-w-[380px]">
+          <div className="lg:col-span-5 flex justify-center lg:justify-end items-center">
+            <div className="w-full max-w-[270px] sm:max-w-[310px] lg:max-w-[340px]">
               <CardDeckCarousel
                 slides={HERO_SLIDES}
                 cardWidth="100%"
-                aspect="3.1 / 4.3"
+                aspect="1 / 1.63"
                 scatter={8}
                 autoplay={3200}
                 showButtons={false}
-                showCount={true}
+                showCount={false}
+                showCaption={false}
+                showMeta={false}
+                showBadge={false}
                 background="transparent"
                 ink="#043224"
               />
@@ -103,7 +106,7 @@ export default function HeroSection() {
         </div>
 
         {/* Bottom Center: See Collections Prompt */}
-        <div className="flex flex-col items-center justify-center mt-12 sm:mt-16 text-[#043224]">
+        <div className="flex flex-col items-center justify-center pt-4 pb-1 text-[#043224] shrink-0">
           <button
             onClick={scrollToCollections}
             className="group flex flex-col items-center gap-1.5 text-xs font-medium cursor-pointer transition hover:opacity-80"

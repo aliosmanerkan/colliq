@@ -88,15 +88,15 @@ const focus = "focus-visible:outline focus-visible:outline-2 focus-visible:outli
 const coarse = "[@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center";
 
 export default function DitheredFooter({
-    brand = "Acme",
+    brand = "Colliq",
     brandHref = "/",
-    tagline = "Tools for teams who ship. Built in the open, one release at a time.",
+    tagline = "Autonomous AI agent vaults collecting, sniping, and trading physical graded card slabs 24/7 on NEAR Protocol.",
     columns = DEFAULT_COLUMNS,
     socials = DEFAULT_SOCIALS,
     legal = toLinks(["Privacy", "Terms"]),
-    copyright = `© ${new Date().getFullYear()} Acme, Inc.`,
+    copyright = `© ${new Date().getFullYear()} Colliq Protocol. All rights reserved.`,
     status = null,
-    accent = "#ff6a00",
+    accent = "#043224",
     onSubscribe,
 }: DitheredFooterProps) {
     const [email, setEmail] = useState("");
@@ -152,7 +152,7 @@ export default function DitheredFooter({
 
                     <form className="mt-8 max-w-sm" onSubmit={submit}>
                         {/* A visible label, not a placeholder: placeholders vanish while you type. */}
-                        <label htmlFor="df-email" className="block text-sm font-medium">Get product updates by email</label>
+                        <label htmlFor="df-email" className="block text-sm font-medium">Get Colliq updates & sniper alpha</label>
                         <div className="mt-2 flex gap-2">
                             <input
                                 id="df-email"
