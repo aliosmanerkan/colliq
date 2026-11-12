@@ -256,7 +256,7 @@ export default function TradingFloorTerminal({
                     {activeTrade.isLiveStreaming ? (
                       <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[11px] font-semibold px-2.5 py-0.5 rounded-md flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                        <span>OPENROUTER IN-PROGRESS</span>
+                        <span>NEGOTIATION IN PROGRESS</span>
                       </span>
                     ) : activeTrade.status === "REJECTED_GUARDRAIL" ? (
                       <span className="bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-md flex items-center gap-1">
@@ -502,7 +502,7 @@ export default function TradingFloorTerminal({
                   {sortedTranscript.length === 0 ? (
                     <div className="py-8 text-center text-xs text-slate-400">
                       {activeTrade.isLiveStreaming
-                        ? "Connecting to OpenRouter A2A negotiation stream..."
+                        ? "Connecting to live A2A barter negotiation channel..."
                         : "No recorded transcript for this trade."}
                     </div>
                   ) : (
@@ -623,7 +623,7 @@ export default function TradingFloorTerminal({
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0 animate-ping" />
                         <span className="text-xs font-mono font-medium text-slate-200 truncate">
                           Round 0{activeTrade.activeRound || (sortedTranscript.length + 1)}:{" "}
-                          <strong className="text-emerald-400 font-bold">{activeTrade.activeSpeaker}</strong> is reasoning via OpenRouter LLM...
+                          <strong className="text-emerald-400 font-bold">{activeTrade.activeSpeaker}</strong> is formulating trade terms...
                         </span>
                       </div>
                       <span className="text-[10px] font-mono font-bold uppercase tracking-wider bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700 shrink-0">
