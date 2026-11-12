@@ -106,13 +106,21 @@ export default function HeroSection() {
         </div>
 
         {/* Bottom Center: See Collections Prompt */}
-        <div className="flex flex-col items-center justify-center pt-4 pb-1 text-[#043224] shrink-0">
+        <div className="flex flex-col items-center justify-center pt-3 pb-2 text-[#043224] shrink-0 select-none">
           <button
             onClick={scrollToCollections}
-            className="group flex flex-col items-center gap-1.5 text-xs font-medium cursor-pointer transition hover:opacity-80"
+            className="group flex flex-col items-center gap-2 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95"
+            aria-label="Scroll to collections"
           >
-            <ArrowDown className="w-3.5 h-3.5 group-hover:translate-y-1 transition-transform" />
-            <span>See collections</span>
+            <div className="relative flex items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-[#043224]/20 animate-ping pointer-events-none" />
+              <div className="relative w-8 h-8 rounded-full border border-[#043224]/30 bg-[#043224]/10 flex items-center justify-center shadow-sm group-hover:bg-[#043224]/20 group-hover:border-[#043224]/60 transition-all duration-300">
+                <ArrowDown className="w-4 h-4 text-[#043224] animate-bounce" />
+              </div>
+            </div>
+            <span className="text-[11px] sm:text-xs font-semibold tracking-wider uppercase text-[#043224]/90 group-hover:text-[#043224] transition-colors">
+              See collections
+            </span>
           </button>
         </div>
 
