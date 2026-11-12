@@ -18,7 +18,13 @@ export default function PortfolioPage() {
   const myCards = cards.filter(
     (c) => (c.vault_id && myVaultIds.includes(c.vault_id)) || (c.owner_account || "").toLowerCase() === userAccount
   );
-  const myTrades = trades.filter((t) => myVaultIds.includes(t.vault_a_id) || myVaultIds.includes(t.vault_b_id));
+  const myTrades = trades.filter(
+    (t) =>
+      myVaultIds.includes(t.vault_a_id) ||
+      myVaultIds.includes(t.vault_b_id) ||
+      (t.vault_a_name || "").toLowerCase() === userAccount ||
+      (t.vault_b_name || "").toLowerCase() === userAccount
+  );
 
   if (isLoading && vaults.length === 0) {
     return (
