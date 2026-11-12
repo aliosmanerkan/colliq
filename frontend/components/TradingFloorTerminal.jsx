@@ -14,6 +14,7 @@ import {
   Layers,
 } from "lucide-react";
 import TradeDetailModal from "@/components/TradeDetailModal";
+import { useApp } from "@/context/AppContext";
 
 export default function TradingFloorTerminal({
   trades = [],
@@ -23,6 +24,8 @@ export default function TradingFloorTerminal({
   onTriggerSnipe,
   isSniping,
 }) {
+  const { liveNegotiation } = useApp();
+
   const allTrades = useMemo(() => {
     return trades && trades.length > 0 ? trades : tradeHistory || [];
   }, [trades, tradeHistory]);
@@ -33,26 +36,10 @@ export default function TradingFloorTerminal({
   const [tapeFilter, setTapeFilter] = useState("all"); // "all" | "barter" | "snipes" | "vetoed"
   const [modalTrade, setModalTrade] = useState(null);
 
-  // Auto-follow newest trade when followLatest is active
-  useEffect(() => {
-    if (followLatest && allTrades.length > 0) {
-      setSelectedTradeId(allTrades[0]?.id || allTrades[0]?.trade_id);
-    }
-  }, [allTrades, followLatest]);
-
-  // Derive the active selected trade
-  const activeTrade = useMemo(() => {
-    if (!allTrades || allTrades.length === 0) return null;
-    return (
-      allTrades.find((t) => (t.id || t.trade_id) === selectedTradeId) ||
-      allTrades[0]
-    );
-  }, [allTrades, selectedTradeId]);
-
   // Helpers to inspect trade type
   const isMarketSnipe = (trade) => {
     if (!trade) return false;
-    const tid = String(trade.trade_id || "");
+    const tid = String(trade.trade_id || trade.id || "");
     return (
       tid.startsWith("snipe-") ||
       trade.vault_b_name?.includes("Collector Crypt") ||
@@ -65,12 +52,49 @@ export default function TradingFloorTerminal({
 
   const isAcquisition = (trade) => {
     if (!trade) return false;
-    const tid = String(trade.trade_id || "");
+    const tid = String(trade.trade_id || trade.id || "");
     return (
       tid.startsWith("acq-") ||
       trade.negotiation_log?.[0]?.action === "BUSINESS_ACQUISITION"
     );
   };
+
+  // Find preferred barter trade (multi-round A2A) over 1-round snipe
+  const defaultBarterTrade = useMemo(() => {
+    if (!allTrades || allTrades.length === 0) return null;
+    return (
+      allTrades.find((t) => !isMarketSnipe(t) && !isAcquisition(t)) ||
+      allTrades[0]
+    );
+  }, [allTrades]);
+
+  // Initial selection defaulting to multi-round barter
+  useEffect(() => {
+    if (!selectedTradeId && defaultBarterTrade) {
+      setSelectedTradeId(defaultBarterTrade.id || defaultBarterTrade.trade_id);
+    }
+  }, [defaultBarterTrade, selectedTradeId]);
+
+  // Auto-follow newest trade when followLatest is active (unless live streaming)
+  useEffect(() => {
+    if (followLatest && allTrades.length > 0 && !liveNegotiation?.isLiveStreaming) {
+      const preferred = allTrades.find((t) => !isMarketSnipe(t) && !isAcquisition(t)) || allTrades[0];
+      setSelectedTradeId(preferred?.id || preferred?.trade_id);
+    }
+  }, [allTrades, followLatest, liveNegotiation]);
+
+  // Active Trade derivations: if liveNegotiation is streaming, it takes precedence!
+  const activeTrade = useMemo(() => {
+    if (liveNegotiation && liveNegotiation.isLiveStreaming) {
+      return liveNegotiation;
+    }
+    if (!allTrades || allTrades.length === 0) return null;
+    return (
+      allTrades.find((t) => (t.id || t.trade_id) === selectedTradeId) ||
+      defaultBarterTrade ||
+      allTrades[0]
+    );
+  }, [liveNegotiation, allTrades, selectedTradeId, defaultBarterTrade]);
 
   // Filtered tape list
   const filteredTrades = useMemo(() => {
@@ -122,8 +146,23 @@ export default function TradingFloorTerminal({
   const activeIsAcq = isAcquisition(activeTrade);
   const activeIsBarter = !activeIsSnipe && !activeIsAcq;
 
-  const cardA = activeTrade?.cards_from_a?.[0] || null;
-  const cardB = activeTrade?.cards_from_b?.[0] || null;
+  const cardA = activeTrade?.cards_from_a?.[0] || (activeTrade?.card_a_name ? {
+    name: activeTrade.card_a_name,
+    image_url: activeTrade.card_a_image,
+    grading_company: activeTrade.card_a_company,
+    grade: activeTrade.card_a_grade,
+    oracle_fair_value_usdc: activeTrade.card_a_oracle,
+    oracle_price: activeTrade.card_a_oracle,
+  } : null);
+
+  const cardB = activeTrade?.cards_from_b?.[0] || (activeTrade?.card_b_name ? {
+    name: activeTrade.card_b_name,
+    image_url: activeTrade.card_b_image,
+    grading_company: activeTrade.card_b_company,
+    grade: activeTrade.card_b_grade,
+    oracle_fair_value_usdc: activeTrade.card_b_oracle,
+    oracle_price: activeTrade.card_b_oracle,
+  } : null);
 
   const cardAPrice = Number(
     cardA?.oracle_price || cardA?.oracle_fair_value_usdc || 0
@@ -167,7 +206,12 @@ export default function TradingFloorTerminal({
                 <div className="px-6 py-3.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between gap-3 flex-wrap">
                   {/* Left: Deal Type Pill, ID & Follow Latest */}
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    {activeIsSnipe ? (
+                    {activeTrade.isLiveStreaming ? (
+                      <span className="bg-[#053b2a] text-white text-[10px] font-mono uppercase px-2.5 py-0.5 rounded font-semibold tracking-wide flex items-center gap-1.5 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        LIVE A2A NEGOTIATION STREAM
+                      </span>
+                    ) : activeIsSnipe ? (
                       <span className="bg-slate-900 text-white text-[10px] font-mono uppercase px-2.5 py-0.5 rounded font-semibold tracking-wide">
                         AUTONOMOUS MARKET SNIPE
                       </span>
@@ -189,12 +233,13 @@ export default function TradingFloorTerminal({
                       <span>{formatDate(activeTrade.createdAt)}</span>
                     </div>
 
-                    {!followLatest && (
+                    {!followLatest && !activeTrade.isLiveStreaming && (
                       <button
                         onClick={() => {
                           setFollowLatest(true);
                           if (allTrades.length > 0) {
-                            setSelectedTradeId(allTrades[0]?.id || allTrades[0]?.trade_id);
+                            const preferred = allTrades.find((t) => !isMarketSnipe(t) && !isAcquisition(t)) || allTrades[0];
+                            setSelectedTradeId(preferred?.id || preferred?.trade_id);
                           }
                         }}
                         className="text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full cursor-pointer transition flex items-center gap-1"
@@ -208,7 +253,12 @@ export default function TradingFloorTerminal({
 
                   {/* Right: Outcome Status & Block/Tx Proof */}
                   <div className="flex items-center gap-2">
-                    {activeTrade.status === "REJECTED_GUARDRAIL" ? (
+                    {activeTrade.isLiveStreaming ? (
+                      <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[11px] font-semibold px-2.5 py-0.5 rounded-md flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        <span>OPENROUTER IN-PROGRESS</span>
+                      </span>
+                    ) : activeTrade.status === "REJECTED_GUARDRAIL" ? (
                       <span className="bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-md flex items-center gap-1">
                         <XCircle className="w-3 h-3 text-rose-600" />
                         <span>VETOED BY GUARDRAIL</span>
@@ -220,7 +270,7 @@ export default function TradingFloorTerminal({
                       </span>
                     )}
 
-                    {activeTrade.tx_hash &&
+                    {!activeTrade.isLiveStreaming && activeTrade.tx_hash &&
                     activeTrade.tx_hash !== "0x_GUARDRAIL_DECLINED" &&
                     !activeTrade.tx_hash.startsWith("0x") ? (
                       <a
@@ -232,7 +282,7 @@ export default function TradingFloorTerminal({
                         <span>View Tx</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
-                    ) : activeTrade.near_block ? (
+                    ) : !activeTrade.isLiveStreaming && activeTrade.near_block ? (
                       <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                         Block #{activeTrade.near_block}
                       </span>
@@ -451,7 +501,9 @@ export default function TradingFloorTerminal({
                 <div className="p-6 space-y-3 max-h-[420px] overflow-y-auto">
                   {sortedTranscript.length === 0 ? (
                     <div className="py-8 text-center text-xs text-slate-400">
-                      No recorded transcript for this trade.
+                      {activeTrade.isLiveStreaming
+                        ? "Connecting to OpenRouter A2A negotiation stream..."
+                        : "No recorded transcript for this trade."}
                     </div>
                   ) : (
                     sortedTranscript.map((item, idx) => {
@@ -482,9 +534,9 @@ export default function TradingFloorTerminal({
                       return (
                         <div
                           key={idx}
-                          className={`p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs transition-all ${
+                          className={`p-4 rounded-xl bg-white border border-slate-200/90 shadow-2xs transition-all ${
                             isInitiator
-                              ? "border-l-4 border-l-slate-900"
+                              ? "border-l-4 border-l-[#053b2a]"
                               : "border-l-4 border-l-blue-600"
                           }`}
                         >
@@ -496,6 +548,15 @@ export default function TradingFloorTerminal({
                               </span>
                               <span className="text-xs font-bold text-slate-900">
                                 {speakerName}
+                              </span>
+                              <span
+                                className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded font-semibold ${
+                                  isInitiator
+                                    ? "bg-[#053b2a]/10 text-[#053b2a]"
+                                    : "bg-blue-50 text-blue-700"
+                                }`}
+                              >
+                                {isInitiator ? "INITIATOR" : "COUNTERPARTY"}
                               </span>
                             </div>
 
@@ -514,8 +575,8 @@ export default function TradingFloorTerminal({
                             )}
                           </div>
 
-                          {/* Public Argument */}
-                          <p className="text-xs text-slate-700 leading-relaxed mt-2 font-sans whitespace-pre-line">
+                          {/* Public Dialogue */}
+                          <p className="text-[13px] text-slate-900 leading-relaxed mt-2.5 font-sans whitespace-pre-line font-medium">
                             {publicArgument}
                           </p>
 
@@ -553,6 +614,22 @@ export default function TradingFloorTerminal({
                         </div>
                       );
                     })
+                  )}
+
+                  {/* Live Pulsing Turn Indicator during streaming */}
+                  {activeTrade.isLiveStreaming && activeTrade.activeSpeaker && (
+                    <div className="p-3.5 rounded-xl bg-slate-900 text-white border border-slate-800 shadow-sm flex items-center justify-between gap-3 animate-pulse">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0 animate-ping" />
+                        <span className="text-xs font-mono font-medium text-slate-200 truncate">
+                          Round 0{activeTrade.activeRound || (sortedTranscript.length + 1)}:{" "}
+                          <strong className="text-emerald-400 font-bold">{activeTrade.activeSpeaker}</strong> is reasoning via OpenRouter LLM...
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700 shrink-0">
+                        Live Turn
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -752,6 +829,25 @@ export default function TradingFloorTerminal({
                           ? `Vault Acquired (${t.cards_from_a?.length || 0} slabs)`
                           : `${tCardA?.name || "Slab"} ⇄ ${tCardB?.name || "Slab"}`}
                       </div>
+
+                      {/* Dialogue Quote Snippet */}
+                      {(() => {
+                        const lastLogItem = Array.isArray(t.negotiation_log) && t.negotiation_log.length > 0
+                          ? t.negotiation_log[t.negotiation_log.length - 1]
+                          : null;
+                        const rawArg = lastLogItem?.turn?.public_argument || lastLogItem?.turn?.message || "";
+                        const cleanSnippet = rawArg
+                          .replace(/\[NEP-413.*?\]/gs, "")
+                          .replace(/Intent ID:.*?\n/g, "")
+                          .replace(/^["']|["']$/g, "")
+                          .trim();
+                        if (!cleanSnippet) return null;
+                        return (
+                          <div className="text-[10.5px] text-slate-500 italic truncate font-sans">
+                            &ldquo;{cleanSnippet.slice(0, 80)}{cleanSnippet.length > 80 ? "..." : ""}&rdquo;
+                          </div>
+                        );
+                      })()}
 
                       {/* Bottom Line: Economics & Rounds */}
                       <div className="font-mono text-[10px] text-slate-500 flex items-center gap-2">

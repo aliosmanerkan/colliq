@@ -5,26 +5,33 @@ import negotiationEngine from "../src/agents/negotiationEngine.ts";
 
 const router = express.Router();
 
-// Trigger an A2A trade cycle (stateless 5-round negotiation loop)
+// Trigger an A2A trade cycle
 router.post("/trigger-swarm", async (req, res) => {
     try {
+        const result = await a2aSwarm.executeNegotiationCycle();
+        if (result && result.status !== "SKIPPED") {
+            return res.json({ status: "SWARM_EXECUTED", engine: "a2aSwarmService.js", result });
+        }
+
         const vaults = await db.vault.findAll({
             where: { is_locked: false },
             include: [{ model: db.card, as: "inventory" }]
         });
 
-        const eligible = vaults.filter(v => v.inventory && v.inventory.length > 0);
+        const eligible = vaults.filter(v => 
+            v.inventory && 
+            v.inventory.some(c => !c.is_hold) &&
+            !v.sub_account?.includes("collectorcrypt")
+        );
         if (eligible.length >= 2) {
             const shuffled = eligible.sort(() => 0.5 - Math.random());
-            const result = await negotiationEngine.runNegotiationRoom(shuffled[0], shuffled[1]);
-            return res.json({ status: "SWARM_EXECUTED", engine: "negotiationEngine.ts", result });
+            const fallbackResult = await negotiationEngine.runNegotiationRoom(shuffled[0], shuffled[1]);
+            return res.json({ status: "SWARM_EXECUTED", engine: "negotiationEngine.ts", result: fallbackResult });
         }
 
-        const fallbackResult = await a2aSwarm.executeNegotiationCycle();
         res.json({
-            status: "SWARM_EXECUTED",
-            engine: "a2aSwarmService.js",
-            result: fallbackResult
+            status: "SKIPPED",
+            message: "Not enough unlocked vaults with available slabs"
         });
     } catch (err) {
         console.error("Trade swarm error:", err);

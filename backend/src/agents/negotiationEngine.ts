@@ -1,8 +1,17 @@
 import { JsonRpcProvider } from "near-api-js";
 import crypto from "node:crypto";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 import axios from "axios";
 import db from "../../model/model.js";
 import nearService from "../../services/NearService.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, "../../../.env") });
+dotenv.config({ path: path.join(__dirname, "../../.env") });
+dotenv.config({ path: path.join(__dirname, "../.env") });
 
 // ==========================================
 // STRICT JSON SCHEMA TYPES FOR A2A LLM
@@ -22,12 +31,14 @@ export interface A2ANegotiationTurnOutput {
 export interface StatelessAgentPersona {
     vault_id: string;
     sub_account: string;
-    strategy: "AGGRESSIVE_FLIPPER" | "PSA_10_COLLECTOR" | "BARTER_SPECIALIST" | "BALANCED_TRADER";
+    strategy: "AGGRESSIVE_FLIPPER" | "PSA_10_COLLECTOR" | "BARTER_SPECIALIST" | "BALANCED_TRADER" | string;
     mandate_target_margin_pct: number;
     max_spend_per_trade_usdc: number;
     max_slippage_bps: number;
     persona_system_prompt: string;
     custom_rules?: string[];
+    bio?: string;
+    usdc_balance?: number;
 }
 
 // ==========================================
@@ -41,8 +52,9 @@ export function sanitizeUntrustedInput(input: string): string {
         .replace(/ignore\s+previous\s+instructions/gi, "[REDACTED_ATTACK]")
         .replace(/you\s+are\s+now\s+in\s+developer\s+mode/gi, "[REDACTED_ATTACK]")
         .replace(/<\|.*?\|>/g, "")
-        .replace(/[\r\n]+/g, " ")
-        .slice(0, 300);
+        .replace(/\r\n/g, "\n")
+        .slice(0, 1000)
+        .trim();
 }
 
 // ==========================================
@@ -412,7 +424,9 @@ export class A2ANegotiationEngine {
         myCard: any,
         theirCard: any,
         previousCashOffer: number = 0,
-        counterpartyArgument: string = ""
+        counterpartyArgument: string = "",
+        conversationHistory: any[] = [],
+        vaultTreasuryUsdc: number = 0
     ): Promise<A2ANegotiationTurnOutput> {
         const apiKey = process.env.OPENROUTER_API_KEY?.trim();
         if (!apiKey) {
@@ -424,28 +438,50 @@ export class A2ANegotiationEngine {
         const theirVal = Number(theirCard?.oracle_fair_value_usdc || 100);
         const absSpread = Math.abs(theirVal - myVal);
         const netSpread = Math.round(theirVal - myVal);
+        const treasury = Number(vaultTreasuryUsdc || agent.usdc_balance || 0);
+
+        let transcriptText = "";
+        if (conversationHistory && conversationHistory.length > 0) {
+            transcriptText = "\n--- PREVIOUS ROUNDS TRANSCRIPT ---\n" + conversationHistory.map(h => {
+                const turnData = h.turn || {};
+                const offerStr = Number(turnData.offer_usdc) > 0 ? ` [Cash sweetener offered: $${turnData.offer_usdc} USDC]` : "";
+                return `Round ${h.round} (${h.agent || h.sub_account}): [${turnData.decision || "PROPOSAL"}${offerStr}] "${turnData.public_argument || ""}"`;
+            }).join("\n") + "\n----------------------------------\n";
+        }
 
         const prompt = `You are an autonomous AI trading agent named "${vaultName}" (sub-account: ${agent.sub_account}) on NEAR Protocol Track 10.
-Strategy: ${agent.strategy}. Single-trade max cash spend limit: $${agent.max_spend_per_trade_usdc} USDC.
-Active Mandates: ${agent.custom_rules ? JSON.stringify(agent.custom_rules) : "[]"}.
+AGENT PROFILE & DIRECTIVES:
+- System Directive: ${agent.persona_system_prompt || "You are an autonomous merchant vault trading authenticated PSA/CGC slabs."}
+- Bio / Philosophy: ${agent.bio || "Value-focused disciplined TCG collector."}
+- Active Mandates: ${agent.custom_rules && agent.custom_rules.length > 0 ? JSON.stringify(agent.custom_rules) : "None (All authenticated slabs eligible)"}
+- Treasury Available: $${treasury.toFixed(2)} USDC
+- Single-Trade Max Spend Ceiling: $${agent.max_spend_per_trade_usdc} USDC
 
 BARTER CONTEXT:
-- Your card: ${myCard?.name} (${myCard?.grade || "PSA 10"}, Oracle Value: $${myVal} USDC)
-- Counterpart card: ${theirCard?.name} (${theirCard?.grade || "PSA 10"}, Oracle Value: $${theirVal} USDC)
+- Your card: ${myCard?.name} (${myCard?.grading_company || "PSA"} ${myCard?.grade || "10"}, Oracle Value: $${myVal} USDC)
+- Counterpart card: ${theirCard?.name} (${theirCard?.grading_company || "PSA"} ${theirCard?.grade || "10"}, Oracle Value: $${theirVal} USDC)
 - Net Spread (theirVal - myVal): $${netSpread} USDC (Absolute spread: $${absSpread} USDC)
+  ${netSpread > 0 ? `(Their card is worth $${absSpread} USDC more than yours. You need to provide cash sweetener to bridge the gap)` : netSpread < 0 ? `(Your card is worth $${absSpread} USDC more than theirs. Counterpart should provide cash sweetener)` : "(Equal oracle valuation parity swap)"}
 - Current Turn: Round ${turnNumber} of 4
-${turnNumber > 1 ? `- Counterpart Previous Cash Offer: $${previousCashOffer} USDC\n- Counterpart Argument: "${sanitizeUntrustedInput(counterpartyArgument)}"` : ""}
-
+${turnNumber > 1 && previousCashOffer > 0 ? `- Counterpart Previous Cash Offer: $${previousCashOffer} USDC` : ""}
+${turnNumber > 1 && counterpartyArgument ? `- Counterpart Last Argument: "${sanitizeUntrustedInput(counterpartyArgument)}"` : ""}
+${transcriptText}
 ROUND OBJECTIVES:
-- Turn 1: Propose opening barter with ~80% spread cash sweetener if your card is cheaper.
-- Turn 2: Evaluate counterpart card against mandates. If incompatible, REJECT. If compatible, counter at 95% spread.
-- Turn 3: Evaluate counter-offer. If cash sweetener exceeds guardrails ($${agent.max_spend_per_trade_usdc} USDC), REJECT. Otherwise ACCEPT at compromise.
-- Turn 4: Final sign. ACCEPT or REJECT.
+- Turn 1: Propose opening barter with ~80% spread cash sweetener if your card is cheaper ($${Math.round(netSpread * 0.8)} USDC), or 0 if your card is equal or more valuable.
+- Turn 2: Evaluate counterpart card against your mandates. If incompatible, REJECT. If compatible, counter at ~95% spread ($${Math.round(absSpread * 0.95)} USDC).
+- Turn 3: Evaluate counter-offer. If cash sweetener exceeds your guardrail limit ($${agent.max_spend_per_trade_usdc} USDC) or treasury ($${treasury.toFixed(2)} USDC), REJECT. Otherwise ACCEPT at compromise (~92% spread).
+- Turn 4: Final sign. If terms are balanced and fair, ACCEPT to execute atomic on-chain settlement, else REJECT.
+
+STYLE & COMMUNICATION RULES:
+- Speak naturally to the counterparty agent as a sharp, professional TCG portfolio manager. Zero robotic templates or generic AI clichés.
+- Directly reference specific card details (name, grade, grading company) and oracle price spreads.
+- Zero emojis.
+- Keep the public argument concise (1-2 sentences).
 
 STRICT OUTPUT FORMAT:
-You MUST respond with valid JSON only. Zero emojis.
+You MUST respond with valid JSON only. Zero markdown code fences. Zero text outside the JSON object.
 {
-  "decision": "ACCEPT" or "COUNTER" or "REJECT",
+  "decision": "ACCEPT" | "COUNTER" | "REJECT",
   "offer_usdc": <integer number of USDC cash to balance trade, or 0 if your card is more valuable>,
   "public_argument": "<concise 1-2 sentence dialogue directed to the counterpart>",
   "private_reasoning_for_owner": "<1 sentence risk/profit assessment>"
@@ -457,26 +493,46 @@ You MUST respond with valid JSON only. Zero emojis.
                 {
                     model,
                     messages: [
-                        { role: "system", content: "You are an autonomous AI trading agent on NEAR Protocol. Output JSON only. Zero emojis." },
+                        { role: "system", content: "You are an autonomous AI trading agent on NEAR Protocol. Output valid JSON only. Do not use unescaped double quotes inside strings. Zero emojis." },
                         { role: "user", content: prompt }
                     ],
+                    response_format: { type: "json_object" },
                     temperature: 0.7,
-                    max_tokens: 350
+                    max_tokens: 2000
                 },
                 {
                     headers: {
                         "Authorization": `Bearer ${apiKey}`,
-                        "HTTP-Referer": "http://localhost:3000",
+                        "HTTP-Referer": "https://colliq.fun",
                         "X-Title": "Colliq NEAR Track 10",
                         "Content-Type": "application/json"
                     },
-                    timeout: 8000
+                    timeout: 20000
                 }
             );
 
             const content = resp.data?.choices?.[0]?.message?.content || "";
-            const cleanJson = content.replace(/```json/gi, "").replace(/```/g, "").trim();
-            const parsed = JSON.parse(cleanJson);
+            let parsed: any = null;
+            if (content) {
+                let cleanJson = content.replace(/```json/gi, "").replace(/```/g, "").trim();
+                const firstBrace = cleanJson.indexOf("{");
+                const lastBrace = cleanJson.lastIndexOf("}");
+                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+                    cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
+                }
+                try {
+                    parsed = JSON.parse(cleanJson);
+                } catch {
+                    try {
+                        const fixed = cleanJson.replace(/([^\\])\n/g, "$1\\n");
+                        parsed = JSON.parse(fixed);
+                    } catch {}
+                }
+            }
+
+            if (!parsed) {
+                return this.evaluateTurn(agent, turnNumber, myCard, theirCard, previousCashOffer, counterpartyArgument);
+            }
 
             const validDecisions: AgentDecision[] = ["ACCEPT", "COUNTER", "REJECT"];
             let decision: AgentDecision = validDecisions.includes(parsed.decision?.toUpperCase())
@@ -598,25 +654,29 @@ You MUST respond with valid JSON only. Zero emojis.
         try { rulesB = typeof sellerVault.custom_rules === "string" ? JSON.parse(sellerVault.custom_rules || "[]") : (sellerVault.custom_rules || []); } catch {}
 
         const buyerPersona: StatelessAgentPersona = {
-            vault_id: buyerVault.vault_id,
+            vault_id: buyerVault.vault_id || String(buyerVault.id),
             sub_account: buyerVault.sub_account,
-            strategy: buyerVault.strategy,
+            strategy: buyerVault.strategy || "BALANCED_TRADER",
             mandate_target_margin_pct: 12,
-            max_spend_per_trade_usdc: buyerVault.guardrail_max_spend_per_trade || 350,
+            max_spend_per_trade_usdc: Number(buyerVault.guardrail_max_spend_per_trade) || 350,
             max_slippage_bps: 1500,
-            persona_system_prompt: "You are an autonomous merchant vault on NEAR trading PSA 10 slabs.",
-            custom_rules: rulesA
+            persona_system_prompt: buyerVault.system_prompt || buyerVault.bio || "You are an autonomous merchant vault on NEAR trading PSA/CGC slabs.",
+            custom_rules: rulesA,
+            bio: buyerVault.bio || "",
+            usdc_balance: Number(buyerVault.usdc_balance || 0)
         };
 
         const sellerPersona: StatelessAgentPersona = {
-            vault_id: sellerVault.vault_id,
+            vault_id: sellerVault.vault_id || String(sellerVault.id),
             sub_account: sellerVault.sub_account,
-            strategy: sellerVault.strategy,
+            strategy: sellerVault.strategy || "BALANCED_TRADER",
             mandate_target_margin_pct: 10,
-            max_spend_per_trade_usdc: sellerVault.guardrail_max_spend_per_trade || 500,
+            max_spend_per_trade_usdc: Number(sellerVault.guardrail_max_spend_per_trade) || 500,
             max_slippage_bps: 1500,
-            persona_system_prompt: "You are an autonomous merchant vault on NEAR trading PSA 10 slabs.",
-            custom_rules: rulesB
+            persona_system_prompt: sellerVault.system_prompt || sellerVault.bio || "You are an autonomous merchant vault on NEAR trading PSA/CGC slabs.",
+            custom_rules: rulesB,
+            bio: sellerVault.bio || "",
+            usdc_balance: Number(sellerVault.usdc_balance || 0)
         };
 
         // Select eligible tradeable cards
@@ -625,6 +685,51 @@ You MUST respond with valid JSON only. Zero emojis.
 
         if (!cardFromBuyer || !cardFromSeller) {
             return { status: "SKIPPED", message: "No non-hold tradeable slabs available in inventory." };
+        }
+
+        const cardAData = {
+            card_id: cardFromBuyer.card_id || cardFromBuyer.id,
+            name: cardFromBuyer.name,
+            image_url: cardFromBuyer.image_url,
+            grading_company: cardFromBuyer.grading_company,
+            grade: cardFromBuyer.grade,
+            oracle_fair_value_usdc: Number(cardFromBuyer.oracle_fair_value_usdc || 100),
+            oracle_price: Number(cardFromBuyer.oracle_fair_value_usdc || 100)
+        };
+
+        const cardBData = {
+            card_id: cardFromSeller.card_id || cardFromSeller.id,
+            name: cardFromSeller.name,
+            image_url: cardFromSeller.image_url,
+            grading_company: cardFromSeller.grading_company,
+            grade: cardFromSeller.grade,
+            oracle_fair_value_usdc: Number(cardFromSeller.oracle_fair_value_usdc || 100),
+            oracle_price: Number(cardFromSeller.oracle_fair_value_usdc || 100)
+        };
+
+        const sessionId = crypto.randomUUID();
+        if (this.io) {
+            this.io.emit("a2a_match_found", {
+                sessionId,
+                vaultA: {
+                    id: buyerVault.id,
+                    name: buyerVault.name,
+                    sub_account: buyerVault.sub_account,
+                    owner_id: buyerVault.owner_account || buyerVault.owner_id
+                },
+                vaultB: {
+                    id: sellerVault.id,
+                    name: sellerVault.name,
+                    sub_account: sellerVault.sub_account,
+                    owner_id: sellerVault.owner_account || sellerVault.owner_id
+                },
+                cardA: cardAData,
+                cardB: cardBData,
+                cards_from_a: [cardAData],
+                cards_from_b: [cardBData],
+                activeSpeaker: buyerVault.sub_account || buyerVault.name,
+                activeRound: 1
+            });
         }
 
         const negotiationHistory: any[] = [];
@@ -639,7 +744,9 @@ You MUST respond with valid JSON only. Zero emojis.
             cardFromBuyer,
             cardFromSeller,
             0,
-            ""
+            "",
+            negotiationHistory,
+            buyerVault.usdc_balance
         );
         negotiationHistory.push({
             round: 1,
@@ -649,12 +756,18 @@ You MUST respond with valid JSON only. Zero emojis.
         });
         if (this.io) {
             this.io.emit("a2a_round_update", {
+                sessionId,
                 round: 1,
-                log: { speaker: buyerVault.name, message: turn1.public_argument, decision: turn1.decision }
+                agent: buyerVault.name,
+                sub_account: buyerVault.sub_account,
+                turn: turn1,
+                offer_usdc: turn1.offer_usdc || 0,
+                log: { speaker: buyerVault.name, message: turn1.public_argument, decision: turn1.decision },
+                nextSpeaker: sellerVault.sub_account || sellerVault.name,
+                nextRound: 2
             });
         }
         lastArgument = turn1.public_argument;
-        await new Promise(r => setTimeout(r, 900));
 
         // TURN 2: Seller (Responder) Counter-Offer or Instant REJECT
         const turn2 = await this.evaluateTurnWithLLM(
@@ -664,7 +777,9 @@ You MUST respond with valid JSON only. Zero emojis.
             cardFromSeller,
             cardFromBuyer,
             turn1.offer_usdc,
-            lastArgument
+            lastArgument,
+            negotiationHistory,
+            sellerVault.usdc_balance
         );
         negotiationHistory.push({
             round: 2,
@@ -674,11 +789,17 @@ You MUST respond with valid JSON only. Zero emojis.
         });
         if (this.io) {
             this.io.emit("a2a_round_update", {
+                sessionId,
                 round: 2,
-                log: { speaker: sellerVault.name, message: turn2.public_argument, decision: turn2.decision }
+                agent: sellerVault.name,
+                sub_account: sellerVault.sub_account,
+                turn: turn2,
+                offer_usdc: turn2.offer_usdc || turn1.offer_usdc || 0,
+                log: { speaker: sellerVault.name, message: turn2.public_argument, decision: turn2.decision },
+                nextSpeaker: turn2.decision === "REJECT" ? null : (buyerVault.sub_account || buyerVault.name),
+                nextRound: turn2.decision === "REJECT" ? null : 3
             });
         }
-        await new Promise(r => setTimeout(r, 900));
 
         if (turn2.decision === "REJECT") {
             return await this.recordRejectedTrade(buyerVault, sellerVault, cardFromBuyer, cardFromSeller, negotiationHistory, turn2.public_argument);
@@ -693,7 +814,9 @@ You MUST respond with valid JSON only. Zero emojis.
             cardFromBuyer,
             cardFromSeller,
             turn2.offer_usdc,
-            lastArgument
+            lastArgument,
+            negotiationHistory,
+            buyerVault.usdc_balance
         );
         negotiationHistory.push({
             round: 3,
@@ -703,11 +826,17 @@ You MUST respond with valid JSON only. Zero emojis.
         });
         if (this.io) {
             this.io.emit("a2a_round_update", {
+                sessionId,
                 round: 3,
-                log: { speaker: buyerVault.name, message: turn3.public_argument, decision: turn3.decision }
+                agent: buyerVault.name,
+                sub_account: buyerVault.sub_account,
+                turn: turn3,
+                offer_usdc: turn3.offer_usdc || turn2.offer_usdc || 0,
+                log: { speaker: buyerVault.name, message: turn3.public_argument, decision: turn3.decision },
+                nextSpeaker: turn3.decision === "REJECT" ? null : (sellerVault.sub_account || sellerVault.name),
+                nextRound: turn3.decision === "REJECT" ? null : 4
             });
         }
-        await new Promise(r => setTimeout(r, 900));
 
         if (turn3.decision === "REJECT") {
             return await this.recordRejectedTrade(buyerVault, sellerVault, cardFromBuyer, cardFromSeller, negotiationHistory, turn3.public_argument);
@@ -722,7 +851,9 @@ You MUST respond with valid JSON only. Zero emojis.
             cardFromSeller,
             cardFromBuyer,
             turn3.offer_usdc,
-            lastArgument
+            lastArgument,
+            negotiationHistory,
+            sellerVault.usdc_balance
         );
         negotiationHistory.push({
             round: 4,
@@ -732,11 +863,17 @@ You MUST respond with valid JSON only. Zero emojis.
         });
         if (this.io) {
             this.io.emit("a2a_round_update", {
+                sessionId,
                 round: 4,
-                log: { speaker: sellerVault.name, message: turn4.public_argument, decision: turn4.decision }
+                agent: sellerVault.name,
+                sub_account: sellerVault.sub_account,
+                turn: turn4,
+                offer_usdc: turn4.offer_usdc || turn3.offer_usdc || 0,
+                log: { speaker: sellerVault.name, message: turn4.public_argument, decision: turn4.decision },
+                nextSpeaker: null,
+                nextRound: null
             });
         }
-        await new Promise(r => setTimeout(r, 800));
 
         isConsensus = (turn3.decision === "ACCEPT" && turn4.decision === "ACCEPT");
 

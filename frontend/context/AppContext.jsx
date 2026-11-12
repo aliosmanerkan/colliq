@@ -28,6 +28,7 @@ export function AppProvider({ children }) {
   const [chatVault, setChatVault] = useState(null);
   const [isTriggering, setIsTriggering] = useState(false);
   const [isSniping, setIsSniping] = useState(false);
+  const [liveNegotiation, setLiveNegotiation] = useState(null);
 
   // Trigger manual A2A trading cycle
   const handleTriggerSwarm = async () => {
@@ -153,8 +154,8 @@ export function AppProvider({ children }) {
     const onDisconnect = () => setSocketStatus("disconnected");
 
     const onMatchFound = (data) => {
-      const nameA = data.vaultA?.name || "Agent A";
-      const nameB = data.vaultB?.name || "Agent B";
+      const nameA = data.vaultA?.name || data.vaultA?.sub_account || "Agent A";
+      const nameB = data.vaultB?.name || data.vaultB?.sub_account || "Agent B";
       setLiveEvents((prev) => [
         {
           id: `match-${Date.now()}-${Math.random()}`,
@@ -165,7 +166,40 @@ export function AppProvider({ children }) {
         },
         ...prev.slice(0, 50),
       ]);
-      loadData();
+
+      const cardA = data.cardA || data.cards_from_a?.[0] || null;
+      const cardB = data.cardB || data.cards_from_b?.[0] || null;
+
+      setLiveNegotiation({
+        id: data.sessionId || `live-${Date.now()}`,
+        trade_id: data.sessionId || `live-${Date.now()}`,
+        isLiveStreaming: true,
+        status: "NEGOTIATING",
+        vault_a_id: data.vaultA?.id,
+        vault_b_id: data.vaultB?.id,
+        vault_a_name: data.vaultA?.sub_account || data.vaultA?.name || "Initiator Agent",
+        vault_b_name: data.vaultB?.sub_account || data.vaultB?.name || "Counterparty Agent",
+        vault_a_owner: data.vaultA?.owner_id || data.vaultA?.owner_account,
+        vault_b_owner: data.vaultB?.owner_id || data.vaultB?.owner_account,
+        cards_from_a: cardA ? [cardA] : [],
+        cards_from_b: cardB ? [cardB] : [],
+        card_a_name: cardA?.name || "Initiator Slab",
+        card_a_image: cardA?.image_url,
+        card_a_company: cardA?.grading_company,
+        card_a_grade: cardA?.grade,
+        card_a_oracle: cardA?.oracle_price || cardA?.oracle_fair_value_usdc,
+        card_b_name: cardB?.name || "Counterparty Slab",
+        card_b_image: cardB?.image_url,
+        card_b_company: cardB?.grading_company,
+        card_b_grade: cardB?.grade,
+        card_b_oracle: cardB?.oracle_price || cardB?.oracle_fair_value_usdc,
+        usdc_from_a: 0,
+        usdc_from_b: 0,
+        activeSpeaker: data.activeSpeaker || data.vaultA?.sub_account || data.vaultA?.name || "Initiator Agent",
+        activeRound: data.activeRound || 1,
+        negotiation_log: [],
+        createdAt: new Date().toISOString()
+      });
     };
 
     const onRoundUpdate = (data) => {
@@ -173,14 +207,50 @@ export function AppProvider({ children }) {
         {
           id: `round-${Date.now()}-${Math.random()}`,
           type: "round",
-          speaker: `${data.log?.speaker || "Agent"} (Round ${data.round || 1})`,
-          message: data.log?.message || "",
-          decision: data.log?.decision || null,
+          speaker: `${data.log?.speaker || data.agent || "Agent"} (Round ${data.round || 1})`,
+          message: data.turn?.public_argument || data.log?.message || "",
+          decision: data.turn?.decision || data.log?.decision || null,
           timestamp: Date.now(),
         },
         ...prev.slice(0, 50),
       ]);
-      loadData();
+
+      setLiveNegotiation((prev) => {
+        if (!prev) return null;
+        const newRound = {
+          round: data.round,
+          agent: data.agent || data.log?.speaker || prev.vault_a_name,
+          sub_account: data.sub_account || data.agent || prev.vault_a_name,
+          turn: data.turn || {
+            decision: data.log?.decision || "COUNTER",
+            public_argument: data.log?.message || "",
+            offer_usdc: data.offer_usdc || 0,
+            private_reasoning_for_owner: data.turn?.private_reasoning_for_owner || ""
+          }
+        };
+
+        const existingLogs = prev.negotiation_log || [];
+        const filtered = existingLogs.filter((r) => r.round !== data.round);
+        const updatedLogs = [...filtered, newRound].sort(
+          (a, b) => (Number(a.round) || 0) - (Number(b.round) || 0)
+        );
+
+        const currentOffer =
+          data.offer_usdc !== undefined
+            ? Number(data.offer_usdc)
+            : data.turn?.offer_usdc !== undefined
+            ? Number(data.turn.offer_usdc)
+            : prev.usdc_from_a;
+
+        return {
+          ...prev,
+          negotiation_log: updatedLogs,
+          rounds_count: updatedLogs.length,
+          usdc_from_a: currentOffer,
+          activeSpeaker: data.nextSpeaker !== undefined ? data.nextSpeaker : prev.activeSpeaker,
+          activeRound: data.nextRound !== undefined ? data.nextRound : (data.round + 1)
+        };
+      });
     };
 
     const onTradeSettled = (data) => {
@@ -198,6 +268,7 @@ export function AppProvider({ children }) {
         },
         ...prev.slice(0, 50),
       ]);
+      setLiveNegotiation(null);
       loadData();
     };
 
@@ -212,6 +283,7 @@ export function AppProvider({ children }) {
         },
         ...prev.slice(0, 50),
       ]);
+      setLiveNegotiation(null);
       loadData();
     };
 
@@ -228,6 +300,7 @@ export function AppProvider({ children }) {
         },
         ...prev.slice(0, 50),
       ]);
+      setLiveNegotiation(null);
       loadData();
     };
 
@@ -313,6 +386,7 @@ export function AppProvider({ children }) {
         nearStatus,
         socketStatus,
         liveEvents,
+        liveNegotiation,
         connectedAccount,
         isTriggering,
         handleTriggerSwarm,

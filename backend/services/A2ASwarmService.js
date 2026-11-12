@@ -219,11 +219,6 @@ export class A2ASwarmService {
             await vaultB.save();
             lockedVaults = [vaultA, vaultB];
 
-            this.emitEvent("a2a_match_found", {
-                vaultA: { id: vaultA.id, name: vaultA.name, sub_account: vaultA.sub_account },
-                vaultB: { id: vaultB.id, name: vaultB.name, sub_account: vaultB.sub_account }
-            });
-
             // 2. Execute negotiation room with strict economic directionality
             const result = await negotiationEngine.runNegotiationRoom(vaultA, vaultB, cardA, cardB);
             return result;
