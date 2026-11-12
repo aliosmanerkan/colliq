@@ -177,6 +177,66 @@ router.post("/buy-direct", async (req, res) => {
 
         const networkInfo = await nearService.getNetworkStatus();
         const settledTxHash = tx_hash || `0x${networkInfo.latest_block_hash?.substring(0, 32) || Date.now()}`;
+        const cardPrice = Number(finalCard.oracle_fair_value_usdc || finalCard.last_sale_usdc || 50);
+
+        // Generate cryptographically signed NEP-413 Cross-Chain RWA Acquisition Intent
+        const nearIntent = nearService.createCrossChainSnipeIntent({
+            signerAccount: buyer_account,
+            solanaMint: finalCard.solana_mint || String(card_id),
+            cardName: finalCard.name,
+            usdcAmount: cardPrice,
+            nearAmount: near_amount || null,
+            destinationMpcAddress: nearService.deriveSolanaAddressForVault(buyer_account)
+        });
+
+        let ccVault = await db.vault.findOne({ where: { sub_account: "collectorcrypt.colliq.testnet" } });
+
+        const tradeId = `direct-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        await db.trade.create({
+            trade_id: tradeId,
+            vault_a_id: null,
+            vault_b_id: ccVault ? ccVault.id : null,
+            vault_a_name: buyer_account,
+            vault_b_name: "Collector Crypt Vault (PWCC / Brink's)",
+            cards_from_a: [],
+            cards_from_b: [finalCard.toJSON ? finalCard.toJSON() : finalCard],
+            usdc_from_a: cardPrice,
+            usdc_from_b: 0.0,
+            rounds_count: 1,
+            negotiation_log: [
+                {
+                    round: 1,
+                    agent: buyer_account,
+                    turn: {
+                        decision: "ACCEPT",
+                        public_argument: `Direct user acquisition: Secured ${finalCard.name} (${finalCard.grade || "PSA 10"}) via NEAR Intent (${nearIntent.intent_id}).`,
+                        private_reasoning_for_owner: `Signed NEP-413 Cross-Chain Swap. Payment settled via ${payment_method || "NEAR"}${near_amount ? ` (${near_amount} NEAR)` : ""}. Custody: Brink's / PWCC.`,
+                        near_intent: nearIntent
+                    }
+                }
+            ],
+            status: "COMPLETED",
+            protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
+            tx_hash: settledTxHash,
+            near_block: networkInfo.latest_block_height
+        });
+
+        const io = req.app.get("io");
+        if (io) {
+            io.emit("market_snipe", {
+                vault: { id: null, name: buyer_account, sub_account: buyer_account, usdc_balance: 0 },
+                card: finalCard,
+                price: cardPrice,
+                tx_hash: settledTxHash
+            });
+            io.emit("trade:event", {
+                vaultA: buyer_account,
+                vaultB: "Collector Crypt Vault (PWCC / Brink's)",
+                cardTitle: finalCard.name,
+                tradeId,
+                txHash: settledTxHash
+            });
+        }
 
         res.json({
             status: "SUCCESS_BOUGHT",
@@ -186,6 +246,8 @@ router.post("/buy-direct", async (req, res) => {
             payment_method: payment_method || "NEAR",
             near_amount: near_amount || null,
             block: networkInfo.latest_block_height,
+            near_intent: nearIntent,
+            solana_holding_address: nearService.deriveSolanaAddressForVault(buyer_account),
             explorer_url: `https://testnet.nearblocks.io/txns/${settledTxHash}`
         });
     } catch (err) {

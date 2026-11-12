@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
   X,
@@ -158,20 +159,38 @@ export default function CollectorCryptCatalog({
     isDraggingRef.current = false;
   };
 
+  const router = useRouter();
+
   // Connected Wallet Account & Live NEAR Balance
   const [connectedAccount, setConnectedAccount] = useState(null);
   const [liveNearBalance, setLiveNearBalance] = useState("0.00");
 
+  // Filter ONLY current user's vaults (excluding collectorcrypt.colliq.testnet)
+  const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
+  const myVaults = useMemo(() => {
+    return (vaults || []).filter(
+      (v) =>
+        !String(v.sub_account || "").includes("collectorcrypt") &&
+        (v.owner_account || "").toLowerCase() === userAccount
+    );
+  }, [vaults, userAccount]);
+
   // Slab Inspector & Acquisition Modal
   const [selectedCard, setSelectedCard] = useState(null);
   const [activeImageView, setActiveImageView] = useState("front"); // "front" | "back"
-  const [destination, setDestination] = useState("personal"); // "personal" | "vault"
+  const [destination, setDestination] = useState("vault"); // "vault" | "personal"
   const [targetVaultId, setTargetVaultId] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("NEAR"); // "NEAR" | "USDC"
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [purchaseStep, setPurchaseStep] = useState("idle"); // "idle" | "awaiting_wallet" | "confirming" | "success"
   const [purchaseResult, setPurchaseResult] = useState(null);
   const [purchaseError, setPurchaseError] = useState("");
+
+  // Sync default target vault whenever myVaults change
+  useEffect(() => {
+    if (myVaults.length > 0 && (!targetVaultId || !myVaults.some((v) => String(v.id) === String(targetVaultId)))) {
+      setTargetVaultId(String(myVaults[0].id));
+    }
+  }, [myVaults, targetVaultId]);
 
   // Search input debounce (300ms)
   useEffect(() => {
@@ -209,13 +228,6 @@ export default function CollectorCryptCatalog({
       if (subscription?.unsubscribe) subscription.unsubscribe();
     };
   }, []);
-
-  // Set default target vault
-  useEffect(() => {
-    if (vaults.length > 0 && !targetVaultId) {
-      setTargetVaultId(String(vaults[0].id));
-    }
-  }, [vaults, targetVaultId]);
 
   // Fetch initial or updated cards when filter change
   const fetchCards = useCallback(async (isLoadMore = false, cursorToUse = null) => {
@@ -280,14 +292,19 @@ export default function CollectorCryptCatalog({
     setPurchaseError("");
 
     try {
-      const price = selectedCard.costUsd || selectedCard.insuredUsd || 50;
+      const price = Number(selectedCard.costUsd || selectedCard.insuredUsd || 50);
       const nearAmount = usdToNear(price);
 
-      // Destination A: Snipe into AI Agent Vault
+      // Destination A: Snipe into AI Agent Vault (settled in USDC via NEP-413 NEAR Intent)
       if (destination === "vault") {
         if (!targetVaultId) {
           throw new Error("Please select an agent vault destination.");
         }
+        const selectedVault = myVaults.find((v) => String(v.id) === String(targetVaultId));
+        if (selectedVault && Number(selectedVault.usdc_balance) < price) {
+          throw new Error(`Insufficient treasury in ${selectedVault.name}. Required: $${price.toFixed(2)} USDC, Available: $${Number(selectedVault.usdc_balance).toFixed(2)} USDC.`);
+        }
+
         const res = await api.post(`/vaults/${targetVaultId}/snipe`, {
           card_id: selectedCard.id,
           card_data: selectedCard
@@ -296,7 +313,9 @@ export default function CollectorCryptCatalog({
         setPurchaseResult({
           card: selectedCard,
           destinationType: "vault",
-          targetVault: vaults.find((v) => String(v.id) === String(targetVaultId))?.name || "Agent Vault",
+          targetVault: selectedVault?.name || res.data?.vault?.name || "Agent Vault",
+          near_intent: res.data?.near_intent || null,
+          solana_holding_address: res.data?.solana_holding_address || null,
           txHash: res.data?.tx_hash || res.data?.card?.card_id || "0x_SETTLED_VAULT_ACQUISITION"
         });
         setPurchaseStep("success");
@@ -304,61 +323,43 @@ export default function CollectorCryptCatalog({
         return;
       }
 
-      // Destination B: Personal Wallet via NEAR
-      if (paymentMethod === "NEAR") {
-        const wallet = await initNearWallet();
-        const accId = wallet?.accountId || connectedAccount;
-        if (!accId) {
-          await showWalletModal();
-          setPurchaseLoading(false);
-          return;
-        }
-
-        setPurchaseStep("awaiting_wallet");
-        const paymentRes = await executeNearPayment({
-          receiverId: "market.testnet",
-          amountNear: nearAmount
-        });
-
-        setPurchaseStep("confirming");
-        const res = await api.post("/market/buy-direct", {
-          card_id: selectedCard.id,
-          buyer_account: accId,
-          payment_method: "NEAR",
-          near_amount: nearAmount,
-          tx_hash: paymentRes.txHash,
-          card_data: selectedCard
-        });
-
-        const newBal = await getLiveNearAccountBalance(accId);
-        setLiveNearBalance(newBal);
-
-        setPurchaseResult({
-          ...res.data,
-          card: selectedCard,
-          destinationType: "personal",
-          nearAmount,
-          txHash: paymentRes.txHash,
-          explorerUrl: `https://testnet.nearblocks.io/txns/${paymentRes.txHash}`
-        });
-        setPurchaseStep("success");
-        if (onCardBridged) onCardBridged();
+      // Destination B: Personal Wallet via NEAR Wallet Transaction
+      const wallet = await initNearWallet();
+      const accId = wallet?.accountId || connectedAccount;
+      if (!accId) {
+        await showWalletModal();
+        setPurchaseLoading(false);
         return;
       }
 
-      // Destination C: Personal Wallet via Instant USDC
+      setPurchaseStep("awaiting_wallet");
+      const paymentRes = await executeNearPayment({
+        receiverId: "colliq.testnet",
+        amountNear: nearAmount
+      });
+
+      setPurchaseStep("confirming");
       const res = await api.post("/market/buy-direct", {
         card_id: selectedCard.id,
-        buyer_account: connectedAccount || "alierkan.testnet",
-        payment_method: "USDC",
+        buyer_account: accId,
+        payment_method: "NEAR",
+        near_amount: nearAmount,
+        tx_hash: paymentRes.txHash,
         card_data: selectedCard
       });
+
+      const newBal = await getLiveNearAccountBalance(accId);
+      setLiveNearBalance(newBal);
 
       setPurchaseResult({
         ...res.data,
         card: selectedCard,
         destinationType: "personal",
-        txHash: res.data?.tx_hash || "0x_USDC_SETTLED"
+        nearAmount,
+        near_intent: res.data?.near_intent || null,
+        solana_holding_address: res.data?.solana_holding_address || null,
+        txHash: paymentRes.txHash,
+        explorerUrl: `https://testnet.nearblocks.io/txns/${paymentRes.txHash}`
       });
       setPurchaseStep("success");
       if (onCardBridged) onCardBridged();
@@ -529,6 +530,10 @@ export default function CollectorCryptCatalog({
                   onClick={() => {
                     setSelectedCard(card);
                     setActiveImageView("front");
+                    setDestination(myVaults.length > 0 ? "vault" : "personal");
+                    if (myVaults.length > 0 && (!targetVaultId || !myVaults.some((v) => String(v.id) === String(targetVaultId)))) {
+                      setTargetVaultId(String(myVaults[0].id));
+                    }
                     setPurchaseResult(null);
                     setPurchaseError("");
                     setPurchaseStep("idle");
@@ -669,9 +674,33 @@ export default function CollectorCryptCatalog({
                       <span>Solana Custody Mint:</span>
                       <span className="text-neutral-900 font-bold truncate max-w-[220px]">{selectedCard.id}</span>
                     </div>
+                    {purchaseResult.near_intent?.intent_id && (
+                      <div className="flex items-center justify-between">
+                        <span>NEAR Intent ID:</span>
+                        <span className="text-emerald-700 font-bold truncate max-w-[220px]">{purchaseResult.near_intent.intent_id}</span>
+                      </div>
+                    )}
+                    {purchaseResult.solana_holding_address && (
+                      <div className="flex items-center justify-between">
+                        <span>Derived MPC Vault:</span>
+                        <span className="text-neutral-900 font-bold truncate max-w-[220px]">{purchaseResult.solana_holding_address}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <span>Transaction Reference:</span>
-                      <span className="text-neutral-900 font-bold truncate max-w-[220px]">{purchaseResult.txHash}</span>
+                      {purchaseResult.txHash && !purchaseResult.txHash.startsWith("0x") ? (
+                        <a
+                          href={`https://testnet.nearblocks.io/txns/${purchaseResult.txHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-700 hover:underline flex items-center gap-1 font-bold truncate max-w-[220px]"
+                        >
+                          <span>{purchaseResult.txHash}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ) : (
+                        <span className="text-neutral-900 font-bold truncate max-w-[220px]">{purchaseResult.txHash}</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -680,6 +709,7 @@ export default function CollectorCryptCatalog({
                   onClick={() => {
                     setSelectedCard(null);
                     setPurchaseResult(null);
+                    router.push("/portfolio");
                   }}
                   className="w-full py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition active:scale-95 shadow-sm cursor-pointer"
                 >
@@ -823,77 +853,113 @@ export default function CollectorCryptCatalog({
 
                     {/* Target Vault Dropdown */}
                     {destination === "vault" && (
-                      <div className="pt-2">
-                        {vaults.length === 0 ? (
+                      <div className="pt-2 space-y-2">
+                        {myVaults.length === 0 ? (
                           <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between">
-                            <span>No agent vaults minted yet.</span>
+                            <span>No active agent vaults found for your account.</span>
                             <button
                               type="button"
                               onClick={onOpenMint}
-                              className="font-bold underline hover:text-amber-950"
+                              className="font-bold underline hover:text-amber-950 cursor-pointer"
                             >
-                              Mint One
+                              Mint Vault
                             </button>
                           </div>
                         ) : (
-                          <select
-                            value={targetVaultId}
-                            onChange={(e) => setTargetVaultId(e.target.value)}
-                            className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs font-medium text-neutral-900 focus:outline-none focus:border-[#073525]"
-                          >
-                            {vaults.map((v) => (
-                              <option key={v.id} value={v.id}>
-                                {v.name} ({v.sub_account}) • ${v.usdc_balance} USDC
-                              </option>
-                            ))}
-                          </select>
+                          <>
+                            <select
+                              value={targetVaultId}
+                              onChange={(e) => setTargetVaultId(e.target.value)}
+                              className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs font-medium text-neutral-900 focus:outline-none focus:border-[#073525]"
+                            >
+                              {myVaults.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                  {v.name} (@{v.sub_account}) • ${Number(v.usdc_balance || 0).toFixed(0)} USDC
+                                </option>
+                              ))}
+                            </select>
+
+                            {(() => {
+                              const sVault = myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0];
+                              const cardCost = Number(selectedCard.costUsd || selectedCard.insuredUsd || 50);
+                              if (!sVault) return null;
+                              if (Number(sVault.usdc_balance || 0) < cardCost) {
+                                return (
+                                  <div className="text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2.5">
+                                    Insufficient Treasury: Vault holds ${Number(sVault.usdc_balance || 0).toFixed(2)} USDC (needs ${cardCost.toFixed(2)} USDC).
+                                  </div>
+                                );
+                              }
+                              if (Number(sVault.usdc_balance || 0) < cardCost * 1.34) {
+                                return (
+                                  <div className="text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                                    Low Treasury Buffer: Remaining funds will dip below the 25% safety reserve.
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </>
                         )}
                       </div>
                     )}
                   </div>
 
-                  {/* Payment Method Selector (For Personal Wallet) */}
+                  {/* Payment Method Notice (For Personal Wallet) */}
                   {destination === "personal" && (
                     <div className="space-y-1.5 pt-1">
                       <label className="text-[11px] font-bold text-neutral-700 uppercase tracking-wider block">
                         Payment Currency:
                       </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod("NEAR")}
-                          className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                            paymentMethod === "NEAR"
-                              ? "border-[#073525] bg-[#f8faf9] text-[#073525] ring-1 ring-[#073525]"
-                              : "border-neutral-200 text-neutral-700 bg-white"
-                          }`}
-                        >
-                          <span>NEAR Testnet</span>
-                          <span className="text-[10px] font-mono font-normal">
-                            ({usdToNear(selectedCard.costUsd || selectedCard.insuredUsd || 50)} N)
-                          </span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod("USDC")}
-                          className={`p-2 rounded-xl border text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                            paymentMethod === "USDC"
-                              ? "border-[#073525] bg-[#f8faf9] text-[#073525] ring-1 ring-[#073525]"
-                              : "border-neutral-200 text-neutral-700 bg-white"
-                          }`}
-                        >
-                          <span>USDC Balance</span>
-                        </button>
+                      <div className="p-2.5 rounded-xl border border-[#073525] bg-[#f8faf9] text-[#073525] text-xs font-semibold flex items-center justify-between">
+                        <span>NEAR Testnet Wallet</span>
+                        <span className="font-mono text-xs font-bold text-slate-800">
+                          {usdToNear(selectedCard.costUsd || selectedCard.insuredUsd || 50)} NEAR
+                        </span>
                       </div>
+                      <p className="text-[10px] text-slate-500">
+                        Executed via Meteor Wallet. Physical slab custody mapped to your NEAR account.
+                      </p>
                     </div>
                   )}
 
+                  {/* NEAR Intents Cross-Chain Settlement Route Preview Box */}
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 font-mono text-[11px] space-y-1.5 text-slate-600">
+                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <span>INTENT STANDARD</span>
+                      <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">
+                        NEP-413 Cross-Chain Swap
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">GIVE (NEAR):</span>
+                      <span className="text-slate-800 font-semibold">
+                        {destination === "vault"
+                          ? `$${Number(selectedCard.costUsd || selectedCard.insuredUsd || 50).toFixed(2)} USDC (from @${(myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0])?.sub_account || "vault"})`
+                          : `${usdToNear(selectedCard.costUsd || selectedCard.insuredUsd || 50)} NEAR ($${Number(selectedCard.costUsd || selectedCard.insuredUsd || 50).toFixed(2)} eqv.)`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">SOLVER ROUTE:</span>
+                      <span className="text-slate-800 font-medium">rwa-solver.colliq.testnet (NEAR ➔ Solana)</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">RECEIVE (MPC):</span>
+                      <span className="text-slate-800 font-medium">Solana pNFT #{selectedCard.certNumber} ➔ NEAR Custody</span>
+                    </div>
+                  </div>
+
                   {/* Purchase Action Button */}
-                  <div className="pt-3">
+                  <div className="pt-2">
                     <button
                       onClick={handleConfirmPurchase}
-                      disabled={purchaseLoading || (destination === "vault" && vaults.length === 0)}
+                      disabled={
+                        purchaseLoading ||
+                        (destination === "vault" &&
+                          (myVaults.length === 0 ||
+                            Number((myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0])?.usdc_balance || 0) <
+                              Number(selectedCard.costUsd || selectedCard.insuredUsd || 50)))
+                      }
                       className="w-full py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
                     >
                       {purchaseLoading ? (
@@ -909,8 +975,8 @@ export default function CollectorCryptCatalog({
                         <>
                           <span>
                             {destination === "vault"
-                              ? "Snipe into Agent Vault"
-                              : `Buy Slab with ${paymentMethod}`}
+                              ? `Acquire into ${(myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0])?.name || "Agent Vault"}`
+                              : `Buy Slab with NEAR Wallet`}
                           </span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </>

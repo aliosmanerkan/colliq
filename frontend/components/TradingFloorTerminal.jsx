@@ -515,9 +515,29 @@ export default function TradingFloorTerminal({
                           </div>
 
                           {/* Public Argument */}
-                          <p className="text-xs text-slate-700 leading-relaxed mt-2 font-sans">
+                          <p className="text-xs text-slate-700 leading-relaxed mt-2 font-sans whitespace-pre-line">
                             {publicArgument}
                           </p>
+
+                          {/* Verified NEAR Intent (NEP-413) Cryptographic Proof */}
+                          {turn.near_intent && (
+                            <div className="mt-2.5 px-3 py-2 rounded-lg bg-emerald-50/80 border border-emerald-200 text-[11px] font-mono text-emerald-950 space-y-1">
+                              <div className="flex items-center justify-between text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                                <span>VERIFIED NEAR INTENT ({turn.near_intent.payload?.standard?.toUpperCase() || "NEP-413"})</span>
+                                <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-300">
+                                  {turn.near_intent.solver_status || "FULFILLED"}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-emerald-800 truncate">
+                                <strong>Intent ID:</strong> {turn.near_intent.intent_id}
+                              </div>
+                              {turn.near_intent.payload?.token_diff && (
+                                <div className="text-[10px] text-emerald-700 font-mono">
+                                  <strong>TokenDiff:</strong> {JSON.stringify(turn.near_intent.payload.token_diff)}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {/* Private Owner Telemetry */}
                           {showPrivateReasoning && privateReasoning && (

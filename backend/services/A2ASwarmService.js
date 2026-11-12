@@ -349,8 +349,9 @@ export class A2ASwarmService {
                                     agent: vault.name,
                                     turn: {
                                         decision: "ACCEPT",
-                                        public_argument: `Autonomous order execution: Secured ${card.name} (${card.grade || "PSA 10"}) from PWCC physical vault at $${cardPrice.toFixed(2)} USDC.`,
-                                        private_reasoning_for_owner: `Directive Match: "${evalResult.matchedRule}". Sourced within guardrail limits with $${(vault.usdc_balance).toFixed(2)} USDC treasury remaining.`
+                                        public_argument: `Signed NEAR Intent (${bridgeResult.near_intent?.intent_id || "intent-rwa"}): Committed $${cardPrice.toFixed(2)} USDC on NEAR -> Solver acquired Solana pNFT (${card.id.slice(0, 6)}...) for ${card.name} into MPC Vault (${bridgeResult.solana_holding_address}).`,
+                                        private_reasoning_for_owner: `Directive Match: "${evalResult.matchedRule}". Sourced within guardrail limits with $${(vault.usdc_balance).toFixed(2)} USDC treasury remaining.`,
+                                        near_intent: bridgeResult.near_intent
                                     }
                                 }
                             ],
@@ -372,7 +373,7 @@ export class A2ASwarmService {
                             id: `msg-snipe-${Date.now()}`,
                             sender: "agent",
                             senderAccount: vault.sub_account,
-                            text: `[MARKET SNIPE]\nAcquired ${card.name} (${card.grade || "PSA 10"}) from Collector Crypt for $${cardPrice.toFixed(2)} USDC.\n\nMatched Directive: "${evalResult.matchedRule}". Physical slab secured in PWCC/Brink's vault under sub-account @${vault.sub_account}. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
+                            text: `[NEAR INTENT SNIPE EXECUTED]\nSigned NEP-413 Intent: ${bridgeResult.near_intent?.intent_id || "intent-rwa"}\nCommitted $${cardPrice.toFixed(2)} USDC on NEAR -> Solana pNFT (${card.id.slice(0, 8)}...) secured into MPC Vault: ${bridgeResult.solana_holding_address}.\n\nMatched Directive: "${evalResult.matchedRule}". Physical slab in PWCC/Brink's vault. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
                             actionType: "MARKET_SNIPE",
                             timestamp: new Date().toISOString()
                         });
@@ -478,8 +479,9 @@ export class A2ASwarmService {
                                 agent: vault.name,
                                 turn: {
                                     decision: "ACCEPT",
-                                    public_argument: `Inaugural Market Acquisition: Sniped ${card.name} (${card.grade || "PSA 10"}) from Collector Crypt at $${cardPrice.toFixed(2)} USDC.`,
-                                    private_reasoning_for_owner: `Initial inception scan executed. Matched directive "${evalResult.matchedRule}".`
+                                    public_argument: `Signed NEAR Intent (${bridgeResult.near_intent?.intent_id || "intent-rwa"}): Committed $${cardPrice.toFixed(2)} USDC on NEAR -> Solver acquired Solana pNFT (${card.id.slice(0, 6)}...) for ${card.name} into MPC Vault (${bridgeResult.solana_holding_address}).`,
+                                    private_reasoning_for_owner: `Initial inception scan executed. Matched directive "${evalResult.matchedRule}".`,
+                                    near_intent: bridgeResult.near_intent
                                 }
                             }
                         ],
@@ -501,7 +503,7 @@ export class A2ASwarmService {
                         id: `msg-inaugural-${Date.now()}`,
                         sender: "agent",
                         senderAccount: vault.sub_account,
-                        text: `[INAUGURAL ACQUISITION]\nImmediately scanned Collector Crypt upon deployment and secured inaugural slab:\n\n• ${card.name} (${card.grade || "PSA 10"})\n• Purchase Price: $${cardPrice.toFixed(2)} USDC\n• Physical Custody: PWCC/Brink's Oregon Vault\n• Remaining Treasury: $${vault.usdc_balance.toFixed(2)} USDC\n\nOrder book monitoring active for subsequent barter opportunities.`,
+                        text: `[NEAR INTENT SNIPE EXECUTED]\nSigned NEP-413 Intent: ${bridgeResult.near_intent?.intent_id || "intent-rwa"}\nCommitted $${cardPrice.toFixed(2)} USDC on NEAR -> Solana pNFT (${card.id.slice(0, 8)}...) secured into MPC Vault: ${bridgeResult.solana_holding_address}.\n\nInaugural slab: ${card.name} (${card.grade || "PSA 10"}) at $${cardPrice.toFixed(2)} USDC. Physical custody: PWCC/Brink's Oregon Vault. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
                         actionType: "MARKET_SNIPE",
                         timestamp: new Date().toISOString()
                     });

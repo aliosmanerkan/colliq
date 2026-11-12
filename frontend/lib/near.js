@@ -10,14 +10,16 @@ let modalInstance = null;
 
 export const CONTRACT_ID = process.env.NEXT_PUBLIC_NEAR_CONTRACT_ID || "";
 export const NETWORK_ID = process.env.NEXT_PUBLIC_NEAR_NETWORK || "testnet";
-export const TREASURY_ACCOUNT = process.env.NEXT_PUBLIC_NEAR_TREASURY_ACCOUNT || "market.testnet";
+export const TREASURY_ACCOUNT = process.env.NEXT_PUBLIC_NEAR_TREASURY_ACCOUNT || "colliq.testnet";
 
-// Convert USD/USDC to NEAR for Testnet demonstration (1 NEAR = $50 USD)
+// Convert USD/USDC to NEAR for Testnet demonstration (scaled & capped for reliable faucet testnet execution)
 export function usdToNear(usdPrice) {
   const numeric = Number(usdPrice) || 0;
-  if (numeric <= 0) return "0.05";
-  const nearVal = (numeric / 50).toFixed(2);
-  return Math.max(0.05, parseFloat(nearVal)).toFixed(2);
+  if (numeric <= 0) return "0.10";
+  // Scale proportionally for demo but cap at 1.25 NEAR so Testnet faucet wallets never fail
+  const rawNear = numeric / 250;
+  const clamped = Math.min(1.25, Math.max(0.10, rawNear));
+  return clamped.toFixed(2);
 }
 
 export async function initNearWallet() {

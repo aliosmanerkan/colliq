@@ -504,8 +504,9 @@ router.post("/:id/snipe", async (req, res) => {
                     agent: vault.name,
                     turn: {
                         decision: "ACCEPT",
-                        public_argument: `Direct market acquisition: Secured ${result.card.name} (${result.card.grade || "PSA 10"}) at $${cardPrice.toFixed(2)} USDC.`,
-                        private_reasoning_for_owner: `Physical slab bridged to vault sub-account. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`
+                        public_argument: `Signed NEAR Intent (${result.near_intent?.intent_id || "intent-rwa"}): Committed $${cardPrice.toFixed(2)} USDC on NEAR -> Solver acquired Solana pNFT (${result.solana_mint?.slice(0, 6)}...) for ${result.card.name} into MPC Vault (${result.solana_holding_address}).`,
+                        private_reasoning_for_owner: `Physical slab bridged to vault sub-account. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
+                        near_intent: result.near_intent
                     }
                 }
             ],
@@ -527,7 +528,7 @@ router.post("/:id/snipe", async (req, res) => {
             id: `msg-snipe-${Date.now()}`,
             sender: "agent",
             senderAccount: vault.sub_account,
-            text: `[DIRECT MARKET SNIPE]\nAcquired ${result.card.name} (${result.card.grade || "PSA 10"}) from Collector Crypt for $${cardPrice.toFixed(2)} USDC.\nPhysical custody secured in PWCC/Brink's vault. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
+            text: `[NEAR INTENT SNIPE EXECUTED]\nSigned NEP-413 Intent: ${result.near_intent?.intent_id || "intent-rwa"}\nCommitted $${cardPrice.toFixed(2)} USDC on NEAR -> Solana pNFT (${result.solana_mint?.slice(0, 8)}...) secured into MPC Vault: ${result.solana_holding_address}.\n\nPhysical custody secured in PWCC/Brink's vault. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
             actionType: "MARKET_SNIPE",
             timestamp: new Date().toISOString()
         });

@@ -2,6 +2,7 @@ import { JsonRpcProvider } from "near-api-js";
 import crypto from "node:crypto";
 import axios from "axios";
 import db from "../../model/model.js";
+import nearService from "../../services/NearService.js";
 
 // ==========================================
 // STRICT JSON SCHEMA TYPES FOR A2A LLM
@@ -798,6 +799,24 @@ You MUST respond with valid JSON only. Zero emojis.
 
             // Register anti-ping-pong cooldown
             this.setPairCooldown(cardFromBuyer.card_id, cardFromSeller.card_id, buyerVault.id, sellerVault.id);
+
+            // Generate dual-signed NEP-413 TokenDiff Barter Intent
+            const barterIntent = nearService.createA2ABarterIntent({
+                vaultA: buyerVault,
+                vaultB: sellerVault,
+                cardA: cardFromBuyer,
+                cardB: cardFromSeller,
+                usdcFromA: usdcFromBuyer,
+                usdcFromB: usdcFromSeller
+            });
+
+            if (negotiationHistory.length > 0) {
+                const finalRound = negotiationHistory[negotiationHistory.length - 1];
+                if (finalRound && finalRound.turn) {
+                    finalRound.turn.near_intent = barterIntent;
+                    finalRound.turn.public_argument = `[NEP-413 ATOMIC BARTER EXECUTED]\nIntent ID: ${barterIntent.intent_id}\n` + (finalRound.turn.public_argument || "");
+                }
+            }
 
             const txHash = "0x" + crypto.randomBytes(32).toString("hex");
 

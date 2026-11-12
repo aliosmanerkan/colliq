@@ -49,18 +49,18 @@ export function getCollectorCryptInventory() {
 export function normalizeLiveCard(raw) {
     if (!raw) return null;
 
-    const id = raw.nftAddress || raw.id;
-    const ccCardId = raw.id || id;
-    const name = raw.itemName || `${raw.year || ""} ${raw.category || "Vault"} Slab`.trim();
+    const id = raw.nftAddress || raw.id || raw.solana_mint || raw.card_id;
+    const ccCardId = raw.ccCardId || raw.id || id;
+    const name = raw.itemName || raw.name || `${raw.year || ""} ${raw.category || "Vault"} Slab`.trim();
 
-    // Priority for ultra-fast CloudFront CDN loading (<50ms)
-    const imageUrl = raw.images?.frontM || raw.images?.frontS || raw.frontImage || null;
-    const thumbnailUrl = raw.images?.frontS || raw.images?.frontM || raw.frontImage || null;
-    const backImageUrl = raw.images?.backS || raw.backImage || null;
+    // Support both raw Collector Crypt API schema AND already-normalized frontend card object
+    const imageUrl = raw.images?.frontM || raw.images?.frontS || raw.frontImage || raw.imageUrl || raw.image_url || raw.thumbnailUrl || null;
+    const thumbnailUrl = raw.images?.frontS || raw.images?.frontM || raw.frontImage || raw.thumbnailUrl || raw.imageUrl || raw.image_url || null;
+    const backImageUrl = raw.images?.backS || raw.backImage || raw.backImageUrl || null;
 
-    const gradingCompany = raw.gradingCompany || "PSA";
+    const gradingCompany = raw.gradingCompany || (raw.grade?.includes("CGC") ? "CGC" : raw.grade?.includes("BGS") ? "BGS" : "PSA");
     let grade = raw.grade || "GEM-MT 10";
-    if (gradingCompany && grade && !grade.startsWith(gradingCompany)) {
+    if (gradingCompany && grade && !String(grade).startsWith(gradingCompany)) {
         grade = `${gradingCompany} ${grade}`;
     }
 
@@ -71,17 +71,21 @@ export function normalizeLiveCard(raw) {
         String(grade).includes("8") ? 8 : 10
     );
 
-    const certNumber = raw.gradingID || raw.serial || (ccCardId ? String(ccCardId).slice(-8) : "CERT-VAULT");
+    const certNumber = raw.gradingID || raw.certNumber || raw.psa_cert_number || raw.serial || (ccCardId ? String(ccCardId).slice(-8) : "CERT-VAULT");
 
-    // Realistic valuation & cost calculation
-    let insuredUsd = Number(raw.insuredValue) > 0 ? Number(raw.insuredValue) : 50;
-    let costUsd = insuredUsd;
+    // Preserve existing insuredUsd / costUsd if already normalized
+    let insuredUsd = Number(raw.insuredValue || raw.insuredUsd || raw.oracle_fair_value_usdc) > 0
+        ? Number(raw.insuredValue || raw.insuredUsd || raw.oracle_fair_value_usdc)
+        : 50;
+    let costUsd = Number(raw.costUsd || raw.last_sale_usdc) > 0
+        ? Number(raw.costUsd || raw.last_sale_usdc)
+        : insuredUsd;
 
     if (raw.listing?.price && Number(raw.listing.price) > 0) {
         const rawPrice = Number(raw.listing.price);
         costUsd = raw.listing.currency === "SOL" ? Math.round(rawPrice * 185) : Math.round(rawPrice);
         if (insuredUsd < costUsd) insuredUsd = Math.round(costUsd * 1.12);
-    } else if (insuredUsd > 0) {
+    } else if (!raw.costUsd && insuredUsd > 0) {
         costUsd = Math.round(insuredUsd * 0.9);
     }
 
@@ -515,6 +519,15 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
     // Derive Solana holding address for this vault via NEAR Chain Signatures MPC
     const solanaHoldingAddress = nearService.deriveSolanaAddressForVault(vault.sub_account);
 
+    // Cryptographically sign NEP-413 Cross-Chain Acquisition Intent
+    const nearIntent = nearService.createCrossChainSnipeIntent({
+        signerAccount: vault.sub_account,
+        solanaMint: ccCard.id,
+        cardName: ccCard.name,
+        usdcAmount: cardPrice,
+        destinationMpcAddress: solanaHoldingAddress
+    });
+
     return {
         status: "PURCHASED",
         card: newCard,
@@ -528,6 +541,7 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
         solana_mint: ccCard.id,
         solana_holding_address: solanaHoldingAddress,
         vault_custody: `${ccCard.vault || "PWCC / Brink's"} (Collector Crypt Sealed)`,
+        near_intent: nearIntent,
         tx_hash: `0xnear_mpc_${Date.now()}`
     };
 }
