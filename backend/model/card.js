@@ -22,6 +22,11 @@ export default (sequelize) => {
             population_higher: { type: DataTypes.INTEGER, defaultValue: 0 },
             is_locked: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_hold: { type: DataTypes.BOOLEAN, defaultValue: false },
+            is_listed_by_agent: { type: DataTypes.BOOLEAN, defaultValue: false },
+            asking_price_usdc: { type: DataTypes.FLOAT, allowNull: true },
+            min_reserve_usdc: { type: DataTypes.FLOAT, allowNull: true },
+            allow_barter: { type: DataTypes.BOOLEAN, defaultValue: true },
+            sell_directive: { type: DataTypes.TEXT, allowNull: true },
         },
         {
             timestamps: true,

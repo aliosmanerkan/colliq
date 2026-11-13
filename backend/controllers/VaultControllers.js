@@ -628,6 +628,82 @@ router.post("/cards/:cardId/toggle-hold", async (req, res) => {
     }
 });
 
+// LIST OR UNLIST CARD FOR SALE WITH DIRECTIVES
+router.post("/:id/cards/:cardId/list-sale", async (req, res) => {
+    try {
+        const { action = "LIST", asking_price_usdc, min_reserve_usdc, allow_barter, sell_directive } = req.body;
+        const vault = await db.vault.findOne({
+            where: getVaultWhere(req.params.id),
+            include: [{ model: db.card, as: "inventory" }]
+        });
+        if (!vault) return res.status(404).json({ error: "Vault not found" });
+
+        const cardParam = req.params.cardId;
+        const card = vault.inventory?.find(c => 
+            String(c.id) === String(cardParam) || 
+            c.card_id === String(cardParam)
+        );
+        if (!card) return res.status(404).json({ error: "Card not found in this vault's inventory" });
+
+        if (String(action).toUpperCase() === "UNLIST") {
+            card.is_listed_by_agent = false;
+            card.asking_price_usdc = null;
+            card.min_reserve_usdc = null;
+            card.allow_barter = true;
+            card.sell_directive = null;
+            await card.save();
+
+            let history = [];
+            try { history = JSON.parse(vault.chat_history || "[]"); } catch {}
+            history.push({
+                id: `msg-sale-${Date.now()}`,
+                sender: "agent",
+                senderAccount: vault.sub_account,
+                text: `[SALES NOTICE] Delisted '${card.name}' from marketplace. Restored to private vault reserve.`,
+                actionType: "CARD_UNLISTED",
+                timestamp: new Date().toISOString()
+            });
+            vault.chat_history = JSON.stringify(history);
+            await vault.save();
+
+            req.app.get("io")?.emit("vault:updated", { vaultId: vault.id, cardId: card.id, action: "CARD_UNLISTED" });
+            return res.json({ status: "SUCCESS", action: "UNLIST", card });
+        }
+
+        const asking = Number(asking_price_usdc || card.oracle_fair_value_usdc || 100);
+        const reserve = min_reserve_usdc ? Number(min_reserve_usdc) : Math.round(asking * 0.95);
+        const finalReserve = Math.min(reserve, asking);
+        const finalAllowBarter = allow_barter === true;
+        const finalDirective = sell_directive || "Defend the asking price and only concede toward the reserve floor if necessary.";
+
+        card.is_listed_by_agent = true;
+        card.asking_price_usdc = asking;
+        card.min_reserve_usdc = finalReserve;
+        card.allow_barter = finalAllowBarter;
+        card.sell_directive = finalDirective;
+        await card.save();
+
+        let history = [];
+        try { history = JSON.parse(vault.chat_history || "[]"); } catch {}
+        history.push({
+            id: `msg-sale-${Date.now()}`,
+            sender: "agent",
+            senderAccount: vault.sub_account,
+            text: `[SALES ACTIVATED] Listed '${card.name}' for $${asking} USDC. Secret reserve: $${finalReserve} USDC. Barter allowed: ${finalAllowBarter ? "YES" : "NO — Cash Only"}. Directive: "${finalDirective}". Standing by to negotiate with prospective buyers.`,
+            actionType: "CARD_LISTED",
+            timestamp: new Date().toISOString()
+        });
+        vault.chat_history = JSON.stringify(history);
+        await vault.save();
+
+        req.app.get("io")?.emit("vault:updated", { vaultId: vault.id, cardId: card.id, action: "CARD_LISTED" });
+        return res.json({ status: "SUCCESS", action: "LIST", card });
+    } catch (err) {
+        console.error("Card list-sale error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // DEPOSIT USDC TO AGENT TREASURY
 router.post("/:id/deposit-treasury", async (req, res) => {
     try {

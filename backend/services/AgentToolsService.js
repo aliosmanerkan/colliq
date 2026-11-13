@@ -258,6 +258,44 @@ export const AGENT_TOOLS_SCHEMA = [
     {
         type: "function",
         function: {
+            name: "list_card_for_sale_with_directive",
+            description: "List a card held in this vault's inventory for sale managed by the autonomous agent, setting a public asking price in USDC, a secret minimum reserve floor price that the agent will never drop below, whether card swap/barter offers are allowed or strictly cash-only, and custom negotiation instructions. Can also unlist a card.",
+            parameters: {
+                type: "object",
+                properties: {
+                    action: {
+                        type: "string",
+                        enum: ["LIST", "UNLIST"],
+                        description: "Action to perform: 'LIST' or 'UNLIST'"
+                    },
+                    card_name_or_id: {
+                        type: "string",
+                        description: "Name or card_id of the card in the vault's inventory. If vault only has 1 card, pass that card's name or 'current_card'"
+                    },
+                    asking_price_usdc: {
+                        type: "number",
+                        description: "Public listing price in USDC, e.g. 1000"
+                    },
+                    min_reserve_usdc: {
+                        type: "number",
+                        description: "Secret floor price in USDC that the agent will never drop below, e.g. 950. Defaults to 95% of asking_price_usdc if omitted."
+                    },
+                    allow_barter: {
+                        type: "boolean",
+                        description: "Set to false if the user requested cash only / no trade/swap offers. Defaults to false when listing for cash sale unless barter is explicitly allowed."
+                    },
+                    sell_directive: {
+                        type: "string",
+                        description: "The owner's bargaining directive, e.g. 'Do not accept trade offers. Defend $1000 asking price strongly; only drop toward $950 secret floor if the buyer pushes hard.'"
+                    }
+                },
+                required: ["action", "card_name_or_id"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
             name: "list_vault_for_sale",
             description: "List this autonomous Merchant Vault on the Business-in-a-Box secondary marketplace for a specified USDC asking price. Sets anti-front-running lock until sold or delisted.",
             parameters: {
@@ -860,6 +898,83 @@ export async function executeAgentTool(vault, toolName, args = {}) {
                 payout_received_usdc: payout,
                 new_usdc_treasury: vault.usdc_balance,
                 summary: `Successfully liquidated '${cardName}' for $${payout} USDC cash. Treasury updated to $${vault.usdc_balance} USDC.`
+            };
+        }
+
+        // 8c. LIST OR UNLIST CARD FOR SALE WITH DIRECTIVES
+        case "list_card_for_sale_with_directive": {
+            const { action = "LIST", card_name_or_id, asking_price_usdc, min_reserve_usdc, allow_barter, sell_directive } = args;
+
+            const fullVault = await db.vault.findOne({
+                where: { id: vault.id },
+                include: [{ model: db.card, as: "inventory" }]
+            });
+
+            const inventory = fullVault?.inventory || [];
+            if (inventory.length === 0) {
+                return {
+                    status: "FAILED",
+                    error: "This vault has no physical card inventory to list for sale."
+                };
+            }
+
+            const q = (card_name_or_id || "").toLowerCase();
+            let card = inventory.find(c => 
+                c.card_id === card_name_or_id || 
+                String(c.id) === String(card_name_or_id) ||
+                (q && c.name.toLowerCase().includes(q))
+            );
+
+            // If only 1 card exists in inventory and user referenced "bu kart" or general card
+            if (!card && inventory.length === 1) {
+                card = inventory[0];
+            }
+
+            if (!card) {
+                return {
+                    status: "NOT_FOUND",
+                    error: `No card matching '${card_name_or_id}' found in vault inventory (${inventory.map(c => c.name).join(", ")}).`
+                };
+            }
+
+            if (String(action).toUpperCase() === "UNLIST") {
+                card.is_listed_by_agent = false;
+                card.asking_price_usdc = null;
+                card.min_reserve_usdc = null;
+                card.allow_barter = true;
+                card.sell_directive = null;
+                await card.save();
+
+                return {
+                    status: "CARD_UNLISTED",
+                    card_id: card.card_id,
+                    card_name: card.name,
+                    summary: `Successfully delisted '${card.name}' from marketplace sale. Restored to private reserve.`
+                };
+            }
+
+            const asking = Number(asking_price_usdc || card.oracle_fair_value_usdc || 100);
+            const reserve = min_reserve_usdc ? Number(min_reserve_usdc) : Math.round(asking * 0.95);
+            const finalReserve = Math.min(reserve, asking);
+            const finalAllowBarter = allow_barter === true;
+            const finalDirective = sell_directive || "Defend the asking price and only concede toward the reserve floor if necessary.";
+
+            card.is_listed_by_agent = true;
+            card.asking_price_usdc = asking;
+            card.min_reserve_usdc = finalReserve;
+            card.allow_barter = finalAllowBarter;
+            card.sell_directive = finalDirective;
+            await card.save();
+
+            return {
+                status: "CARD_LISTED_BY_AGENT",
+                card_id: card.card_id,
+                card_name: card.name,
+                asking_price_usdc: card.asking_price_usdc,
+                min_reserve_usdc: card.min_reserve_usdc,
+                allow_barter: card.allow_barter,
+                sell_directive: card.sell_directive,
+                summary: `Successfully listed '${card.name}' for $${asking} USDC (Secret Floor: $${finalReserve} USDC, Barter Allowed: ${finalAllowBarter ? "YES" : "NO — Cash Only"}). Directive: "${finalDirective}".`
             };
         }
 

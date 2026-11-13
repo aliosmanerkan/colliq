@@ -68,6 +68,14 @@ export default function AgentCommandStudioModal({
   const [actionCardId, setActionCardId] = useState(null);
   const [inventoryNotice, setInventoryNotice] = useState(null);
 
+  // Card Sale Listing State
+  const [sellingCardId, setSellingCardId] = useState(null);
+  const [askingPriceInput, setAskingPriceInput] = useState("");
+  const [minReserveInput, setMinReserveInput] = useState("");
+  const [allowBarterInput, setAllowBarterInput] = useState(true);
+  const [sellDirectiveInput, setSellDirectiveInput] = useState("");
+  const [isListingSubmitting, setIsListingSubmitting] = useState(false);
+
   useEffect(() => {
     if (initialTab) {
       setActiveTab(initialTab);
@@ -306,6 +314,97 @@ export default function AgentCommandStudioModal({
       setInventoryNotice({
         type: "error",
         text: err.response?.data?.error || err.message || "Liquidation failed."
+      });
+    } finally {
+      setActionCardId(null);
+    }
+  };
+
+  // Start Inline Card Sale Listing
+  const handleStartSell = (card) => {
+    const cardId = card.id || card.card_id;
+    setSellingCardId(cardId);
+    const fairVal = Math.round(Number(card.oracle_fair_value_usdc || 100));
+    setAskingPriceInput(card.asking_price_usdc ? String(card.asking_price_usdc) : String(fairVal));
+    setMinReserveInput(card.min_reserve_usdc ? String(card.min_reserve_usdc) : String(Math.round(fairVal * 0.95)));
+    setAllowBarterInput(card.allow_barter !== false);
+    setSellDirectiveInput(card.sell_directive || "Defend asking price aggressively; haggle toughly before conceding toward the reserve floor.");
+  };
+
+  const handleCancelSell = () => {
+    setSellingCardId(null);
+    setAskingPriceInput("");
+    setMinReserveInput("");
+    setAllowBarterInput(true);
+    setSellDirectiveInput("");
+  };
+
+  // Submit Card Sale Listing to Agent
+  const handleActivateCardListing = async (card) => {
+    const cardId = card.id || card.card_id;
+    const asking = parseFloat(askingPriceInput);
+    const reserve = parseFloat(minReserveInput);
+
+    if (isNaN(asking) || asking <= 0) {
+      setInventoryNotice({ type: "error", text: "Please enter a valid asking price in USDC." });
+      return;
+    }
+    if (isNaN(reserve) || reserve <= 0) {
+      setInventoryNotice({ type: "error", text: "Please enter a valid secret reserve floor in USDC." });
+      return;
+    }
+    if (reserve > asking) {
+      setInventoryNotice({ type: "error", text: "Secret reserve floor cannot exceed the asking price." });
+      return;
+    }
+
+    setIsListingSubmitting(true);
+    setInventoryNotice(null);
+
+    try {
+      await api.post(`/vaults/${vault.id}/cards/${cardId}/list-sale`, {
+        action: "LIST",
+        asking_price_usdc: asking,
+        min_reserve_usdc: reserve,
+        allow_barter: allowBarterInput,
+        sell_directive: sellDirectiveInput.trim() || undefined
+      });
+
+      setInventoryNotice({
+        type: "success",
+        text: `"${card.name}" listed for $${asking.toLocaleString()} USDC with secret reserve floor $${reserve.toLocaleString()} USDC!`
+      });
+      handleCancelSell();
+      await loadData();
+    } catch (err) {
+      setInventoryNotice({
+        type: "error",
+        text: err.response?.data?.error || err.message || "Failed to list card for sale."
+      });
+    } finally {
+      setIsListingSubmitting(false);
+    }
+  };
+
+  // Delist Card from Agent Sale
+  const handleUnlistCardListing = async (card) => {
+    const cardId = card.id || card.card_id;
+    setActionCardId(cardId);
+    setInventoryNotice(null);
+
+    try {
+      await api.post(`/vaults/${vault.id}/cards/${cardId}/list-sale`, {
+        action: "UNLIST"
+      });
+      setInventoryNotice({
+        type: "success",
+        text: `Delisted "${card.name}" from public market. Restored to private vault reserve.`
+      });
+      await loadData();
+    } catch (err) {
+      setInventoryNotice({
+        type: "error",
+        text: err.response?.data?.error || err.message || "Failed to unlist card."
       });
     } finally {
       setActionCardId(null);
@@ -762,15 +861,145 @@ export default function AgentCommandStudioModal({
                             </div>
                           </div>
 
-                          {/* Action Buttons: Withdraw & Liquidate (Zero Reload!) */}
-                          <div className="pt-2 border-t border-neutral-200/60 flex items-center gap-2">
+                          {/* Status Badge: Listed by Agent */}
+                          {card.is_listed_by_agent && (
+                            <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/90 text-[11px] space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-emerald-800 flex items-center gap-1.5">
+                                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                  Listed by Agent: ${card.asking_price_usdc} USDC
+                                </span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono font-medium">
+                                  {card.allow_barter ? "Swaps OK" : "Cash Only"}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-emerald-700/90 font-mono">
+                                Secret Reserve Floor: <span className="font-bold">${card.min_reserve_usdc} USDC</span>
+                              </div>
+                              {card.sell_directive && (
+                                <div className="text-[10px] text-emerald-700 italic truncate" title={card.sell_directive}>
+                                  "{card.sell_directive}"
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Inline Sell with Agent Form */}
+                          {!card.is_listed_by_agent && sellingCardId === cardId && (
+                            <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-2.5 animate-in fade-in duration-150">
+                              <div className="flex items-center justify-between font-semibold text-emerald-900 text-[11px]">
+                                <span>Instruct Agent to Sell Slab</span>
+                                <button
+                                  type="button"
+                                  onClick={handleCancelSell}
+                                  className="text-neutral-400 hover:text-neutral-700 text-xs cursor-pointer"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">
+                                    Asking Price ($)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={askingPriceInput}
+                                    onChange={(e) => setAskingPriceInput(e.target.value)}
+                                    placeholder="e.g. 1000"
+                                    className="w-full px-2 py-1 bg-white border border-emerald-300 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-[10px] font-medium text-emerald-800 mb-0.5" title="Lowest price agent will accept in secret haggling">
+                                    Secret Floor ($)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={minReserveInput}
+                                    onChange={(e) => setMinReserveInput(e.target.value)}
+                                    placeholder="e.g. 950"
+                                    className="w-full px-2 py-1 bg-white border border-emerald-300 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  id={`barter-${cardId}`}
+                                  checked={allowBarterInput}
+                                  onChange={(e) => setAllowBarterInput(e.target.checked)}
+                                  className="w-3.5 h-3.5 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                />
+                                <label htmlFor={`barter-${cardId}`} className="text-[11px] text-emerald-900 cursor-pointer select-none">
+                                  Allow Card Barter Offers <span className="text-neutral-400 text-[10px]">({allowBarterInput ? "Swaps Allowed" : "Cash Only"})</span>
+                                </label>
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-medium text-emerald-800 mb-0.5">
+                                  Agent Bargaining Directive
+                                </label>
+                                <input
+                                  type="text"
+                                  value={sellDirectiveInput}
+                                  onChange={(e) => setSellDirectiveInput(e.target.value)}
+                                  placeholder="e.g. Defend price aggressively; do not sell below reserve"
+                                  className="w-full px-2 py-1 bg-white border border-emerald-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleActivateCardListing(card)}
+                                  disabled={isListingSubmitting}
+                                  className="flex-1 py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] shadow-sm transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                                >
+                                  {isListingSubmitting ? "Activating..." : "Activate Agent Listing"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleCancelSell}
+                                  className="py-1.5 px-2 rounded-lg bg-white border border-neutral-200 text-neutral-700 font-medium text-[11px] hover:bg-neutral-100 transition active:scale-95 cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="pt-2 border-t border-neutral-200/60 flex items-center gap-1.5">
+                            {card.is_listed_by_agent ? (
+                              <button
+                                type="button"
+                                onClick={() => handleUnlistCardListing(card)}
+                                disabled={isActing}
+                                className="flex-1 py-1.5 px-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-[11px] font-semibold text-amber-800 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                              >
+                                {isActing ? "Unlisting..." : "Unlist Sale"}
+                              </button>
+                            ) : sellingCardId !== cardId ? (
+                              <button
+                                type="button"
+                                onClick={() => handleStartSell(card)}
+                                className="flex-1 py-1.5 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[11px] font-semibold text-emerald-800 transition active:scale-95 cursor-pointer"
+                              >
+                                Sell with Agent
+                              </button>
+                            ) : null}
+
                             <button
                               type="button"
                               onClick={() => handleWithdrawCard(card)}
                               disabled={isActing}
-                              className="flex-1 py-1.5 px-2.5 rounded-lg bg-white hover:bg-neutral-100 border border-neutral-200 text-[11px] font-semibold text-neutral-800 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                              className="py-1.5 px-2.5 rounded-lg bg-white hover:bg-neutral-100 border border-neutral-200 text-[11px] font-semibold text-neutral-800 transition active:scale-95 disabled:opacity-50 cursor-pointer"
                             >
-                              {isActing ? "Withdrawing..." : "Withdraw to Wallet"}
+                              {isActing ? "..." : "Withdraw"}
                             </button>
 
                             <button

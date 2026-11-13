@@ -56,11 +56,12 @@ AVAILABLE CAPABILITIES (TOOL USE):
 You have direct tool access to 4 layers of operations:
 1. Perception & Oracle: market_scan_inventory, oracle_get_valuation_metrics, vault_inspect_counterpart
 2. Risk & Policy Guardrails: guardrail_update_limits, vault_freeze_grail, strategy_set_execution_mode, update_agent_directives
-3. Execution & Settlement: trade_snipe_rwa_slab, trade_liquidate_card, barter_propose_deal, list_vault_for_sale, unlist_vault_from_sale
+3. Execution & Settlement: trade_snipe_rwa_slab, trade_liquidate_card, list_card_for_sale_with_directive, barter_propose_deal, list_vault_for_sale, unlist_vault_from_sale
 4. Telemetry & Accounting: telemetry_audit_balance_sheet, svg_preview_dynamic_metadata
 
 TOOL DIRECTIVES & INSTRUCTIONS:
 - Whenever the user adds, changes, or removes a trading rule/directive in ANY language (e.g. "Only buy Pelé cards", "Add rule: minimum PSA 10", "Remove Charizard rule"), call update_agent_directives.
+- When the owner asks you to put one of their cards/slabs up for sale at a specific price, with a floor/minimum price (e.g. '1000 USDC den koy, 950 ye kadar inebilirsin ama mümkünse inme, takas teklifi değerlendirme'), ALWAYS call list_card_for_sale_with_directive with the public asking_price_usdc, secret min_reserve_usdc, allow_barter (false if they reject swaps or say cash only), and sell_directive.
 - When calling market_scan_inventory, always translate the query parameter into clean English ASCII entity keywords (e.g. "Pele", "Charizard", "Pikachu") and use sort_by, deal_type, and max_price_usdc for sorting/filtering instead of putting full non-English sentences into query.
 - When the user asks to list the vault for sale on the secondary market or delist it, call list_vault_for_sale or unlist_vault_from_sale.
 
@@ -314,6 +315,33 @@ GUIDELINES:
                     agentReply = isTurkish
                         ? `Mevcut tek işlem harcama limiti $${vault.guardrail_max_spend_per_trade} USDC. Kullanılabilir hazine: $${vault.usdc_balance} USDC.`
                         : `Current single-trade expenditure limit is $${vault.guardrail_max_spend_per_trade} USDC. Available treasury: $${vault.usdc_balance} USDC.`;
+                }
+            }
+
+            // 2b. LIST CARD FOR SALE WITH DIRECTIVE (Deterministic Fallback)
+            else if (
+                (msgLower.includes("koy") || msgLower.includes("satış") || msgLower.includes("list") || msgLower.includes("sell")) &&
+                (msgLower.includes("usdc") || msgLower.includes("$") || /\d+/.test(msgLower))
+            ) {
+                const numbers = msgLower.match(/\d+[\.,]?\d*/g);
+                const asking = numbers && numbers[0] ? parseFloat(numbers[0].replace(",", ".")) : null;
+                const reserve = numbers && numbers[1] ? parseFloat(numbers[1].replace(",", ".")) : (asking ? Math.round(asking * 0.95) : null);
+                const noBarter = msgLower.includes("takas") || msgLower.includes("barter") || msgLower.includes("swap") || msgLower.includes("cash only") || msgLower.includes("nakit");
+
+                if (asking && inventory.length > 0) {
+                    const cardToList = inventory[0];
+                    cardToList.is_listed_by_agent = true;
+                    cardToList.asking_price_usdc = asking;
+                    cardToList.min_reserve_usdc = reserve ? Math.min(reserve, asking) : Math.round(asking * 0.95);
+                    cardToList.allow_barter = !noBarter;
+                    cardToList.sell_directive = userMessage;
+                    await cardToList.save();
+
+                    actionType = "CARD_LISTED";
+                    ruleApplied = `Sales Listing: ${cardToList.name} @ $${asking} USDC (Floor: $${cardToList.min_reserve_usdc} USDC, Cash Only: ${!cardToList.allow_barter})`;
+                    agentReply = isTurkish
+                        ? `Emir alındı. "${cardToList.name}" $${asking} USDC liste fiyatı ve $${cardToList.min_reserve_usdc} USDC gizli taban fiyat ile satışa çıkarıldı. Takas teklifleri: ${cardToList.allow_barter ? "Açık" : "Kapalı (Sadece Nakit)"}. Pazarlık direktifi: "${userMessage}".`
+                        : `Order confirmed. Listed "${cardToList.name}" at $${asking} USDC asking price with $${cardToList.min_reserve_usdc} USDC secret reserve floor. Barter swaps: ${cardToList.allow_barter ? "Allowed" : "Disabled (Cash Only)"}. Sales directive: "${userMessage}".`;
                 }
             }
 

@@ -142,9 +142,10 @@ export function getTradeableCards(vault: any): any[] {
         .filter(r => r.toLowerCase().includes("protected") || r.toLowerCase().includes("grail") || r.toLowerCase().includes("korumalı"))
         .map(r => r.toLowerCase());
 
-    // 1. Strict filter: cannot be hold and cannot be marked as protected grail
+    // 1. Strict filter: cannot be hold, cannot be marked as protected grail, and cannot be cash-only listing (allow_barter === false)
     const nonHoldCards = inventory.filter((c: any) => {
         if (c.is_hold === true) return false;
+        if (c.is_listed_by_agent && c.allow_barter === false) return false;
         const nameLower = (c.name || "").toLowerCase();
         const isMarkedProtected = protectedGrailNames.some(p => p.includes(nameLower.split(" ")[0]));
         return !isMarkedProtected;

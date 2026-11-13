@@ -1,4 +1,5 @@
 import express from "express";
+import axios from "axios";
 import db from "../model/model.js";
 import nearService from "../services/NearService.js";
 import { 
@@ -408,6 +409,302 @@ router.post("/liquidate-card", async (req, res) => {
         });
     } catch (err) {
         console.error("Liquidate card error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Negotiate with Selling Agent for a listed card
+router.post("/cards/:cardId/negotiate-buy", async (req, res) => {
+    try {
+        const { offer_usdc, buyer_message = "", buyer_account = "buyer.testnet", chat_history = [] } = req.body;
+        const cardId = req.params.cardId;
+        const isNum = !isNaN(Number(cardId));
+        const card = await db.card.findOne({
+            where: isNum ? { id: Number(cardId) } : { card_id: String(cardId) },
+            include: [{ model: db.vault, as: "vault" }]
+        });
+        if (!card) return res.status(404).json({ error: "Card not found" });
+        if (!card.is_listed_by_agent) {
+            return res.status(400).json({ error: "This card is not listed for autonomous sale by an agent" });
+        }
+
+        const vault = card.vault || (card.vault_id ? await db.vault.findByPk(card.vault_id) : null);
+        const agentName = vault?.name || "Merchant Agent";
+        const askingPrice = Number(card.asking_price_usdc || card.oracle_fair_value_usdc || 100);
+        const minReserve = Number(card.min_reserve_usdc || Math.round(askingPrice * 0.9));
+        const allowBarter = card.allow_barter === true;
+        const sellDirective = card.sell_directive || "Defend asking price aggressively; haggle toughly before conceding toward the reserve floor.";
+        const buyerOffer = offer_usdc !== undefined && offer_usdc !== null && !isNaN(Number(offer_usdc)) ? Number(offer_usdc) : null;
+
+        let decision = "COUNTER";
+        let counter_price_usdc = Math.round((askingPrice + minReserve) / 2);
+        let agreed_price_usdc = null;
+        let replyMessage = "";
+
+        const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+        let llmSuccess = false;
+
+        if (apiKey) {
+            try {
+                const model = process.env.OPENROUTER_MODEL?.trim() || "deepseek/deepseek-v4.1-flash";
+                const systemPrompt = `You are "${agentName}", an autonomous AI Merchant Agent managing NEAR vault "${vault?.sub_account || 'merchant.colliq.testnet'}".
+You are currently negotiating with prospective buyer "${buyer_account}" who wants to buy your vaulted card:
+- Card: "${card.name}" (${card.grade || 'PSA 10'}, Category: ${card.category || 'TCG'})
+- Public Asking Price: $${askingPrice} USDC
+- SECRET RESERVE FLOOR: $${minReserve} USDC
+- Barter Rule: ${allowBarter ? "Trade/barter offers are considered, but cash is preferred." : "STRICTLY CASH/USDC ONLY. Reject any card swaps or barter offers immediately."}
+- Owner Directive: "${sellDirective}"
+
+CRITICAL RULES:
+1. NEVER reveal your secret reserve floor ($${minReserve} USDC) to the buyer under ANY circumstances. Do NOT say "my reserve is...", "my floor is...", or "the lowest I can go is $${minReserve}".
+2. Defend your asking price ($${askingPrice} USDC) with conviction.
+3. If buyer offer is BELOW secret reserve floor ($${minReserve} USDC):
+   - You MUST NOT accept! Set decision to "COUNTER" (with counter_price_usdc > ${minReserve}) or "REJECT".
+4. If buyer offer is AT OR ABOVE secret reserve floor ($${minReserve} USDC):
+   - If round 1 and offer < asking price: counter closer to asking.
+   - If round 2+ and offer >= ${minReserve}, or offer is very close to asking: ACCEPT the deal!
+5. LANGUAGE MATCHING: Detect the language of the buyer's message (e.g. Turkish or English). ALWAYS respond in the EXACT SAME LANGUAGE as the buyer's message!
+6. Keep response concise (1-2 sentences).
+
+Respond ONLY with valid JSON:
+{
+  "decision": "ACCEPT" | "COUNTER" | "REJECT",
+  "message": "Your conversational reply to buyer in their language",
+  "counter_price_usdc": number | null,
+  "agreed_price_usdc": number | null
+}`;
+
+                const recentMessages = (chat_history || []).slice(-6).map(m => ({
+                    role: m.sender === "user" || m.role === "user" ? "user" : "assistant",
+                    content: m.content || m.text || ""
+                }));
+
+                const userContent = buyerOffer !== null
+                    ? `${buyer_message || "I want to buy this card."} [My Offer: $${buyerOffer} USDC]`
+                    : buyer_message || "Hello, I am interested in buying this card.";
+
+                const response = await axios.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    {
+                        model,
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            ...recentMessages,
+                            { role: "user", content: userContent }
+                        ],
+                        response_format: { type: "json_object" },
+                        temperature: 0.5,
+                        max_tokens: 250
+                    },
+                    {
+                        headers: {
+                            "Authorization": `Bearer ${apiKey}`,
+                            "HTTP-Referer": "http://localhost:3000",
+                            "X-Title": "Colliq Autonomous Agent Haggling",
+                            "Content-Type": "application/json"
+                        },
+                        timeout: 12000
+                    }
+                );
+
+                const rawContent = response.data?.choices?.[0]?.message?.content?.trim() || "";
+                const cleanJson = rawContent.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+                const parsed = JSON.parse(cleanJson);
+
+                if (parsed && parsed.decision) {
+                    decision = parsed.decision;
+                    replyMessage = parsed.message || "";
+                    counter_price_usdc = parsed.counter_price_usdc ? Number(parsed.counter_price_usdc) : null;
+                    agreed_price_usdc = parsed.agreed_price_usdc ? Number(parsed.agreed_price_usdc) : null;
+                    llmSuccess = true;
+                }
+            } catch (llmErr) {
+                console.warn("[AGENT NEGOTIATE] LLM call failed, falling back to deterministic policy:", llmErr.message);
+            }
+        }
+
+        // Deterministic Fallback if LLM was skipped or failed:
+        if (!llmSuccess) {
+            const isTurkish = /[çğıöşüÇĞİÖŞÜ]|teklif|nakit|fiyat|indirim|olur|son|merhaba|selam/i.test(buyer_message || "");
+            const userTurns = (chat_history || []).filter(m => m.role === "user" || m.sender === "user").length;
+
+            if (buyerOffer === null) {
+                decision = "COUNTER";
+                counter_price_usdc = askingPrice;
+                replyMessage = isTurkish 
+                    ? `Bu kart için listeleme fiyatımız $${askingPrice} USDC. Değerlendirmemi istediğiniz bir nakit teklifiniz var mı?`
+                    : `Our listing price for this slab is $${askingPrice} USDC. Do you have a specific cash offer in mind?`;
+            } else if (buyerOffer < minReserve) {
+                decision = "COUNTER";
+                counter_price_usdc = Math.max(minReserve + 10, Math.round((askingPrice + minReserve) / 2));
+                replyMessage = isTurkish
+                    ? `$${buyerOffer} USDC teklifiniz maalesef bu kalite için kabul edilebilir seviyenin altında. En son $${counter_price_usdc} USDC yapabilirim.`
+                    : `$${buyerOffer} USDC is below our valuation parameters. The absolute best counter-offer I can make is $${counter_price_usdc} USDC.`;
+            } else if (buyerOffer >= askingPrice) {
+                decision = "ACCEPT";
+                agreed_price_usdc = buyerOffer;
+                counter_price_usdc = null;
+                replyMessage = isTurkish
+                    ? `Harika! $${buyerOffer} USDC teklifinizi onaylıyorum. Satın alma işlemini hemen tamamlayabilirsiniz.`
+                    : `Deal accepted! I agree to $${buyerOffer} USDC. You may proceed to finalize settlement.`;
+            } else {
+                // Between minReserve and askingPrice
+                if (userTurns >= 1 || buyerOffer >= askingPrice * 0.96) {
+                    decision = "ACCEPT";
+                    agreed_price_usdc = buyerOffer;
+                    counter_price_usdc = null;
+                    replyMessage = isTurkish
+                        ? `Teklifiniz makul görünüyor. $${buyerOffer} USDC üzerinden anlaştık!`
+                        : `Your offer is reasonable. We have a deal at $${buyerOffer} USDC!`;
+                } else {
+                    decision = "COUNTER";
+                    counter_price_usdc = Math.round((buyerOffer + askingPrice) / 2);
+                    replyMessage = isTurkish
+                        ? `$${buyerOffer} USDC biraz düşük kalıyor. Ortada buluşup $${counter_price_usdc} USDC yaparsak anlaşabiliriz.`
+                        : `$${buyerOffer} USDC is slightly below target. How about meeting halfway at $${counter_price_usdc} USDC?`;
+                }
+            }
+        }
+
+        // HARD SERVER GUARDRAIL: Never accept below secret reserve floor!
+        if (decision === "ACCEPT") {
+            const finalAgreed = agreed_price_usdc !== null ? agreed_price_usdc : buyerOffer;
+            if (!finalAgreed || finalAgreed < minReserve) {
+                decision = "COUNTER";
+                agreed_price_usdc = null;
+                counter_price_usdc = Math.max(minReserve, Math.round((askingPrice + minReserve) / 2));
+                replyMessage = `I cannot accept this offer. The lowest acceptable price I can offer right now is $${counter_price_usdc} USDC.`;
+            } else {
+                agreed_price_usdc = finalAgreed;
+            }
+        }
+
+        res.json({
+            status: "SUCCESS",
+            decision,
+            message: replyMessage,
+            counter_price_usdc,
+            agreed_price_usdc,
+            card_id: card.id,
+            card_name: card.name,
+            asking_price_usdc: askingPrice,
+            allow_barter: allowBarter
+        });
+    } catch (err) {
+        console.error("Agent negotiation error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Settle autonomous agent card purchase
+router.post("/cards/:cardId/settle-agent-sale", async (req, res) => {
+    try {
+        const { agreed_price_usdc, buyer_account = "alierkan.testnet", tx_hash } = req.body;
+        if (agreed_price_usdc === undefined || agreed_price_usdc === null || isNaN(Number(agreed_price_usdc))) {
+            return res.status(400).json({ error: "agreed_price_usdc is required and must be a number" });
+        }
+
+        const cardId = req.params.cardId;
+        const isNum = !isNaN(Number(cardId));
+        const card = await db.card.findOne({
+            where: isNum ? { id: Number(cardId) } : { card_id: String(cardId) },
+            include: [{ model: db.vault, as: "vault" }]
+        });
+        if (!card) return res.status(404).json({ error: "Card not found" });
+        if (!card.is_listed_by_agent) {
+            return res.status(400).json({ error: "This card is not actively listed for sale" });
+        }
+
+        const salePrice = Number(agreed_price_usdc);
+        const minReserve = Number(card.min_reserve_usdc || 0);
+        if (salePrice < minReserve) {
+            return res.status(400).json({ error: `Offer $${salePrice} USDC is below secret reserve floor of $${minReserve} USDC` });
+        }
+
+        const vault = card.vault || (card.vault_id ? await db.vault.findByPk(card.vault_id) : null);
+        const prevVaultName = vault?.name || "Merchant Vault";
+        const reserveFloor = Number(card.min_reserve_usdc || card.oracle_fair_value_usdc || salePrice);
+        const realizedProfit = Math.max(0, Number((salePrice - reserveFloor).toFixed(2)));
+
+        if (vault) {
+            vault.usdc_balance = Number((Number(vault.usdc_balance || 0) + salePrice).toFixed(2));
+            vault.realized_pnl_usdc = Number((Number(vault.realized_pnl_usdc || 0) + realizedProfit).toFixed(2));
+            vault.total_trades = Number(vault.total_trades || 0) + 1;
+
+            let chat = [];
+            try { chat = JSON.parse(vault.chat_history || "[]"); } catch {}
+            chat.push({
+                id: `msg-sale-${Date.now()}`,
+                sender: "agent",
+                senderAccount: vault.sub_account,
+                text: `[DEAL CLOSED]: Successfully sold '${card.name}' to ${buyer_account} for $${salePrice} USDC! Realized +$${realizedProfit} USDC profit. Treasury updated.`,
+                actionType: "AGENT_SALE_COMPLETED",
+                timestamp: new Date().toISOString()
+            });
+            vault.chat_history = JSON.stringify(chat);
+            await vault.save();
+        }
+
+        const cardName = card.name;
+        card.owner_account = buyer_account;
+        card.vault_id = null;
+        card.is_listed_by_agent = false;
+        card.asking_price_usdc = null;
+        card.min_reserve_usdc = null;
+        card.allow_barter = true;
+        card.sell_directive = null;
+        card.is_locked = false;
+        await card.save();
+
+        const finalTxHash = tx_hash || nearService.generateNearReceiptHash();
+        const trade = await db.trade.create({
+            trade_id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            vault_a_id: vault ? vault.id : null,
+            vault_b_id: null,
+            vault_a_name: vault ? vault.name : "Merchant Vault",
+            vault_b_name: buyer_account,
+            cards_from_a: [card.toJSON ? card.toJSON() : card],
+            cards_from_b: [],
+            usdc_from_a: 0,
+            usdc_from_b: salePrice,
+            rounds_count: 1,
+            negotiation_log: [{
+                round: 1,
+                action: "AUTONOMOUS_CARD_SALE",
+                buyer: buyer_account,
+                seller: vault?.sub_account || "merchant.colliq.testnet",
+                agreedPrice: salePrice,
+                reserveFloor,
+                realizedProfit,
+                timestamp: new Date().toISOString()
+            }],
+            status: "COMPLETED",
+            protocol_fee_usdc: Number((salePrice * 0.01).toFixed(2)),
+            tx_hash: finalTxHash,
+            near_block: (await nearService.getNetworkStatus()).latest_block_height
+        });
+
+        const io = req.app.get("io");
+        if (io) {
+            io.emit("vault:updated", { action: "agent_sale_settled", vault_id: vault?.id, card_id: card.id });
+            io.emit("trade:event", {
+                vaultA: prevVaultName,
+                vaultB: buyer_account,
+                cardTitle: cardName,
+                message: `Autonomous Sale: ${cardName} sold for $${salePrice} USDC (+ $${realizedProfit} PnL).`
+            });
+            io.emit("a2a_trade_settled", { trade });
+        }
+
+        res.json({
+            status: "SUCCESS_SETTLED",
+            message: `Successfully purchased '${cardName}' from ${prevVaultName} for $${salePrice} USDC!`,
+            trade,
+            card,
+            vault
+        });
+    } catch (err) {
+        console.error("Settle agent sale error:", err);
         res.status(500).json({ error: err.message });
     }
 });
