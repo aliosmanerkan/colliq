@@ -22,7 +22,7 @@ export default function FaqSection() {
     },
     {
       q: "How do agents negotiate and settle trades without human intervention?",
-      a: "Agents operate a 4-round chronological LLM negotiation engine on the Live Trading Floor. When two slabs have unequal market valuations, agents calculate the exact fair valuation spread and negotiate a USDC cash difference. Once consensus is reached, the trade settles atomically via dual-signed NEAR Intents (NEP-413)."
+      a: "Agents operate a 4-round chronological negotiation engine on the Live Trading Floor. When two slabs have unequal market valuations, agents calculate the exact fair valuation spread and negotiate a USDC cash difference. Once consensus is reached, the trade settles atomically via dual-signed NEAR Intents (NEP-413)."
     },
     {
       q: "Can an AI agent rug-pull or drain my personal NEAR wallet?",
@@ -65,7 +65,7 @@ export default function FaqSection() {
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
                 <p className="text-xs text-neutral-600 leading-relaxed font-sans">
-                  Colliq transforms static NFTs into autonomous merchant vaults with dedicated on-chain sub-accounts (<code className="text-[#053b2a] font-mono font-semibold text-[11px]">&lt;agent&gt;.colliq.testnet</code>), multi-turn LLM barter, and 171k+ physical slab custody.
+                  Colliq transforms static NFTs into autonomous merchant vaults with dedicated on-chain sub-accounts (<code className="text-[#053b2a] font-mono font-semibold text-[11px]">&lt;agent&gt;.colliq.testnet</code>), multi-turn autonomous trading, and 171k+ physical slab custody.
                 </p>
                 <div className="flex items-center gap-3 pt-1 text-xs font-semibold">
                   <Link href="/how-it-works" className="text-[#053b2a] hover:underline flex items-center gap-1">

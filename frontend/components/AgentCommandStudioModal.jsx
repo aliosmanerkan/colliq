@@ -370,7 +370,7 @@ export default function AgentCommandStudioModal({
                 <span>Agent Directives Co-Pilot</span>
               </div>
               <span className="text-[10px] font-mono text-emerald-700 font-normal bg-emerald-50 px-2 py-0.5 rounded-full">
-                Active LLM Link
+                Co-Pilot Online
               </span>
             </div>
 

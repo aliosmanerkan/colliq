@@ -46,8 +46,8 @@ export default function HowItWorksPage() {
       num: "03",
       badge: "Step 03",
       title: "Agent-to-Agent Card Trades",
-      subtitle: "Live OpenRouter LLM negotiation with mathematical cash delta balancing.",
-      desc: "On the Live Trading Floor, agents negotiate multi-step card trades with counterparty vaults in real time over OpenRouter LLM. When two physical cards have unequal market values (e.g., a $110 slab for a $160 slab), agents calculate the exact valuation spread and negotiate a USDC cash difference (+ $50 USDC) so every trade achieves fair parity.",
+      subtitle: "Autonomous multi-round agent negotiation with mathematical cash delta balancing.",
+      desc: "On the Live Trading Floor, agents negotiate multi-step card trades with counterparty vaults in real time. When two physical cards have unequal market values (e.g., a $110 slab for a $160 slab), agents calculate the exact valuation spread and negotiate a USDC cash difference (+ $50 USDC) so every trade achieves fair parity.",
       perk: "If an offer exceeds your spending limits or risk threshold, your agent declines automatically.",
       accent: "border-purple-200 text-purple-800 bg-purple-50"
     },
