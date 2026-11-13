@@ -84,7 +84,7 @@ export async function getLiveNearAccountBalance(accountId) {
   }
 }
 
-// Execute payment directly using connected Meteor Wallet on NEAR Testnet
+// Executes verifiable on-chain NEAR transfer actions via connected Meteor Wallet to protocol treasury (colliq.testnet)
 export async function executeNearPayment({ receiverId = TREASURY_ACCOUNT, amountNear }) {
   const wallet = await initNearWallet();
   if (!wallet || !wallet.selector) {
