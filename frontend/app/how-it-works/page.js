@@ -64,34 +64,34 @@ export default function HowItWorksPage() {
 
   const nearPrimitives = [
     {
-      title: "NFTs as Accounts (Executable Sub-Accounts)",
+      title: "NFTs as Accounts (Dedicated Vault Sub-Accounts)",
       standard: "NEP-171 / Track 10 Core",
-      codePath: "contract/src/contract.ts • mint_merchant_vault",
-      desc: "Unlike passive NFTs on other chains, each Colliq Merchant Vault NFT controls a first-class NEAR sub-account (<name>.colliq.testnet) equipped with an internal synchronous asset ledger. The vault directly manages USDC balances, RWA slab ownership, and consensus trade commitments without cross-contract promise deadlocks."
+      desc: "Unlike passive NFTs on other chains, each Colliq Merchant Vault NFT controls a dedicated, live NEAR account that holds your USDC cash and physical card inventory directly on-chain.",
+      benefit: "Your funds and cards sit in your own dedicated vault account—never pooled in a shared exchange wallet."
     },
     {
-      title: "NEAR Intents (NEP-413 Cross-Chain & TokenDiff)",
+      title: "NEAR Intents (Atomic Card & Cash Swaps)",
       standard: "NEP-413 Standard",
-      codePath: "backend/services/NearService.js • createCrossChainSnipeIntent",
-      desc: "Implements cryptographically signed nep413 intent payloads for both cross-chain Solana slab acquisitions (createCrossChainSnipeIntent) and dual-signed multi-asset agent trades (createA2ABarterIntent). Intents guarantee atomic execution via deterministic solver verification."
+      desc: "Every marketplace purchase and agent-to-agent trade is settled through a cryptographically signed NEAR Intent. Both cards and negotiated cash differences transfer simultaneously in a single atomic transaction.",
+      benefit: "Trades either settle completely at the agreed price and valuation spread, or don't happen at all—zero counterparty default risk."
     },
     {
-      title: "NEAR Chain Signatures (MPC Custody Derivation)",
+      title: "NEAR Chain Signatures (Direct Brink's & Solana Custody)",
       standard: "Multi-Party Computation",
-      codePath: "backend/services/NearService.js • deriveSolanaAddressForVault",
-      desc: "Leverages NEAR Chain Signatures (MPC) to deterministically derive Solana Ed25519 custody addresses (SolVault...) for every NEAR sub-account. This allows a NEAR AI vault to own, verify, and settle physical Collector Crypt pNFTs on Solana without trusted bridge intermediaries."
+      desc: "Using Multi-Party Computation (MPC), your NEAR vault directly controls the Solana custody address holding your physical Collector Crypt slabs in Brink's & PWCC vaults without trusted bridge intermediaries.",
+      benefit: "Seamless cross-chain ownership of real, insured PSA, CGC, and BGS slabs without risky third-party bridges."
     },
     {
-      title: "Scoped Function-Call Keys & Risk Guardrails",
+      title: "Scoped Agent Permissions & Spend Guardrails",
       standard: "Restricted Access Keys",
-      codePath: "backend/src/agents/negotiationEngine.ts • evaluateTurnWithLLM",
-      desc: "AI agents operate with restricted FunctionCall keys (allowance: 0.25 NEAR) limited strictly to trade proposals. Hardcoded on-chain guardrails (guardrail_max_spend_per_trade) and an immutable 25% minimum cash reserve rule ensure prompt injections or LLM hallucinations can never drain owner treasury."
+      desc: "Your AI agent operates with a restricted trading key limited strictly to trade proposals within your rules. Hardcoded on-chain guardrails and an immutable minimum cash reserve protect your treasury at all times.",
+      benefit: "Even if an AI model makes a mistake, it is cryptographically impossible for the agent to withdraw your cash, transfer cards out, or breach your budget reserve."
     },
     {
-      title: "\"Business-in-a-Box\" Portability & Zombie Key Wipe",
+      title: "\"Business-in-a-Box\" & Automatic Key Rotation",
       standard: "Atomic Ownership Transfer",
-      codePath: "backend/services/NearService.js • executeZombieKeyWipe",
-      desc: "Selling or transferring a Vault NFT atomically transfers all enclosed cards and USDC cash to the buyer. Upon transfer (nft_transfer), the protocol triggers a Zombie Key Wipe: the previous owner's AI FunctionCall key is revoked, a fresh Ed25519 keypair is provisioned, and the listing lock (is_locked) is released."
+      desc: "You can sell your entire vault—its sub-account, cash, cards, and trading track record—in a single click on the secondary market. When ownership transfers, the protocol automatically revokes the previous owner's agent key and provisions a fresh key for the buyer.",
+      benefit: "Total liquidity when you want to exit, and 100% security when you buy an existing vault."
     }
   ];
 
@@ -127,7 +127,7 @@ export default function HowItWorksPage() {
       <div className="p-8 sm:p-10 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-[11px] font-mono uppercase tracking-wider text-[#053b2a] bg-[#a8f0be]/30 px-3 py-1 rounded-full font-bold border border-[#053b2a]/15">
-            COLLIQ PROTOCOL ARCHITECTURE • NEAR TRACK 10
+            COLLIQ PROTOCOL • AUTONOMOUS RWA COLLECTOR VAULTS
           </span>
           <span className="text-xs font-mono text-slate-500">
             Chain ID: <strong className="text-slate-800">near:testnet</strong> • Contract: <strong className="text-slate-800">colliq.testnet</strong>
@@ -308,22 +308,22 @@ export default function HowItWorksPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* SECTION 4: 5 Core NEAR Protocol Primitives (For Judges)   */}
+      {/* SECTION 4: Security & Settlement Guarantees (Powered by NEAR) */}
       {/* ========================================================= */}
       <div className="p-8 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-6">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded">
-              JUDGE CODEBASE MAP
+              SECURITY &amp; SETTLEMENT GUARANTEES
             </span>
             <span className="text-xs font-mono text-slate-400">•</span>
             <span className="text-xs font-mono text-slate-500">Native NEAR Protocol Primitives</span>
           </div>
           <h2 className="text-lg font-bold text-slate-900 tracking-tight mt-1">
-            Technical Primitives &amp; Repository Map
+            Powered by NEAR Protocol — Built for Collector Sovereignty
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Direct file locations and smart contract methods implementing Track 10 requirements.
+            Institutional-grade cryptography and smart contract architectures protecting your physical assets and treasury.
           </p>
         </div>
 
@@ -331,7 +331,7 @@ export default function HowItWorksPage() {
           {nearPrimitives.map((p, idx) => (
             <div
               key={idx}
-              className="p-4 rounded-xl bg-slate-50/60 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition space-y-1.5"
+              className="p-4 rounded-xl bg-slate-50/60 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition space-y-2"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                 <div className="flex items-center gap-2">
@@ -351,9 +351,9 @@ export default function HowItWorksPage() {
                 {p.desc}
               </p>
 
-              <div className="pt-1 flex items-center gap-1.5 text-[11px] font-mono text-emerald-800 font-semibold">
-                <FileCode2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                <span>Implemented in: <code className="bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 font-mono text-[10.5px]">{p.codePath}</code></span>
+              <div className="pt-1 flex items-start gap-2 text-xs font-sans text-emerald-900 bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200/60">
+                <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <span><strong className="font-semibold text-emerald-950">What this means for you:</strong> {p.benefit}</span>
               </div>
             </div>
           ))}

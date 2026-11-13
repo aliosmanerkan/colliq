@@ -114,7 +114,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
         }
 
         if (blueprint && Array.isArray(blueprint.custom_rules) && blueprint.custom_rules.length > 0) {
-          setRules((prev) => Array.from(new Set([...prev, ...blueprint.custom_rules])));
+          setRules(blueprint.custom_rules);
         }
       }
     } catch (err) {

@@ -61,8 +61,36 @@ export function sanitizeUntrustedInput(input: string): string {
 // MANDATE & INVENTORY HELPERS
 // ==========================================
 
-export function doesCardMatchDirectives(card: any, rulesJsonOrArray: any): boolean {
+export function doesCardMatchDirectives(card: any, rulesJsonOrArray: any, compiledPolicy: any = null): boolean {
     if (!card) return false;
+
+    const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const cardName = norm(card.name || card.itemName);
+    const cardCategory = norm(card.category);
+    const cardGrade = norm(card.grade);
+    const cardSet = norm(card.set_name || card.set);
+    const combinedCardText = `${cardName} ${cardCategory} ${cardSet}`.trim();
+
+    // 1. Strict evaluation against LLM-compiled structured policy
+    if (compiledPolicy) {
+        if (Array.isArray(compiledPolicy.excluded_keywords) && compiledPolicy.excluded_keywords.length > 0) {
+            for (const excluded of compiledPolicy.excluded_keywords) {
+                if (excluded && combinedCardText.includes(norm(excluded))) {
+                    return false;
+                }
+            }
+        }
+        if (Array.isArray(compiledPolicy.allowed_grades) && compiledPolicy.allowed_grades.length > 0) {
+            const matchesGrade = compiledPolicy.allowed_grades.some((g: string) => cardGrade.includes(norm(g)) || cardName.includes(norm(g)));
+            if (!matchesGrade) return false;
+        }
+        if (Array.isArray(compiledPolicy.must_match_keywords) && compiledPolicy.must_match_keywords.length > 0) {
+            return compiledPolicy.must_match_keywords.some((kw: string) => combinedCardText.includes(norm(kw)));
+        }
+        return true;
+    }
+
+    // 2. Fallback rule parsing without brittle word-splitting
     let rules: string[] = [];
     try {
         rules = typeof rulesJsonOrArray === "string" ? JSON.parse(rulesJsonOrArray) : (rulesJsonOrArray || []);
@@ -71,56 +99,31 @@ export function doesCardMatchDirectives(card: any, rulesJsonOrArray: any): boole
     }
 
     const directiveRules = rules.filter(r => {
-        const t = String(r).trim().toLowerCase();
+        const t = norm(String(r));
         return !t.startsWith("max spend") && !t.startsWith("strategy") && !t.startsWith("protected grail");
     });
 
-    // If no directives exist, any card is eligible
     if (directiveRules.length === 0) return true;
 
-    const cardName = (card.name || "").toLowerCase();
-    const cardCategory = (card.category || "").toLowerCase();
-    const cardGrade = (card.grade || "").toLowerCase();
-    const cardSet = (card.set_name || card.set || "").toLowerCase();
-
-    const gradeRules = [];
-    const keywordRules = [];
-
     for (const rule of directiveRules) {
-        const ruleText = String(rule).trim().toLowerCase();
-        if (!ruleText) continue;
-        if (ruleText.includes("psa 10") || ruleText.includes("gem mt 10") || ruleText.includes("gem 10") || ruleText.includes("grade 9") || ruleText.includes("psa 9")) {
-            gradeRules.push(rule);
-        } else {
-            keywordRules.push(rule);
-        }
-    }
-
-    // 1. Grade constraints
-    for (const gRule of gradeRules) {
-        const gText = String(gRule).toLowerCase();
-        if (gText.includes("10") && !cardGrade.includes("10")) {
+        const rNorm = norm(String(rule));
+        // Check grade constraints
+        if (rNorm.includes("10") && !cardGrade.includes("10")) {
             return false;
         }
-    }
-
-    // 2. Keyword directives
-    if (keywordRules.length > 0) {
-        for (const rule of keywordRules) {
-            const ruleText = String(rule).trim().toLowerCase();
-            const keywords = ruleText.replace(/target|only|slabs|cards|per card|max|min/gi, "").trim().split(/\s+/);
-            for (const kw of keywords) {
-                if (kw.length >= 3) {
-                    if (cardName.includes(kw) || cardCategory.includes(kw) || cardSet.includes(kw)) {
-                        return true;
-                    }
+        // Extract meaningful entities (strip generic words)
+        const cleanRule = rNorm.replace(/target|only|sadece|slabs|cards|per card|max|min|alınır|alinsin/gi, "").trim();
+        const words = cleanRule.split(/\s+/);
+        for (const kw of words) {
+            if (kw.length >= 4 && !["psa", "cgc", "bgs", "slab", "card", "tcg", "oyuncu", "veya", "kategorisi"].includes(kw)) {
+                if (combinedCardText.includes(kw)) {
+                    return true;
                 }
             }
         }
-        return false;
     }
 
-    return true;
+    return false;
 }
 
 export function getTradeableCards(vault: any): any[] {

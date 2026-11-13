@@ -55,9 +55,14 @@ ${ruleApplied ? `- System Action Executed: ${actionType} -> ${ruleApplied}` : ""
 AVAILABLE CAPABILITIES (TOOL USE):
 You have direct tool access to 4 layers of operations:
 1. Perception & Oracle: market_scan_inventory, oracle_get_valuation_metrics, vault_inspect_counterpart
-2. Risk & Policy Guardrails: guardrail_update_limits, vault_freeze_grail, strategy_set_execution_mode
-3. Execution & Settlement: trade_snipe_rwa_slab, trade_liquidate_card, barter_propose_deal
+2. Risk & Policy Guardrails: guardrail_update_limits, vault_freeze_grail, strategy_set_execution_mode, update_agent_directives
+3. Execution & Settlement: trade_snipe_rwa_slab, trade_liquidate_card, barter_propose_deal, list_vault_for_sale, unlist_vault_from_sale
 4. Telemetry & Accounting: telemetry_audit_balance_sheet, svg_preview_dynamic_metadata
+
+TOOL DIRECTIVES & INSTRUCTIONS:
+- Whenever the user adds, changes, or removes a trading rule/directive in ANY language (e.g. "Only buy Pelé cards", "Add rule: minimum PSA 10", "Remove Charizard rule"), call update_agent_directives.
+- When calling market_scan_inventory, always translate the query parameter into clean English ASCII entity keywords (e.g. "Pele", "Charizard", "Pikachu") and use sort_by, deal_type, and max_price_usdc for sorting/filtering instead of putting full non-English sentences into query.
+- When the user asks to list the vault for sale on the secondary market or delist it, call list_vault_for_sale or unlist_vault_from_sale.
 
 GUIDELINES:
 - When the owner asks you to inspect the market, check cards, buy/snipe a card, sell/liquidate a card for cash, update guardrails, freeze a grail, or audit the treasury, ALWAYS invoke the appropriate tool.
@@ -241,148 +246,8 @@ GUIDELINES:
         const isTurkish = /[çğıöşü]/i.test(userMessage) || 
             /\b(merhaba|selam|bütçe|harcama|satma|takaslama|sıfırla|sil|en pahalı|market|altında|ürün|kart|fiyat|fırsat|alalım|alabilir|nedir|nasıl)\b/i.test(msgLower);
 
-        // 1. CLEAR / RESET RULES
-        if (
-            msgLower.includes("reset") || 
-            msgLower.includes("clear") || 
-            msgLower.includes("remove all") || 
-            msgLower.includes("sıfırla") || 
-            msgLower.includes("sil")
-        ) {
-            existingRules = [];
-            vault.custom_rules = JSON.stringify(existingRules);
-            actionType = "RULES_RESET";
-            agentReply = isTurkish 
-                ? `${vault.sub_account} için tüm özel direktifler temizlendi. Varsayılan otonom strateji (${vault.strategy}) ile çalışıyorum.`
-                : `All custom directives for ${vault.sub_account} have been cleared. Operating under default autonomous strategy (${vault.strategy}).`;
-        }
-
-        // 2. BUDGET / MAX SPEND GUARDRAIL
-        else if (
-            msgLower.includes("spend") || 
-            msgLower.includes("budget") || 
-            msgLower.includes("limit") || 
-            msgLower.includes("bütçe") || 
-            msgLower.includes("harcama") ||
-            /\b\d+\s*(usdc|dollars?|\$)\b/.test(msgLower)
-        ) {
-            const numberMatch = msgLower.match(/(\d+[\.,]?\d*)/);
-            if (numberMatch) {
-                const newSpend = parseFloat(numberMatch[1].replace(",", "."));
-                if (newSpend > 0) {
-                    vault.guardrail_max_spend_per_trade = newSpend;
-                    ruleApplied = `Max Spend Limit: $${newSpend} USDC`;
-                    
-                    existingRules = existingRules.filter(r => !r.toLowerCase().includes("spend") && !r.toLowerCase().includes("budget") && !r.toLowerCase().includes("harcama"));
-                    existingRules.push(ruleApplied);
-                    vault.custom_rules = JSON.stringify(existingRules);
-                    actionType = "GUARDRAIL_UPDATED";
-                    agentReply = isTurkish
-                        ? `Anlaşıldı. Tek işlem harcama tavanı $${newSpend} USDC olarak kilitlendi. Bu limiti aşan hiçbir alım veya takas on-chain korumaları geçemez.`
-                        : `Understood. Single-trade expenditure limit locked to $${newSpend} USDC. Any barter or snipe exceeding this cap will be automatically blocked by on-chain guardrails.`;
-                } else {
-                    agentReply = isTurkish
-                        ? `Geçerli bir harcama limiti anlaşılamadı. Örnek: "Harcama limitini 400 USDC yap".`
-                        : `Could not parse a valid spend limit. Try stating: "Set max spend to 400 USDC".`;
-                }
-            } else {
-                agentReply = isTurkish
-                    ? `Mevcut tek işlem harcama limiti $${vault.guardrail_max_spend_per_trade} USDC. Kullanılabilir hazine: $${vault.usdc_balance} USDC.`
-                    : `Current single-trade expenditure limit is $${vault.guardrail_max_spend_per_trade} USDC. Available treasury: $${vault.usdc_balance} USDC.`;
-            }
-        }
-
-        // 3. GRAIL PROTECTION (Do not sell/trade specific card)
-        else if (
-            msgLower.includes("never sell") || 
-            msgLower.includes("do not trade") || 
-            msgLower.includes("don't trade") || 
-            msgLower.includes("lock") || 
-            msgLower.includes("protect") || 
-            msgLower.includes("hold") ||
-            msgLower.includes("satma") || 
-            msgLower.includes("takaslama")
-        ) {
-            let matchedCard = inventory.find(c => 
-                msgLower.includes(c.name.toLowerCase().split(" ")[0]) || 
-                msgLower.includes("charizard") || 
-                msgLower.includes("pikachu") || 
-                msgLower.includes("perona") || 
-                msgLower.includes("rayquaza") ||
-                msgLower.includes("umbreon")
-            );
-
-            const targetName = matchedCard 
-                ? matchedCard.name 
-                : userMessage.replace(/never sell|do not trade|don't trade|lock|protect|hold|satma|takaslama/gi, "").trim();
-            
-            ruleApplied = `Protected Grail: "${targetName || "Target Slab"}" (Barter Escrow Blocked)`;
-            if (!existingRules.includes(ruleApplied)) {
-                existingRules.push(ruleApplied);
-                vault.custom_rules = JSON.stringify(existingRules);
-            }
-            actionType = "RULE_ADDED";
-            agentReply = isTurkish
-                ? `Güvenlik kilidi devrede. "${targetName}" Kutsal Kase (Grail) olarak işaretlendi. Otonom A2A takaslarında asla verilmeyecek.`
-                : `Security lock confirmed. "${targetName}" is marked as a Protected Grail. It will never be offered or liquidated during autonomous A2A negotiations.`;
-        }
-
-        // 4. STRATEGY MODE CHANGE
-        else if (
-            msgLower.includes("aggressive") || 
-            msgLower.includes("arbitrage") || 
-            msgLower.includes("flipper") || 
-            msgLower.includes("agresif")
-        ) {
-            vault.strategy = "AGGRESSIVE_ARBITRAGE";
-            ruleApplied = "Strategy Mode: AGGRESSIVE_ARBITRAGE (High Velocity)";
-            existingRules = existingRules.filter(r => !r.toLowerCase().includes("strategy"));
-            existingRules.push(ruleApplied);
-            vault.custom_rules = JSON.stringify(existingRules);
-            actionType = "STRATEGY_UPDATED";
-            agentReply = isTurkish
-                ? `Strateji AGGRESSIVE_ARBITRAGE olarak güncellendi. Hızlı nakit marjları, değerinin altındaki PSA 10 kartlar ve arbitraj fırsatları hedefleniyor.`
-                : `Strategy updated to AGGRESSIVE_ARBITRAGE. Prioritizing rapid cash spreads, undervalued PSA 10 slabs, and opportunistic flips.`;
-        }
-        else if (
-            msgLower.includes("collector") || 
-            msgLower.includes("value") || 
-            msgLower.includes("grail") || 
-            msgLower.includes("koleksiyoncu")
-        ) {
-            vault.strategy = "VALUE_COLLECTOR";
-            ruleApplied = "Strategy Mode: VALUE_COLLECTOR (Grail Accumulator)";
-            existingRules = existingRules.filter(r => !r.toLowerCase().includes("strategy"));
-            existingRules.push(ruleApplied);
-            vault.custom_rules = JSON.stringify(existingRules);
-            actionType = "STRATEGY_UPDATED";
-            agentReply = isTurkish
-                ? `Strateji VALUE_COLLECTOR olarak güncellendi. Düşük popülasyonlu GEM MT 10 hololar ve uzun vadeli değer saklama grailleri hedefleniyor.`
-                : `Strategy updated to VALUE_COLLECTOR. Focusing strictly on low-population GEM MT 10 holos and vintage grails with long-term capital preservation.`;
-        }
-        else if (
-            msgLower.includes("balanced") || 
-            msgLower.includes("dengeli")
-        ) {
-            vault.strategy = "BALANCED_TRADER";
-            ruleApplied = "Strategy Mode: BALANCED_TRADER";
-            existingRules = existingRules.filter(r => !r.toLowerCase().includes("strategy"));
-            existingRules.push(ruleApplied);
-            vault.custom_rules = JSON.stringify(existingRules);
-            actionType = "STRATEGY_UPDATED";
-            agentReply = isTurkish
-                ? `Strateji BALANCED_TRADER olarak ayarlandı. Hazine dengesi korunarak düşük riskli takas fırsatları izleniyor.`
-                : `Strategy calibrated to BALANCED_TRADER. Maintaining treasury stability while executing low-risk multi-asset barter opportunities.`;
-        }
-
-        // Default response if no deterministic rule match
-        if (!agentReply) {
-            agentReply = isTurkish
-                ? `Direktifler alındı. ${vault.name} (@${vault.sub_account}) olarak Brink's Vault ve NEAR A2A takas protokolünde otonom işlem yapıyorum.`
-                : `Directives received. Operating autonomously as ${vault.name} (@${vault.sub_account}) across Brink's Vault and NEAR A2A Barter.`;
-        }
-
-        // 8. OPENROUTER AI ENHANCEMENT WITH MULTI-LAYER TOOL EXECUTION
+        // 1. OPENROUTER AI FIRST IF API KEY CONFIGURED
+        let openRouterHandled = false;
         if (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim()) {
             try {
                 const openRouterResult = await this.callOpenRouter({
@@ -397,9 +262,148 @@ GUIDELINES:
                 if (openRouterResult?.reply) {
                     agentReply = openRouterResult.reply;
                     toolsExecuted = openRouterResult.toolsExecuted || [];
+                    openRouterHandled = true;
                 }
             } catch (llmErr) {
-                console.warn("[OpenRouter] LLM call notice:", llmErr.response?.data?.error?.message || llmErr.message);
+                console.warn("[OpenRouter] LLM call notice, falling back to deterministic:", llmErr.response?.data?.error?.message || llmErr.message);
+            }
+        }
+
+        // 2. DETERMINISTIC FALLBACK ONLY IF OPENROUTER DID NOT HANDLE
+        if (!openRouterHandled) {
+            // 1. CLEAR / RESET RULES
+            if (
+                msgLower.includes("reset") || 
+                msgLower.includes("clear") || 
+                msgLower.includes("remove all") || 
+                msgLower.includes("sıfırla") || 
+                msgLower.includes("tüm direktifleri sil")
+            ) {
+                existingRules = [];
+                vault.custom_rules = JSON.stringify(existingRules);
+                actionType = "RULES_RESET";
+                agentReply = isTurkish 
+                    ? `${vault.sub_account} için tüm özel direktifler temizlendi. Varsayılan otonom strateji (${vault.strategy}) ile çalışıyorum.`
+                    : `All custom directives for ${vault.sub_account} have been cleared. Operating under default autonomous strategy (${vault.strategy}).`;
+            }
+
+            // 2. BUDGET / MAX SPEND GUARDRAIL
+            else if (
+                msgLower.includes("spend") || 
+                msgLower.includes("budget") || 
+                msgLower.includes("limit") || 
+                msgLower.includes("bütçe") || 
+                msgLower.includes("harcama")
+            ) {
+                const numberMatch = msgLower.match(/(\d+[\.,]?\d*)/);
+                if (numberMatch) {
+                    const newSpend = parseFloat(numberMatch[1].replace(",", "."));
+                    if (newSpend > 0) {
+                        vault.guardrail_max_spend_per_trade = newSpend;
+                        ruleApplied = `Max Spend Limit: $${newSpend} USDC`;
+                        
+                        existingRules = existingRules.filter(r => !r.toLowerCase().includes("spend") && !r.toLowerCase().includes("budget") && !r.toLowerCase().includes("harcama"));
+                        existingRules.push(ruleApplied);
+                        vault.custom_rules = JSON.stringify(existingRules);
+                        actionType = "GUARDRAIL_UPDATED";
+                        agentReply = isTurkish
+                            ? `Anlaşıldı. Tek işlem harcama tavanı $${newSpend} USDC olarak kilitlendi. Bu limiti aşan hiçbir alım veya takas on-chain korumaları geçemez.`
+                            : `Understood. Single-trade expenditure limit locked to $${newSpend} USDC. Any barter or snipe exceeding this cap will be automatically blocked by on-chain guardrails.`;
+                    }
+                } else {
+                    agentReply = isTurkish
+                        ? `Mevcut tek işlem harcama limiti $${vault.guardrail_max_spend_per_trade} USDC. Kullanılabilir hazine: $${vault.usdc_balance} USDC.`
+                        : `Current single-trade expenditure limit is $${vault.guardrail_max_spend_per_trade} USDC. Available treasury: $${vault.usdc_balance} USDC.`;
+                }
+            }
+
+            // 3. GRAIL PROTECTION (Do not sell/trade specific card)
+            else if (
+                msgLower.includes("never sell") || 
+                msgLower.includes("do not trade") || 
+                msgLower.includes("don't trade") || 
+                msgLower.includes("lock") || 
+                msgLower.includes("protect") || 
+                msgLower.includes("hold") ||
+                msgLower.includes("satma") || 
+                msgLower.includes("takaslama")
+            ) {
+                let matchedCard = inventory.find(c => 
+                    msgLower.includes(c.name.toLowerCase().split(" ")[0]) || 
+                    msgLower.includes("charizard") || 
+                    msgLower.includes("pikachu") || 
+                    msgLower.includes("perona") || 
+                    msgLower.includes("rayquaza") ||
+                    msgLower.includes("umbreon")
+                );
+
+                const targetName = matchedCard 
+                    ? matchedCard.name 
+                    : userMessage.replace(/never sell|do not trade|don't trade|lock|protect|hold|satma|takaslama/gi, "").trim();
+                
+                ruleApplied = `Protected Grail: "${targetName || "Target Slab"}" (Barter Escrow Blocked)`;
+                if (!existingRules.includes(ruleApplied)) {
+                    existingRules.push(ruleApplied);
+                    vault.custom_rules = JSON.stringify(existingRules);
+                }
+                actionType = "RULE_ADDED";
+                agentReply = isTurkish
+                    ? `Güvenlik kilidi devrede. "${targetName}" Kutsal Kase (Grail) olarak işaretlendi. Otonom A2A takaslarında asla verilmeyecek.`
+                    : `Security lock confirmed. "${targetName}" is marked as a Protected Grail. It will never be offered or liquidated during autonomous A2A negotiations.`;
+            }
+
+            // 4. STRATEGY MODE CHANGE
+            else if (
+                msgLower.includes("aggressive") || 
+                msgLower.includes("arbitrage") || 
+                msgLower.includes("flipper") || 
+                msgLower.includes("agresif")
+            ) {
+                vault.strategy = "AGGRESSIVE_ARBITRAGE";
+                ruleApplied = "Strategy Mode: AGGRESSIVE_ARBITRAGE (High Velocity)";
+                existingRules = existingRules.filter(r => !r.toLowerCase().includes("strategy"));
+                existingRules.push(ruleApplied);
+                vault.custom_rules = JSON.stringify(existingRules);
+                actionType = "STRATEGY_UPDATED";
+                agentReply = isTurkish
+                    ? `Strateji AGGRESSIVE_ARBITRAGE olarak güncellendi. Hızlı nakit marjları, değerinin altındaki PSA 10 kartlar ve arbitraj fırsatları hedefleniyor.`
+                    : `Strategy updated to AGGRESSIVE_ARBITRAGE. Prioritizing rapid cash spreads, undervalued PSA 10 slabs, and opportunistic flips.`;
+            }
+            else if (
+                msgLower.includes("collector") || 
+                msgLower.includes("value") || 
+                msgLower.includes("koleksiyoncu")
+            ) {
+                vault.strategy = "VALUE_COLLECTOR";
+                ruleApplied = "Strategy Mode: VALUE_COLLECTOR (Grail Accumulator)";
+                existingRules = existingRules.filter(r => !r.toLowerCase().includes("strategy"));
+                existingRules.push(ruleApplied);
+                vault.custom_rules = JSON.stringify(existingRules);
+                actionType = "STRATEGY_UPDATED";
+                agentReply = isTurkish
+                    ? `Strateji VALUE_COLLECTOR olarak güncellendi. Düşük popülasyonlu GEM MT 10 hololar ve uzun vadeli değer saklama grailleri hedefleniyor.`
+                    : `Strategy updated to VALUE_COLLECTOR. Focusing strictly on low-population GEM MT 10 holos and vintage grails with long-term capital preservation.`;
+            }
+            else if (
+                msgLower.includes("balanced") || 
+                msgLower.includes("dengeli")
+            ) {
+                vault.strategy = "BALANCED_TRADER";
+                ruleApplied = "Strategy Mode: BALANCED_TRADER";
+                existingRules = existingRules.filter(r => !r.toLowerCase().includes("strategy"));
+                existingRules.push(ruleApplied);
+                vault.custom_rules = JSON.stringify(existingRules);
+                actionType = "STRATEGY_UPDATED";
+                agentReply = isTurkish
+                    ? `Strateji BALANCED_TRADER olarak ayarlandı. Hazine dengesi korunarak düşük riskli takas fırsatları izleniyor.`
+                    : `Strategy calibrated to BALANCED_TRADER. Maintaining treasury stability while executing low-risk multi-asset barter opportunities.`;
+            }
+
+            // Default response if no deterministic rule match
+            if (!agentReply) {
+                agentReply = isTurkish
+                    ? `Direktifler alındı. ${vault.name} (@${vault.sub_account}) olarak Brink's Vault ve NEAR A2A takas protokolünde otonom işlem yapıyorum.`
+                    : `Directives received. Operating autonomously as ${vault.name} (@${vault.sub_account}) across Brink's Vault and NEAR A2A Barter.`;
             }
         }
 

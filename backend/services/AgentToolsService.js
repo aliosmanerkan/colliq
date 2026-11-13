@@ -337,14 +337,25 @@ export async function executeAgentTool(vault, toolName, args = {}) {
             }
 
             const localCards = getCollectorCryptInventory();
-            const cardMap = new Map();
-            for (const c of liveCards) {
-                if (c && c.id) cardMap.set(c.id, c);
+            let cards = [];
+            if ((query || category) && liveCards.length > 0) {
+                cards = [...liveCards];
+                const qClean = (query || "").toLowerCase().trim();
+                for (const c of localCards) {
+                    if (!cards.some(x => x.id === c.id)) {
+                        const matchQ = qClean ? (c.name?.toLowerCase().includes(qClean) || c.category?.toLowerCase().includes(qClean)) : true;
+                        const matchCat = category && category !== "ALL" ? c.category?.toLowerCase() === category.toLowerCase() : true;
+                        if (matchQ && matchCat) {
+                            cards.push(c);
+                        }
+                    }
+                }
+            } else {
+                const cardMap = new Map();
+                for (const c of liveCards) if (c && c.id) cardMap.set(c.id, c);
+                for (const c of localCards) if (c && c.id && !cardMap.has(c.id)) cardMap.set(c.id, c);
+                cards = Array.from(cardMap.values());
             }
-            for (const c of localCards) {
-                if (c && c.id && !cardMap.has(c.id)) cardMap.set(c.id, c);
-            }
-            let cards = Array.from(cardMap.values());
 
             // Handle query and ranking/superlative/undervalued terms
             if (query) {
@@ -510,13 +521,24 @@ export async function executeAgentTool(vault, toolName, args = {}) {
         case "oracle_get_valuation_metrics": {
             const { card_identifier } = args;
             const ccCards = getCollectorCryptInventory();
-            const q = card_identifier.toLowerCase();
-            const card = ccCards.find(c => c.id === card_identifier || c.name?.toLowerCase().includes(q));
+            const q = (card_identifier || "").toLowerCase();
+            let card = ccCards.find(c => c.id === card_identifier || c.name?.toLowerCase().includes(q));
+
+            if (!card) {
+                try {
+                    const liveSearch = await fetchCollectorCryptMarketplace({ search: card_identifier, limit: 20 });
+                    if (liveSearch?.cards && liveSearch.cards.length > 0) {
+                        card = liveSearch.cards.find(c => c.id === card_identifier) || liveSearch.cards[0];
+                    }
+                } catch (liveErr) {
+                    console.warn("[AgentTools] Live oracle search fallback notice:", liveErr.message);
+                }
+            }
 
             if (!card) {
                 return {
                     status: "NOT_FOUND",
-                    error: `No Oracle valuation record found for '${card_identifier}' in Brink's dataset.`
+                    error: `No Oracle valuation record found for '${card_identifier}' in Collector Crypt inventory.`
                 };
             }
 
@@ -709,10 +731,21 @@ export async function executeAgentTool(vault, toolName, args = {}) {
         case "trade_snipe_rwa_slab": {
             const { card_id } = args;
             const ccCards = getCollectorCryptInventory();
-            const targetCard = ccCards.find(c => c.id === card_id || c.name?.toLowerCase().includes(card_id.toLowerCase()));
+            let targetCard = ccCards.find(c => c.id === card_id || c.name?.toLowerCase().includes((card_id || "").toLowerCase()));
 
             if (!targetCard) {
-                return { status: "FAILED", error: `Card '${card_id}' not found in Brink's inventory.` };
+                try {
+                    const liveSearch = await fetchCollectorCryptMarketplace({ search: card_id, limit: 20 });
+                    if (liveSearch?.cards && liveSearch.cards.length > 0) {
+                        targetCard = liveSearch.cards.find(c => c.id === card_id) || liveSearch.cards[0];
+                    }
+                } catch (liveErr) {
+                    console.warn("[AgentTools] Live card snipe lookup notice:", liveErr.message);
+                }
+            }
+
+            if (!targetCard) {
+                return { status: "FAILED", error: `Card '${card_id}' not found in Collector Crypt inventory or live marketplace.` };
             }
 
             const cardPrice = targetCard.insuredUsd || targetCard.costUsd || 50.0;
@@ -729,8 +762,13 @@ export async function executeAgentTool(vault, toolName, args = {}) {
                 };
             }
 
-            // Execute on-chain bridge to vault
-            const result = await bridgeCollectorCryptCardToNearVault(targetCard.id, vault.id, vault.sub_account);
+            // Execute on-chain bridge to vault with live card data preserved
+            const result = await bridgeCollectorCryptCardToNearVault(
+                targetCard.id, 
+                vault.id, 
+                vault.owner_account || vault.sub_account, 
+                targetCard
+            );
 
             return {
                 status: "ACQUIRED_ON_CHAIN",
