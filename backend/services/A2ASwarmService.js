@@ -13,7 +13,7 @@ async function getOrCreateCollectorCryptVault() {
         ccVault = await db.vault.create({
             vault_id: "v-collectorcrypt-system",
             sub_account: "collectorcrypt.colliq.testnet",
-            name: "Collector Crypt Vault (PWCC / Brink's)",
+            name: "PWCC & Brink's Vault Custody",
             owner_account: "collectorcrypt.testnet",
             usdc_balance: 500000.0,
             strategy: "MARKET_MAKER",
@@ -593,7 +593,7 @@ export class A2ASwarmService {
                             vault_a_id: vault.id,
                             vault_b_id: ccVault.id,
                             vault_a_name: vault.name,
-                            vault_b_name: "Collector Crypt Vault (PWCC / Brink's)",
+                            vault_b_name: "PWCC & Brink's Vault Custody",
                             cards_from_a: [],
                             cards_from_b: [bridgeResult.card],
                             usdc_from_a: cardPrice,
@@ -718,7 +718,7 @@ export class A2ASwarmService {
                         vault_a_id: vault.id,
                         vault_b_id: ccVault.id,
                         vault_a_name: vault.name,
-                        vault_b_name: "Collector Crypt Vault (PWCC / Brink's)",
+                        vault_b_name: "PWCC & Brink's Vault Custody",
                         cards_from_a: [],
                         cards_from_b: [bridgeResult.card],
                         usdc_from_a: cardPrice,
@@ -794,7 +794,7 @@ export class A2ASwarmService {
                     id: `msg-audit-${Date.now()}`,
                     sender: "agent",
                     senderAccount: vault.sub_account,
-                    text: `[INCEPTION AUDIT]\nScanned Collector Crypt 170k+ inventory for directives (${rules.length > 0 ? rules.join(", ") : "Balanced strategy"}).\nTreasury liquid with $${Number(vault.usdc_balance).toFixed(2)} USDC. Standing by to snipe newly listed slabs matching target profile.`,
+                    text: `[INCEPTION AUDIT]\nScanned 170,000+ physical graded vault inventory for directives (${rules.length > 0 ? rules.join(", ") : "Balanced strategy"}).\nTreasury liquid with $${Number(vault.usdc_balance).toFixed(2)} USDC. Standing by to acquire newly listed slabs matching target profile.`,
                     actionType: "SYSTEM_AUDIT",
                     timestamp: new Date().toISOString()
                 });

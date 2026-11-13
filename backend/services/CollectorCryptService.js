@@ -503,7 +503,7 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
             solana_mint: ccCard.id,
             name: ccCard.name,
             category: ccCard.category || "Pokemon",
-            set_name: ccCard.set || ccCard.name.split("PSA")[0]?.trim() || "Collector Crypt Vault",
+            set_name: ccCard.set || ccCard.name.split("PSA")[0]?.trim() || "Insured Vault Custody",
             grade: ccCard.grade || "PSA 10 GEM MT",
             rareness_score: ccCard.rareness || 75,
             oracle_fair_value_usdc: oracleValue,
@@ -540,7 +540,7 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
         },
         solana_mint: ccCard.id,
         solana_holding_address: solanaHoldingAddress,
-        vault_custody: `${ccCard.vault || "PWCC / Brink's"} (Collector Crypt Sealed)`,
+        vault_custody: `${ccCard.vault || "PWCC / Brink's"} (Insured Vault Sealed)`,
         near_intent: nearIntent,
         tx_hash: nearService.generateNearReceiptHash()
     };

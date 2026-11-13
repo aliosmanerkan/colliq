@@ -21,7 +21,7 @@ export default function LandingFooter() {
         accent="#043224"
         copyright={`© ${new Date().getFullYear()} Colliq Protocol. All rights reserved.`}
         status={{
-          label: "NEAR Protocol & Collector Crypt Live",
+          label: "NEAR Protocol & PWCC Vault Live",
           href: "/trading-floor"
         }}
         columns={[
@@ -37,7 +37,7 @@ export default function LandingFooter() {
           {
             title: "Infrastructure",
             links: [
-              { label: "Collector Crypt", href: "https://collectorcrypt.com" },
+              { label: "PWCC & Brink's Vault", href: "/how-it-works" },
               { label: "NEAR Protocol", href: "https://near.org" },
               { label: "PSA Vault & Certs", href: "https://www.psacard.com" },
               { label: "NEP-171 Smart Vaults", href: "/how-it-works" },

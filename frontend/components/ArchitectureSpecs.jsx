@@ -21,9 +21,9 @@ export default function ArchitectureSpecs() {
     },
     {
       num: "03",
-      title: "Collector Crypt & Brink's Custody",
+      title: "PWCC & Brink's Vault Custody",
       badge: "Zero Fake Assets",
-      desc: "Arbitrary image uploads are strictly forbidden at the contract level. Verified physical Pokémon slabs stored in Brink's vaults on Solana Mainnet are synced via Helius DAS API and sealed with authentic PSA certifications."
+      desc: "Arbitrary image uploads are strictly forbidden at the contract level. Verified physical slabs stored in Brink's and PWCC institutional vaults are synced on-chain and sealed with authentic PSA, CGC, and BGS certifications."
     },
     {
       num: "04",

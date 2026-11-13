@@ -797,11 +797,20 @@ export default function AgentCommandStudioModal({
                   </div>
                 ) : (
                   vaultTrades.map((trade) => {
-                    const isMarketSnipe = trade.vault_b_name?.includes("Collector Crypt") || String(trade.trade_id).startsWith("snipe");
+                    const vB = (trade.vault_b_name || "").toLowerCase();
+                    const isMarketSnipe =
+                      vB.includes("collector crypt") ||
+                      vB.includes("pwcc") ||
+                      vB.includes("brink") ||
+                      String(trade.trade_id).startsWith("snipe");
                     const cardA = trade.cards_from_a?.[0]?.name || (trade.usdc_from_a ? `$${trade.usdc_from_a} USDC` : "Card");
                     const cardB = trade.cards_from_b?.[0]?.name || "Card";
                     const isInitiator = trade.vault_a_id === vault.id;
-                    const counterparty = isInitiator ? trade.vault_b_name : trade.vault_a_name;
+                    const rawCounterparty = isInitiator ? trade.vault_b_name : trade.vault_a_name;
+                    const counterparty =
+                      rawCounterparty?.toLowerCase().includes("collector crypt")
+                        ? "PWCC & Brink's Vault"
+                        : rawCounterparty;
 
                     return (
                       <div
@@ -810,14 +819,14 @@ export default function AgentCommandStudioModal({
                       >
                         <div className="flex items-center justify-between font-mono">
                           <span className="font-bold text-neutral-900 truncate max-w-[240px]">
-                            {isMarketSnipe ? `Market Snipe: ${counterparty}` : `Swap with ${counterparty}`}
+                            {isMarketSnipe ? `Market Purchase: ${counterparty}` : `Trade with ${counterparty}`}
                           </span>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
                             isMarketSnipe
                               ? "text-blue-800 bg-blue-50 border-blue-200 font-semibold"
                               : "text-emerald-800 bg-emerald-50 border-emerald-200"
                           }`}>
-                            {isMarketSnipe ? "SNIPED" : (trade.status || "SETTLED")}
+                            {isMarketSnipe ? "PURCHASED" : (trade.status || "SETTLED")}
                           </span>
                         </div>
 

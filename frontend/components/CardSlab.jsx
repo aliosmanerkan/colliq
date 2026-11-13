@@ -51,7 +51,7 @@ export default function CardSlab({ card, compact = false }) {
           <h3 className="text-sm font-semibold text-neutral-900 tracking-tight truncate group-hover:text-[#053b2a] transition" title={card.name}>
             {card.name}
           </h3>
-          <p className="text-xs text-neutral-500 truncate">{card.set_name || "Collector Crypt Sealed"}</p>
+          <p className="text-xs text-neutral-500 truncate">{card.set_name || "Insured Vault Sealed"}</p>
         </div>
       </div>
 

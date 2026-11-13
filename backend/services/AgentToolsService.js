@@ -21,7 +21,7 @@ export const AGENT_TOOLS_SCHEMA = [
         type: "function",
         function: {
             name: "market_scan_inventory",
-            description: "Scan the 171,000+ Brink's & PWCC-vaulted PSA slabs in the Collector Crypt marketplace for investment opportunities, arbitrage spreads, undervalued cards below market fair value, or hunt targets.",
+            description: "Scan the 171,000+ Brink's & PWCC-vaulted PSA slabs in the physical vault marketplace for investment opportunities, arbitrage spreads, undervalued cards below market fair value, or hunt targets.",
             parameters: {
                 type: "object",
                 properties: {
@@ -202,7 +202,7 @@ export const AGENT_TOOLS_SCHEMA = [
                 properties: {
                     card_id: {
                         type: "string",
-                        description: "ID of the card slab in the Collector Crypt inventory to acquire"
+                        description: "ID of the card slab in the physical vault inventory to acquire"
                     }
                 },
                 required: ["card_id"]
@@ -503,7 +503,7 @@ export async function executeAgentTool(vault, toolName, args = {}) {
                     rareness_score: c.rareness,
                     population: c.population?.atGrade || "N/A",
                     affordable_by_vault: cost <= (vault.guardrail_max_spend_per_trade || 500) && cost <= (vault.usdc_balance || 500),
-                    custody: "Brink's Vault (Collector Crypt Sealed)"
+                    custody: "Brink's Vault (Insured Vault Sealed)"
                 };
             });
 
@@ -538,7 +538,7 @@ export async function executeAgentTool(vault, toolName, args = {}) {
             if (!card) {
                 return {
                     status: "NOT_FOUND",
-                    error: `No Oracle valuation record found for '${card_identifier}' in Collector Crypt inventory.`
+                    error: `No Oracle valuation record found for '${card_identifier}' in physical vault inventory.`
                 };
             }
 
@@ -745,7 +745,7 @@ export async function executeAgentTool(vault, toolName, args = {}) {
             }
 
             if (!targetCard) {
-                return { status: "FAILED", error: `Card '${card_id}' not found in Collector Crypt inventory or live marketplace.` };
+                return { status: "FAILED", error: `Card '${card_id}' not found in physical vault inventory or live marketplace.` };
             }
 
             const cardPrice = targetCard.insuredUsd || targetCard.costUsd || 50.0;

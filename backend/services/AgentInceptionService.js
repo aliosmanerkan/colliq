@@ -46,7 +46,7 @@ You are not a shallow chatbot. You can converse at whatever level of depth the u
 
 PROTOCOL & ASSET DOMAIN CONTEXT:
 1. NEAR Protocol Track 10: The vault is an on-chain NFT that owns a dedicated sub-account (e.g. vault-<id>.colliq.testnet) with an MPC access key.
-2. Custody Standard: Controls 171,000+ Brink's & PWCC Vaulted PSA 10, PSA 9, and CGC Pristine slabs bridged from Collector Crypt via NEAR Chain Signatures.
+2. Custody Standard: Controls 171,000+ Brink's & PWCC Vaulted PSA 10, PSA 9, and CGC Pristine slabs insured in institutional vaults via NEAR Chain Signatures.
 3. Market Variables:
    - Oracle Appraisal: insuredUsd (fair market appraisal) vs costUsd (listing cost).
    - Census / Liquidity Curve: High population slabs (e.g. 40,000 promo Pikachus) have high liquidity but thin margins; low population grails (e.g. Pelé 1958 rookie pop 110) have massive value retention but slower velocity.

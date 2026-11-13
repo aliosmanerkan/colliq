@@ -63,19 +63,41 @@ export default function ActivityTab() {
     );
   }, [trades, userVaultIds, userAccount]);
 
+  // Vault counterparty name normalization (hides vendor internals)
+  const formatVaultName = (name) => {
+    if (!name) return "";
+    const lower = name.toLowerCase();
+    if (lower.includes("collector crypt") || lower.includes("collectorcrypt")) {
+      return "PWCC & Brink's Vault Custody";
+    }
+    return name;
+  };
+
   // Deal classification helper
   const getDealType = (trade, account) => {
     const tid = String(trade.trade_id || trade.id || "");
     const vAName = (trade.vault_a_name || "").toLowerCase();
     const vBName = (trade.vault_b_name || "").toLowerCase();
 
-    const isDirectBuy = tid.startsWith("direct-") || (vAName === account && vBName.includes("collector crypt"));
+    const isDirectBuy =
+      tid.startsWith("direct-") ||
+      (vAName === account &&
+        (vBName.includes("collector crypt") ||
+          vBName.includes("pwcc") ||
+          vBName.includes("brink") ||
+          vBName.includes("vault custody")));
     if (isDirectBuy) return "DIRECT_BUY";
 
     const isVaultAcq = tid.startsWith("acq-") || trade.negotiation_log?.[0]?.action === "BUSINESS_ACQUISITION";
     if (isVaultAcq) return "VAULT_ACQUISITION";
 
-    const isSnipe = tid.startsWith("snipe-") || vBName.includes("collector crypt") || (!trade.cards_from_a?.length && trade.cards_from_b?.length);
+    const isSnipe =
+      tid.startsWith("snipe-") ||
+      vBName.includes("collector crypt") ||
+      vBName.includes("pwcc") ||
+      vBName.includes("brink") ||
+      vBName.includes("vault custody") ||
+      (!trade.cards_from_a?.length && trade.cards_from_b?.length);
     if (isSnipe) return "AGENT_SNIPE";
 
     return "A2A_BARTER";
@@ -243,10 +265,10 @@ export default function ActivityTab() {
                           {isDirectBuy
                             ? `Purchased to Personal Wallet (${trade.vault_a_name})`
                             : isAgentSnipe
-                            ? `${trade.vault_a_name} Acquired Slab from Collector Crypt`
+                            ? `${trade.vault_a_name} Acquired Physical Slab`
                             : isVaultAcq
                             ? `Business-in-a-Box Vault Transfer (${trade.vault_a_name})`
-                            : `${trade.vault_a_name} ⇄ ${trade.vault_b_name}`}
+                            : `${trade.vault_a_name} ⇄ ${formatVaultName(trade.vault_b_name)}`}
                         </span>
 
                         {/* Badge */}
@@ -274,7 +296,7 @@ export default function ActivityTab() {
                         {isDirectBuy
                           ? "Settled via NEAR Wallet & NEP-413 Intent • Brink's / PWCC Custody"
                           : isAgentSnipe
-                          ? "Collector Crypt Market Purchase • Physical PWCC / Brink's Custody"
+                          ? "Direct Vault Purchase • Insured PWCC & Brink's Custody"
                           : isVaultAcq
                           ? "Zombie Key Wipe Executed • Full Sub-Account & Inventory Transferred"
                           : `${trade.rounds_count || 4}-Round Agent Negotiation • Verified NEAR Intent`}
@@ -416,7 +438,7 @@ export default function ActivityTab() {
                             {getCardGradeBadge(cardB)}
                           </span>
                           <span className="text-[10px] font-mono text-neutral-400 truncate">
-                            {trade.vault_b_name} Sent
+                            {formatVaultName(trade.vault_b_name)} Sent
                           </span>
                         </div>
                         <h5 className="text-xs font-bold text-neutral-900 truncate">
@@ -476,7 +498,7 @@ export default function ActivityTab() {
                         ${Number(trade.usdc_from_b || trade.usdc_from_a || 0).toLocaleString()} USDC
                       </div>
                       <span className="text-[11px] text-purple-800 font-medium font-mono block">
-                        Acquired by {trade.vault_b_name}
+                        Acquired by {formatVaultName(trade.vault_b_name)}
                       </span>
                     </div>
                   </div>
@@ -577,7 +599,7 @@ export default function ActivityTab() {
                                     <span className="w-4 h-4 rounded-full bg-[#073525] text-white text-[10px] flex items-center justify-center font-bold">
                                       {turnItem.round || idx + 1}
                                     </span>
-                                    <span>{turnItem.agent || (idx % 2 === 0 ? trade.vault_a_name : trade.vault_b_name)}</span>
+                                    <span>{turnItem.agent || (idx % 2 === 0 ? trade.vault_a_name : formatVaultName(trade.vault_b_name))}</span>
                                   </span>
                                   <span
                                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${

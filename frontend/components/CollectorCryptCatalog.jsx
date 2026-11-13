@@ -268,7 +268,7 @@ export default function CollectorCryptCatalog({
         setCards(fetchedCards);
       }
     } catch (err) {
-      console.error("Error loading Collector Crypt inventory:", err);
+      console.error("Error loading vault inventory:", err);
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -506,7 +506,7 @@ export default function CollectorCryptCatalog({
       {loading ? (
         <div className="py-32 flex flex-col items-center justify-center gap-3 text-neutral-400 text-xs">
           <Loader2 className="w-6 h-6 animate-spin text-[#073525]" />
-          <span>Streaming verified slabs from Collector Crypt vault index...</span>
+          <span>Loading verified physical slabs...</span>
         </div>
       ) : cards.length === 0 ? (
         <div className="py-24 text-center rounded-[24px] bg-white border border-neutral-200 p-8 space-y-2">
@@ -846,7 +846,7 @@ export default function CollectorCryptCatalog({
                         <Bot className="w-4 h-4 text-[#073525] shrink-0" />
                         <div>
                           <div className="font-semibold text-neutral-900">AI Agent Vault</div>
-                          <div className="text-[10px] text-neutral-500">Autonomous Barter</div>
+                          <div className="text-[10px] text-neutral-500">Autonomous Trading</div>
                         </div>
                       </button>
                     </div>

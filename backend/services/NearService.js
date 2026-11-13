@@ -212,7 +212,7 @@ export class NearService {
             },
             cross_chain_delivery: {
                 source_chain: "solana:mainnet-beta",
-                source_custodian: "Collector Crypt (PWCC / Brink's Vault)",
+                source_custodian: "Brink's & PWCC Institutional Vaults",
                 solana_mint: solanaMint,
                 card_name: cardName,
                 destination_chain: "near:testnet",

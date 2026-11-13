@@ -60,13 +60,25 @@ export default function TradingFloorTerminal({
   const [tapeFilter, setTapeFilter] = useState("all"); // "all" | "trades" | "purchases" | "declined"
   const [modalTrade, setModalTrade] = useState(null);
 
-  // Helpers to inspect trade type
+  // Helpers to inspect trade type & normalize vault names
+  const formatVaultName = (name) => {
+    if (!name) return "";
+    const lower = name.toLowerCase();
+    if (lower.includes("collector crypt") || lower.includes("collectorcrypt")) {
+      return "PWCC / Brink's Vault";
+    }
+    return name;
+  };
+
   const isMarketSnipe = (trade) => {
     if (!trade) return false;
     const tid = String(trade.trade_id || trade.id || "");
+    const vB = (trade.vault_b_name || "").toLowerCase();
     return (
       tid.startsWith("snipe-") ||
-      trade.vault_b_name?.includes("Collector Crypt") ||
+      vB.includes("collector crypt") ||
+      vB.includes("pwcc") ||
+      vB.includes("brink") ||
       (Array.isArray(trade.cards_from_a) &&
         trade.cards_from_a.length === 0 &&
         Array.isArray(trade.cards_from_b) &&
@@ -418,7 +430,7 @@ export default function TradingFloorTerminal({
                           : "AGENT 2"}
                       </span>
                       <span className="font-bold text-sm text-slate-900 truncate max-w-[180px]">
-                        {activeTrade.vault_b_name}
+                        {formatVaultName(activeTrade.vault_b_name)}
                       </span>
                     </div>
 
@@ -488,7 +500,7 @@ export default function TradingFloorTerminal({
                     </strong>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-slate-400">{activeTrade.vault_b_name || "Agent 2"} Total:</span>
+                    <span className="text-slate-400">{formatVaultName(activeTrade.vault_b_name) || "Agent 2"} Total:</span>
                     <strong className="text-slate-800 font-semibold">
                       ${rightSideTotal.toFixed(2)} USDC
                     </strong>
@@ -550,7 +562,7 @@ export default function TradingFloorTerminal({
                         item.agent ||
                         (roundNum % 2 === 1
                           ? activeTrade.vault_a_name
-                          : activeTrade.vault_b_name) ||
+                          : formatVaultName(activeTrade.vault_b_name)) ||
                         "Agent";
                       const isInitiator =
                         speakerName === activeTrade.vault_a_name || roundNum % 2 === 1;
@@ -873,7 +885,7 @@ export default function TradingFloorTerminal({
                             <span className="text-[10px] font-mono bg-purple-900 text-white px-1.5 py-0.2 rounded font-semibold">
                               VAULT PURCHASE
                             </span>
-                            <span className="truncate">{t.vault_b_name}</span>
+                            <span className="truncate">{formatVaultName(t.vault_b_name)}</span>
                           </>
                         ) : (
                           <>
@@ -881,7 +893,7 @@ export default function TradingFloorTerminal({
                               TRADE
                             </span>
                             <span className="truncate">
-                              {t.vault_a_name} <span className="text-slate-400 font-normal">⇄</span> {t.vault_b_name}
+                              {t.vault_a_name} <span className="text-slate-400 font-normal">⇄</span> {formatVaultName(t.vault_b_name)}
                             </span>
                           </>
                         )}

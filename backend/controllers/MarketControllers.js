@@ -125,7 +125,7 @@ async function getOrCreateCollectorCryptVault() {
         ccVault = await db.vault.create({
             vault_id: "v-collectorcrypt-system",
             sub_account: "collectorcrypt.colliq.testnet",
-            name: "Collector Crypt Vault (PWCC / Brink's)",
+            name: "PWCC & Brink's Vault Custody",
             owner_account: "collectorcrypt.testnet",
             usdc_balance: 500000.0,
             strategy: "MARKET_MAKER",
@@ -225,7 +225,7 @@ router.post("/buy-direct", async (req, res) => {
                 vault_a_id: vaultAId,
                 vault_b_id: vaultBId,
                 vault_a_name: buyer_account,
-                vault_b_name: "Collector Crypt Vault (PWCC / Brink's)",
+                vault_b_name: "PWCC & Brink's Vault Custody",
                 cards_from_a: [],
                 cards_from_b: [finalCard.toJSON ? finalCard.toJSON() : finalCard],
                 usdc_from_a: cardPrice,
@@ -262,7 +262,7 @@ router.post("/buy-direct", async (req, res) => {
             });
             io.emit("trade:event", {
                 vaultA: buyer_account,
-                vaultB: "Collector Crypt Vault (PWCC / Brink's)",
+                vaultB: "PWCC & Brink's Vault Custody",
                 cardTitle: finalCard.name,
                 tradeId,
                 txHash: settledTxHash
@@ -395,7 +395,7 @@ router.post("/liquidate-card", async (req, res) => {
         req.app.get("io")?.emit("vault:updated", { action: "card_liquidated" });
         req.app.get("io")?.emit("trade:event", {
             vaultA: updatedVault?.name || "Collector",
-            vaultB: "Collector Crypt Liquidity Pool",
+            vaultB: "PWCC Instant Liquidity Pool",
             cardTitle,
             message: `Instant Liquidation: ${cardTitle} sold for $${cashPayout} USDC.`
         });

@@ -38,7 +38,7 @@ export default function HowItWorksPage() {
       badge: "Step 02",
       title: "Automatic Market Purchases (170k+ Slabs)",
       subtitle: "Autonomous radar scanning 171,000+ Brink's and PWCC vaulted physical slabs.",
-      desc: "Immediately upon deployment—and continuously on the market radar—your agent scans 171,000+ authenticated physical PSA, CGC, and BGS slabs vaulted in Brink's and PWCC via Collector Crypt. When a live listing matches your target criteria below fair oracle value, your agent acquires it automatically via a cryptographically signed NEAR Intent (NEP-413).",
+      desc: "Immediately upon deployment—and continuously on the market radar—your agent scans 171,000+ authenticated physical PSA, CGC, and BGS slabs vaulted in Brink's and PWCC institutional facilities. When a live listing matches your target criteria below fair oracle value, your agent acquires it automatically via a cryptographically signed NEAR Intent (NEP-413).",
       perk: "Physical slabs are securely locked in institutional custody; no speculative JPEGs.",
       accent: "border-blue-200 text-blue-800 bg-blue-50"
     },
@@ -78,7 +78,7 @@ export default function HowItWorksPage() {
     {
       title: "NEAR Chain Signatures (Direct Brink's & Solana Custody)",
       standard: "Multi-Party Computation",
-      desc: "Using Multi-Party Computation (MPC), your NEAR vault directly controls the Solana custody address holding your physical Collector Crypt slabs in Brink's & PWCC vaults without trusted bridge intermediaries.",
+      desc: "Using Multi-Party Computation (MPC), your NEAR vault directly controls the Solana custody address holding your physical slabs in Brink's & PWCC vaults without trusted bridge intermediaries.",
       benefit: "Seamless cross-chain ownership of real, insured PSA, CGC, and BGS slabs without risky third-party bridges."
     },
     {
@@ -102,11 +102,11 @@ export default function HowItWorksPage() {
     },
     {
       q: "Are the cards real physical graded items?",
-      a: "Yes, 100%. Every card indexed on Colliq represents a certified physical PSA, CGC, or BGS graded slab stored in institutional Brink's and PWCC vaults in Oregon. The cards are represented on-chain via Collector Crypt Solana pNFTs, allowing instant cross-chain trading while physical custody remains fully insured."
+      a: "Yes, 100%. Every card indexed on Colliq represents a certified physical PSA, CGC, or BGS graded slab stored in institutional Brink's and PWCC vaults in Oregon. The cards are represented on-chain via Solana pNFTs, allowing instant cross-chain trading while physical custody remains fully insured."
     },
     {
       q: "How do cross-chain NEAR Intents work with Solana slabs?",
-      a: "When your agent buys a slab from the 171,000+ Collector Crypt catalog, it generates a cryptographically signed NEAR Intent (NEP-413). Using NEAR Chain Signatures (MPC), the protocol derives a deterministic Solana custody address for your agent, binding physical custody directly to your NEAR vault sub-account without custodial bridges."
+      a: "When your agent buys a slab from the 171,000+ vault catalog, it generates a cryptographically signed NEAR Intent (NEP-413). Using NEAR Chain Signatures (MPC), the protocol derives a deterministic Solana custody address for your agent, binding physical custody directly to your NEAR vault sub-account without custodial bridges."
     },
     {
       q: "What is a \"Business-in-a-Box\" and how does the Zombie Key Wipe protect buyers?",
@@ -294,7 +294,7 @@ export default function HowItWorksPage() {
               <span className="text-[10px] bg-blue-100 text-blue-900 px-1.5 py-0.2 rounded">BRINK&apos;S</span>
             </div>
             <h4 className="text-xs font-bold text-slate-900">
-              Collector Crypt Vault
+              PWCC &amp; Brink&apos;s Custody
             </h4>
             <p className="text-[11.5px] text-slate-600 leading-relaxed font-sans">
               Every card is an authenticated physical slab insured in PWCC / Brink&apos;s Oregon vaults, indexed via Solana pNFT mints and live oracle valuations.

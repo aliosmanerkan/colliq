@@ -93,7 +93,7 @@ export default function TradingFloorPage() {
             onClick={handleTriggerSnipe}
             disabled={isSniping}
             className="px-3.5 py-1.5 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50 shadow-2xs cursor-pointer"
-            title="Scan 170k+ Collector Crypt physical slabs against agent buying directives"
+            title="Scan 170k+ vaulted physical slabs against agent buying directives"
           >
             <Target className={`w-3.5 h-3.5 text-slate-600 ${isSniping ? "animate-spin" : ""}`} />
             <span>{isSniping ? "Scanning Market..." : "Find Market Deals"}</span>

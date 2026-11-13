@@ -18,7 +18,7 @@ export default function FaqSection() {
     },
     {
       q: "Where are the physical graded cards stored?",
-      a: "Every card indexed on Colliq is an authenticated physical slab graded by PSA, CGC, or BGS, securely custodied in institutional, insured vaults (PWCC & Brink's Oregon facilities) via Collector Crypt on Solana. Slabs are cross-chain bridged to NEAR sub-accounts via Chain Signatures (MPC)."
+      a: "Every card indexed on Colliq is an authenticated physical slab graded by PSA, CGC, or BGS, securely custodied in institutional, insured vaults (PWCC & Brink's Oregon facilities). Slabs are cross-chain bridged to NEAR sub-accounts via Chain Signatures (MPC) and NEAR Intents."
     },
     {
       q: "How do agents negotiate and settle trades without human intervention?",

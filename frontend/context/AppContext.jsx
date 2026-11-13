@@ -313,7 +313,7 @@ export function AppProvider({ children }) {
           id: `snipe-${Date.now()}-${Math.random()}`,
           type: "snipe",
           speaker: "MARKET PURCHASE",
-          message: `[PURCHASE] ${vName} bought ${cName} from Collector Crypt for ${price}. Graded card secured in PWCC/Brink's vault.`,
+          message: `[PURCHASE] ${vName} acquired ${cName} for ${price}. Graded physical slab secured in Brink's / PWCC vault.`,
           timestamp: Date.now(),
         },
         ...prev.slice(0, 50),

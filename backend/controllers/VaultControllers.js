@@ -470,7 +470,7 @@ router.post("/:id/snipe", async (req, res) => {
             ccVault = await db.vault.create({
                 vault_id: "v-collectorcrypt-system",
                 sub_account: "collectorcrypt.colliq.testnet",
-                name: "Collector Crypt Vault (PWCC / Brink's)",
+                name: "PWCC & Brink's Vault Custody",
                 owner_account: "collectorcrypt.testnet",
                 usdc_balance: 500000.0,
                 strategy: "MARKET_MAKER",
@@ -494,7 +494,7 @@ router.post("/:id/snipe", async (req, res) => {
             vault_a_id: vault.id,
             vault_b_id: ccVault.id,
             vault_a_name: vault.name,
-            vault_b_name: "Collector Crypt Vault (PWCC / Brink's)",
+            vault_b_name: "PWCC & Brink's Vault Custody",
             cards_from_a: [],
             cards_from_b: [result.card],
             usdc_from_a: cardPrice,
