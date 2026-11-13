@@ -130,15 +130,18 @@ export default function AgentCommandStudioModal({
 
     try {
       const res = await api.post(`/vaults/${vault.id}/chat`, { message: text });
-      if (res.data?.reply) {
-        setMessages((prev) => [...prev, res.data.reply]);
+      if (Array.isArray(res.data?.chatHistory)) {
+        setMessages(res.data.chatHistory);
+      } else if (res.data?.reply || res.data?.message) {
+        const replyObj = typeof (res.data.reply || res.data.message) === "string"
+          ? { id: `msg-${Date.now()}-a`, sender: "agent", text: res.data.reply || res.data.message, timestamp: new Date().toISOString() }
+          : (res.data.reply || res.data.message);
+        setMessages((prev) => [...prev, replyObj]);
       }
       if (res.data?.activeRules) {
         setActiveRules(res.data.activeRules);
       }
-      if (res.data?.vault) {
-        await loadData();
-      }
+      await loadData();
     } catch (err) {
       setMessages((prev) => [
         ...prev,

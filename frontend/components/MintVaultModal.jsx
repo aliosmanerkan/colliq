@@ -28,11 +28,7 @@ export default function MintVaultModal({ isOpen, onClose, onSuccess }) {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [manualRuleInput, setManualRuleInput] = useState("");
-  const [rules, setRules] = useState([
-    "Evaluate only PSA 10 & CGC Pristine slabs",
-    "Maintain at least $100 USDC cash buffer in treasury",
-    "Require minimum 18% Oracle fair value discount"
-  ]);
+  const [rules, setRules] = useState([]);
   const [suggestedChips, setSuggestedChips] = useState([
     "Target Pokémon PSA 10 grails",
     "Require minimum 20% Oracle discount",

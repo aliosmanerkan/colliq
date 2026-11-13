@@ -777,6 +777,23 @@ router.post("/:id/chat", async (req, res) => {
     }
 });
 
+// UPDATE CUSTOM DIRECTIVES / RULES
+router.put("/:id/rules", async (req, res) => {
+    try {
+        const { rules } = req.body;
+        const vault = await db.vault.findOne({ where: getVaultWhere(req.params.id) });
+        if (!vault) return res.status(404).json({ error: "Vault not found" });
+        const cleanRules = Array.isArray(rules) ? rules.map(r => String(r).trim()).filter(Boolean) : [];
+        vault.custom_rules = JSON.stringify(cleanRules);
+        await vault.save();
+        req.app.get("io")?.emit("vault:updated", { vaultId: vault.id, rules: cleanRules });
+        a2aSwarm.executeMarketSnipeCycle().catch(err => console.warn("Snipe after rules update notice:", err.message));
+        res.json({ status: "SUCCESS", rules: cleanRules, activeRules: cleanRules });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // DELETE SPECIFIC RULE OR ALL RULES
 router.delete("/:id/rules", async (req, res) => {
     try {

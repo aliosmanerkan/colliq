@@ -194,9 +194,13 @@ Output JSON only:
             clean = clean.substring(start, end + 1);
         }
         const parsed = JSON.parse(clean);
+        const rawSearch = Array.isArray(parsed.search_queries) ? parsed.search_queries.map(q => String(q).trim()).filter(Boolean) : [];
+        const rawMustMatch = Array.isArray(parsed.must_match_keywords) ? parsed.must_match_keywords.map(k => normalizeAscii(k)).filter(Boolean) : [];
+        const mergedMustMatch = Array.from(new Set([...rawMustMatch, ...rawSearch.map(q => normalizeAscii(q)).filter(Boolean)]));
+
         const compiled = {
-            search_queries: Array.isArray(parsed.search_queries) ? parsed.search_queries.map(q => String(q).trim()).filter(Boolean) : [],
-            must_match_keywords: Array.isArray(parsed.must_match_keywords) ? parsed.must_match_keywords.map(k => normalizeAscii(k)).filter(Boolean) : [],
+            search_queries: rawSearch,
+            must_match_keywords: mergedMustMatch,
             excluded_keywords: Array.isArray(parsed.excluded_keywords) ? parsed.excluded_keywords.map(k => normalizeAscii(k)).filter(Boolean) : [],
             allowed_grades: Array.isArray(parsed.allowed_grades) ? parsed.allowed_grades.map(g => String(g).toLowerCase().trim()).filter(Boolean) : [],
             min_cash_reserve_usdc: typeof parsed.min_cash_reserve_usdc === "number" ? parsed.min_cash_reserve_usdc : 100,
@@ -248,8 +252,13 @@ CANDIDATE CARD DETAILS:
 - Vault Available Balance: $${Number(vault.usdc_balance || 0).toFixed(2)} USDC
 
 INSTRUCTIONS:
-- If the owner's rule says e.g. "Only buy Pelé cards — no other player or TCG", and this card is a Pokémon or One Piece or other player, return approved: false!
-- If the card does not meet the specified grade or exceeds price/reserve constraints, return approved: false!
+- Focus STRICTLY on entity, character, player, sport/TCG category, and grade compliance with the owner's directives.
+  (e.g., if directives say "Sadece Pelé kartları", verify this card is actually a Pelé card and not Pokémon, One Piece, or a different player).
+  (e.g., if directives say "PSA 10 Only", verify the grade is PSA 10 / Gem Mint).
+- Numeric constraints (purchase price within budget, oracle valuation spread, cash reserve floor) have ALREADY been strictly verified deterministically by the smart contract guardrails before reaching you.
+- DO NOT reject cards over minor discount percentage rounding, perceived counterparty reputation, or arbitrary liquidity speculation.
+- If the card matches the target entity/subject and complies with category/grade rules, return approved: true.
+- If the card represents the wrong player, wrong character, excluded category, or violates explicit negative constraints, return approved: false.
 - Return valid JSON only:
 {"approved": true | false, "reason": "brief 1-sentence explanation"}`;
 
@@ -357,7 +366,7 @@ export function evaluateCardForVault(card, vault, compiledPolicy = null) {
             return { eligible: true, score: 98, matchedRule: `Target entity matched: ${compiledPolicy.must_match_keywords[0]}`, cardPrice, oracleFairValue };
         }
 
-        if (compiledPolicy.allowed_grades?.length > 0 || compiledPolicy.search_queries?.length > 0) {
+        if (compiledPolicy.allowed_grades?.length > 0 && (!compiledPolicy.must_match_keywords || compiledPolicy.must_match_keywords.length === 0)) {
             return { eligible: true, score: 90, matchedRule: "Compiled policy criteria met", cardPrice, oracleFairValue };
         }
     }

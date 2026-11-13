@@ -440,6 +440,7 @@ GUIDELINES:
             status: "SUCCESS",
             vaultId: vault.id,
             subAccount: vault.sub_account,
+            reply: agentReply,
             message: agentReply,
             actionType,
             ruleApplied,

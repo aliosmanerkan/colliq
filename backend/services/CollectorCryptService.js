@@ -84,9 +84,9 @@ export function normalizeLiveCard(raw) {
     if (raw.listing?.price && Number(raw.listing.price) > 0) {
         const rawPrice = Number(raw.listing.price);
         costUsd = raw.listing.currency === "SOL" ? Math.round(rawPrice * 185) : Math.round(rawPrice);
-        if (insuredUsd < costUsd) insuredUsd = Math.round(costUsd * 1.12);
+        if (insuredUsd < costUsd * 1.28) insuredUsd = Math.round(costUsd * 1.30);
     } else if (!raw.costUsd && insuredUsd > 0) {
-        costUsd = Math.round(insuredUsd * 0.9);
+        costUsd = Math.round(insuredUsd * 0.76);
     }
 
     if (costUsd < 5) costUsd = 5;
