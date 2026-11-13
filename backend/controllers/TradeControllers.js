@@ -34,6 +34,8 @@ router.post("/trigger-swarm", async (req, res) => {
 
             let fallbackResult = null;
             try {
+                vA._compiledPolicy = await a2aSwarm.getCompiledVaultPolicy(vA);
+                vB._compiledPolicy = await a2aSwarm.getCompiledVaultPolicy(vB);
                 fallbackResult = await negotiationEngine.runNegotiationRoom(vA, vB);
             } finally {
                 await vA.update({ is_locked: false, lock_reason: null });

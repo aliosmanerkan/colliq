@@ -419,6 +419,10 @@ export class A2ASwarmService {
                 return { status: "SKIPPED", message: "Not enough unlocked vaults with inventory" };
             }
 
+            for (const v of eligibleVaults) {
+                v._compiledPolicy = await getCompiledVaultPolicy(v);
+            }
+
             // Intelligent Matchmaking: Priority 1 (bidirectional) -> Priority 2 (unilateral+cash) -> Priority 3 (barter)
             const bestMatch = negotiationEngine.findBestBarterMatch(eligibleVaults);
             let vaultA, vaultB, cardA, cardB;
@@ -672,6 +676,13 @@ export class A2ASwarmService {
     async scanAndSnipeForNewVault(vault, passedTxHash = null) {
         if (!vault) return null;
         try {
+            let rules = [];
+            try {
+                rules = typeof vault.custom_rules === "string" ? JSON.parse(vault.custom_rules) : (vault.custom_rules || []);
+            } catch {
+                rules = [];
+            }
+
             const policy = await getCompiledVaultPolicy(vault);
             const searchKeyword = policy.search_queries?.[0] || "";
 
@@ -808,6 +819,10 @@ export class A2ASwarmService {
             console.error("scanAndSnipeForNewVault error:", err);
             return null;
         }
+    }
+
+    async getCompiledVaultPolicy(vault) {
+        return getCompiledVaultPolicy(vault);
     }
 
     emitEvent(event, data) {

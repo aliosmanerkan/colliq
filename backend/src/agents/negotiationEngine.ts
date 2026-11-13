@@ -39,6 +39,7 @@ export interface StatelessAgentPersona {
     custom_rules?: string[];
     bio?: string;
     usdc_balance?: number;
+    _compiledPolicy?: any;
 }
 
 // ==========================================
@@ -159,8 +160,8 @@ export function getTradeableCards(vault: any): any[] {
         return !t.startsWith("max spend") && !t.startsWith("strategy") && !t.startsWith("protected") && !t.startsWith("korumalı");
     });
 
-    if (directiveRules.length > 0) {
-        const secondaryCards = nonHoldCards.filter((c: any) => !doesCardMatchDirectives(c, directiveRules));
+    if (directiveRules.length > 0 || vault._compiledPolicy) {
+        const secondaryCards = nonHoldCards.filter((c: any) => !doesCardMatchDirectives(c, directiveRules, vault._compiledPolicy));
         if (secondaryCards.length > 0) {
             return secondaryCards;
         }
@@ -233,6 +234,20 @@ export class A2ANegotiationEngine {
         const absSpread = Math.abs(netSpread);
         const maxSpend = agent.max_spend_per_trade_usdc || 350;
 
+        // Mandate check: Does their offered card match my directives / compiled policy?
+        if (theirCard && (agent.custom_rules || agent._compiledPolicy)) {
+            if (!doesCardMatchDirectives(theirCard, agent.custom_rules, agent._compiledPolicy)) {
+                return {
+                    decision: "REJECT",
+                    offer_usdc: 0,
+                    offer_cards: [],
+                    request_cards: [],
+                    public_argument: `Deal declined: Offered card (${theirCard?.name}) does not comply with my owner's collection directives.`,
+                    private_reasoning_for_owner: `Directives mandate violation for ${theirCard?.name}. Aborting trade immediately.`
+                };
+            }
+        }
+
         // ----------------------------------------------------
         // TURN 1: Initiator Opening Proposal
         // ----------------------------------------------------
@@ -277,7 +292,7 @@ export class A2ANegotiationEngine {
         // ----------------------------------------------------
         if (turnNumber === 2) {
             // Mandate check: Does their offered card match Responder's directives?
-            if (agent.custom_rules && !doesCardMatchDirectives(theirCard, agent.custom_rules)) {
+            if ((agent.custom_rules || agent._compiledPolicy) && !doesCardMatchDirectives(theirCard, agent.custom_rules, agent._compiledPolicy)) {
                 return {
                     decision: "REJECT",
                     offer_usdc: 0,
@@ -436,6 +451,20 @@ export class A2ANegotiationEngine {
             return this.evaluateTurn(agent, turnNumber, myCard, theirCard, previousCashOffer, counterpartyArgument);
         }
 
+        // Pre-LLM Mandate Check: If theirCard violates directives/policy, REJECT immediately without wasting tokens
+        if (theirCard && (agent.custom_rules || agent._compiledPolicy)) {
+            if (!doesCardMatchDirectives(theirCard, agent.custom_rules, agent._compiledPolicy)) {
+                return {
+                    decision: "REJECT",
+                    offer_usdc: 0,
+                    offer_cards: [],
+                    request_cards: [],
+                    public_argument: `Deal declined: Offered card (${theirCard?.name}) does not comply with my owner's collection directives.`,
+                    private_reasoning_for_owner: `Directives mandate violation for ${theirCard?.name}. Aborting trade immediately.`
+                };
+            }
+        }
+
         const model = process.env.OPENROUTER_MODEL?.trim() || "deepseek/deepseek-v4.1-flash";
         const myVal = Number(myCard?.oracle_fair_value_usdc || 100);
         const theirVal = Number(theirCard?.oracle_fair_value_usdc || 100);
@@ -457,6 +486,7 @@ AGENT PROFILE & DIRECTIVES:
 - System Directive: ${agent.persona_system_prompt || "You are an autonomous merchant vault trading authenticated PSA/CGC slabs."}
 - Bio / Philosophy: ${agent.bio || "Value-focused disciplined TCG collector."}
 - Active Mandates: ${agent.custom_rules && agent.custom_rules.length > 0 ? JSON.stringify(agent.custom_rules) : "None (All authenticated slabs eligible)"}
+${agent._compiledPolicy ? `- Strict Compiled Policy: Must match: ${JSON.stringify(agent._compiledPolicy.must_match_keywords || [])}, Excluded: ${JSON.stringify(agent._compiledPolicy.excluded_keywords || [])}, Allowed Grades: ${JSON.stringify(agent._compiledPolicy.allowed_grades || [])}` : ""}
 - Treasury Available: $${treasury.toFixed(2)} USDC
 - Single-Trade Max Spend Ceiling: $${agent.max_spend_per_trade_usdc} USDC
 
@@ -542,6 +572,20 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                 ? parsed.decision.toUpperCase() as AgentDecision
                 : (turnNumber >= 3 ? "ACCEPT" : "COUNTER");
 
+            // Post-LLM Mandate Check: If LLM accepts/counters a card violating directives, override with REJECT
+            if (theirCard && (agent.custom_rules || agent._compiledPolicy)) {
+                if (!doesCardMatchDirectives(theirCard, agent.custom_rules, agent._compiledPolicy)) {
+                    return {
+                        decision: "REJECT",
+                        offer_usdc: 0,
+                        offer_cards: [],
+                        request_cards: [],
+                        public_argument: `Deal declined: Offered card (${theirCard?.name}) does not comply with my owner's collection directives.`,
+                        private_reasoning_for_owner: `Directives mandate violation for ${theirCard?.name}. Overriding LLM decision with mandatory REJECT.`
+                    };
+                }
+            }
+
             let cash = Number(parsed.offer_usdc) || 0;
             if (cash < 0) cash = 0;
 
@@ -616,17 +660,20 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                         const valB = Number(cB.oracle_fair_value_usdc || 100);
                         const absSpread = Math.abs(valB - valA);
 
-                        const matchForA = doesCardMatchDirectives(cB, vA.custom_rules);
-                        const matchForB = doesCardMatchDirectives(cA, vB.custom_rules);
+                        const matchForA = doesCardMatchDirectives(cB, vA.custom_rules, vA._compiledPolicy);
+                        const matchForB = doesCardMatchDirectives(cA, vB.custom_rules, vB._compiledPolicy);
 
-                        // Priority 1: Bidirectional fit
-                        if (matchForA && matchForB) {
+                        // NEVER pair two vaults in Priority 2 or Priority 3 if the incoming card violates a vault's compiled policy
+                        if (!matchForA || !matchForB) continue;
+
+                        // Priority 1: Near parity / tight spread
+                        if (absSpread <= 50) {
                             candidates.push({ vaultA: vA, vaultB: vB, cardA: cA, cardB: cB, priority: 1, spread: absSpread });
                         }
                         // Priority 2: Unilateral fit with cash sweetener
-                        else if (matchForA && vA.usdc_balance >= absSpread && absSpread <= (vA.guardrail_max_spend_per_trade || 500)) {
+                        else if (valA < valB && vA.usdc_balance >= absSpread && absSpread <= (vA.guardrail_max_spend_per_trade || 500)) {
                             candidates.push({ vaultA: vA, vaultB: vB, cardA: cA, cardB: cB, priority: 2, spread: absSpread });
-                        } else if (matchForB && vB.usdc_balance >= absSpread && absSpread <= (vB.guardrail_max_spend_per_trade || 500)) {
+                        } else if (valB < valA && vB.usdc_balance >= absSpread && absSpread <= (vB.guardrail_max_spend_per_trade || 500)) {
                             candidates.push({ vaultA: vB, vaultB: vA, cardA: cB, cardB: cA, priority: 2, spread: absSpread });
                         }
                         // Priority 3: General barter within budget limits
@@ -665,6 +712,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
             max_slippage_bps: 1500,
             persona_system_prompt: buyerVault.system_prompt || buyerVault.bio || "You are an autonomous merchant vault on NEAR trading PSA/CGC slabs.",
             custom_rules: rulesA,
+            _compiledPolicy: buyerVault._compiledPolicy || null,
             bio: buyerVault.bio || "",
             usdc_balance: Number(buyerVault.usdc_balance || 0)
         };
@@ -678,6 +726,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
             max_slippage_bps: 1500,
             persona_system_prompt: sellerVault.system_prompt || sellerVault.bio || "You are an autonomous merchant vault on NEAR trading PSA/CGC slabs.",
             custom_rules: rulesB,
+            _compiledPolicy: sellerVault._compiledPolicy || null,
             bio: sellerVault.bio || "",
             usdc_balance: Number(sellerVault.usdc_balance || 0)
         };
