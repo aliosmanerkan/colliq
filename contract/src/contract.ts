@@ -7,7 +7,8 @@ import {
     LookupMap,
     assert,
     bytes,
-    NearPromise
+    NearPromise,
+    PublicKey
 } from "near-sdk-js";
 
 // ==========================================
@@ -292,7 +293,7 @@ export class MerchantVaultContract {
             .createAccount()
             .transfer(50000000000000000000000n)
             .addAccessKey(
-                agent_public_key,
+                PublicKey.fromString(agent_public_key),
                 250000000000000000000000n, // 0.25 NEAR gas allowance
                 contractId,
                 "propose_barter,accept_barter,execute_a2a_swap"
@@ -387,14 +388,13 @@ export class MerchantVaultContract {
         assert(!seller.is_locked, `Seller vault ${seller_vault_id} is locked`);
 
         const caller = near.predecessorAccountId();
-        const signerKey = near.signerAccountPublicKey();
         assert(
             caller === this.owner_id ||
             caller === this.verified_bridge_signer ||
             caller === buyer.owner_id ||
             caller === seller.owner_id ||
-            signerKey === buyer.agent_public_key ||
-            signerKey === seller.agent_public_key,
+            caller === buyer.sub_account ||
+            caller === seller.sub_account,
             "Unauthorized: Only verified Intent Solver, vault owner, or scoped Agent Function-Call Key can settle A2A swaps"
         );
 

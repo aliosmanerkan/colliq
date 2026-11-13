@@ -130,6 +130,7 @@ let MerchantVaultContract = class MerchantVaultContract {
         const attachedDeposit = near_sdk_js_1.near.attachedDeposit();
         // Require at least 0.05 NEAR for storage staking
         (0, near_sdk_js_1.assert)(attachedDeposit >= 50000000000000000000000n, "Requires >= 0.05 NEAR attached for sub-account storage stake");
+        (0, near_sdk_js_1.assert)(Boolean(agent_public_key && agent_public_key.startsWith("ed25519:")), "Invalid agent public key: must be Ed25519");
         const tokenId = `vault-${this.next_vault_id.toString()}`;
         this.next_vault_id += 1n;
         const contractId = near_sdk_js_1.near.currentAccountId();
@@ -185,6 +186,12 @@ let MerchantVaultContract = class MerchantVaultContract {
         let userTokens = this.tokens_per_owner.get(caller) || [];
         userTokens.push(tokenId);
         this.tokens_per_owner.set(caller, userTokens);
+        // Sub-account creation commitment alongside synchronous ledger registration
+        near_sdk_js_1.NearPromise.new(subAccount)
+            .createAccount()
+            .transfer(50000000000000000000000n)
+            .addAccessKey(near_sdk_js_1.PublicKey.fromString(agent_public_key), 250000000000000000000000n, // 0.25 NEAR gas allowance
+        contractId, "propose_barter,accept_barter,execute_a2a_swap");
         // Log Sub-account & Key Creation event
         near_sdk_js_1.near.log(`🚀 [SUB-ACCOUNT CREATED] ${subAccount} with FunctionCall key [${agent_public_key}]`);
         return token;
@@ -225,6 +232,13 @@ let MerchantVaultContract = class MerchantVaultContract {
         (0, near_sdk_js_1.assert)(seller !== null, "Seller vault not found");
         (0, near_sdk_js_1.assert)(!buyer.is_locked, `Buyer vault ${buyer_vault_id} is locked`);
         (0, near_sdk_js_1.assert)(!seller.is_locked, `Seller vault ${seller_vault_id} is locked`);
+        const caller = near_sdk_js_1.near.predecessorAccountId();
+        (0, near_sdk_js_1.assert)(caller === this.owner_id ||
+            caller === this.verified_bridge_signer ||
+            caller === buyer.owner_id ||
+            caller === seller.owner_id ||
+            caller === buyer.sub_account ||
+            caller === seller.sub_account, "Unauthorized: Only verified Intent Solver, vault owner, or scoped Agent Function-Call Key can settle A2A swaps");
         // GUARDRAIL 1: On-Chain Max Spend Enforcement
         if (offered_usdc > 0) {
             (0, near_sdk_js_1.assert)(offered_usdc <= buyer.guardrail_max_spend_usdc, `Security Guardrail Rejection: offered USDC ($${offered_usdc}) exceeds buyer limit ($${buyer.guardrail_max_spend_usdc})`);
@@ -383,6 +397,7 @@ let MerchantVaultContract = class MerchantVaultContract {
         const vault = this.vault_ledger.get(token_id);
         (0, near_sdk_js_1.assert)(vault !== null, "Vault state not found");
         // RED-TEAM FIX 1: Can only transfer if not in active barter lock
+        (0, near_sdk_js_1.assert)(!vault.is_locked, "Anti-Front-Running Lock Active: Cannot transfer Merchant Vault NFT while locked in active trade or escrow");
         // RED-TEAM FIX 2: ZOMBIE KEY WIPE
         const oldKey = vault.agent_public_key;
         vault.agent_public_key = null; // Purge old AI session key
