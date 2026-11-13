@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "tsx server.js",
-    "dev": "tsx watch server.js"
+    "dev": "tsx watch server.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "axios": "^1.21.0",

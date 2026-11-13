@@ -7,7 +7,7 @@
 [![Track 10: NFTs as Accounts](https://img.shields.io/badge/NEAR%20Hackathon-Track%2010%20(NFTs%20as%20Accounts)-6366f1)](#)
 [![Track 05: AI Swarms](https://img.shields.io/badge/NEAR%20Hackathon-Track%2005%20(AI%20Swarms)-10b981)](#)
 [![Track 06: AI Security](https://img.shields.io/badge/NEAR%20Hackathon-Track%2006%20(AI%20Security)-f59e0b)](#)
-[![Live Data](https://img.shields.io/badge/RWA%20Live%20Data-171k%2B%20Collector%20Crypt%20Slabs-amber)](#)
+[![Live Data](https://img.shields.io/badge/RWA%20Live%20Data-171k%2B%20Indexed%20Physical%20Slabs-amber)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -33,7 +33,7 @@ Instead of sitting statically in cold storage or passive display wallets, your p
 
 ## 2. The Problem
 
-High-value graded collectibles (PSA, CGC, BGS) represent over **$100 billion in alternative wealth**, with hundreds of millions physically locked inside high-security facilities like **Brink's** and **PWCC** vaults. 
+High-value graded collectibles (PSA, CGC, BGS) represent a rapidly expanding multi-billion dollar physical asset market, with hundreds of millions in card inventory secured inside institutional vaults like **Brink's** and **PWCC**. 
 
 Despite tokenization on networks like Solana via programmable NFTs (pNFTs), the market suffers from three fundamental bottlenecks:
 1. **Severe Illiquidity & Lockup:** Once a card is vaulted, trading it requires waiting weeks on custodial auction houses or manual P2P escrow forums.
@@ -51,7 +51,7 @@ Colliq bridges real-world institutional custody with NEAR Protocol’s Account A
 │                                   COLLIQ ARCHITECTURE                                  │
 ├──────────────────────────┬─────────────────────────────┬───────────────────────────────┤
 │    1. NFT VAULTS         │      2. AI AGENTS           │     3. COLLECTIBLE MARKET     │
-│  (NFTs as Accounts)      │  (Autonomous Merchants)     │   (171,000+ Verified Slabs)   │
+│  (NFTs as Accounts)      │  (Autonomous Merchants)     │   (171,000+ Indexed Slabs)    │
 ├──────────────────────────┼─────────────────────────────┼───────────────────────────────┤
 │ • Sovereign NEAR Identity│ • Natural Language Compiler │ • Live Collector Crypt Oracle │
 │   (<name>.colliq.testnet)│ • 4-Round A2A Negotiation   │ • Authenticated PSA/CGC Slabs │
@@ -90,7 +90,7 @@ When monetizing an inventory card, the owner issues a strategic sales directive:
 The agent lists the card at 1,000 USDC publicly, while locking a confidential **950 USDC reserve floor** on the backend.
 
 ### Step 4: Live A2A Negotiation & Settlement
-A prospective buyer vault encounters the listing. Over 4 chronological rounds on the **Trading Floor**, the buyer offers cash or card combinations. If the buyer bids $900, our agent rejects it. When the buyer meets the criteria ($960 cash), consensus is reached: the slab moves to the buyer vault, cash is credited to the seller, and both portfolios update in real time.
+A prospective buyer vault encounters the listing. Over 4 chronological rounds on the **Trading Floor**, the buyer offers cash or card combinations. If the buyer bids $900, our agent rejects it. When the buyer meets the criteria ($960 cash), consensus is reached: the slab moves to the buyer vault, cash is credited to the seller, and both portfolios update atomically across internal ledgers (with dual-signed NEP-413 intent payloads prepared for on-chain settlement).
 
 ---
 
@@ -116,7 +116,7 @@ To verify system behavior quickly and deterministically, follow this 3-step walk
 2. **See:** 
    - Two distinct agent vaults take the stage on the Deal Desk.
    - Watch the 4-round chronological dialogue stream in real time via Socket.IO: Round 1 (Opening Offer) → Round 2 (Counter-Offer) → Round 3 (Guardrail Check) → Round 4 (Final Agreement).
-   - Upon agreement (`DEAL AGREED`), both vaults' cash balances and slab inventories update atomically on screen.
+   - Upon agreement (`DEAL AGREED`), both vaults' cash balances and slab inventories update atomically across internal ledgers, with immediate portfolio reflection.
 
 ### Scenario C: Verify Real NEAR Testnet Payment
 1. **Do:** Connect Meteor Wallet in the top navigation bar and click **"Mint Merchant Vault"**. Confirm the transaction popup in Meteor Wallet.
@@ -217,6 +217,15 @@ pnpm --filter frontend dev
 ```
 
 Open [`http://localhost:3000`](http://localhost:3000) to launch the Colliq Terminal.
+
+### Database Auto-Initialization & Seeding
+On initial launch, the backend automatically connects to PostgreSQL, creates all required tables (`vaults`, `cards`, `trades`), and seeds default demo merchant vaults and sample slab inventories (`db.sync`). No manual migrations or seed scripts are necessary.
+
+### Automated Verification Test Suite
+Run the automated test suite to verify prompt-injection defense, confidential reserve floors, and policy compilation:
+```bash
+pnpm test
+```
 
 ---
 
