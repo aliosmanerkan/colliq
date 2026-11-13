@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "Colliq • Autonomous Merchant Vaults Protocol | NEAR Track 10",
-  description: "Autonomous Merchant Vault NFTs trading physical-backed Pokémon PSA slabs on NEAR Protocol via A2A Swarm Barter.",
+  description: "Autonomous Merchant Vault NFTs trading physical-backed certified graded slabs (Pokémon, Sports, TCG) on NEAR Protocol via A2A Swarm Barter.",
 };
 
 export default function RootLayout({ children }) {
