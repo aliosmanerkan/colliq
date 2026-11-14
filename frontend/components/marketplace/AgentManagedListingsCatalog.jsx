@@ -208,72 +208,69 @@ export default function AgentManagedListingsCatalog() {
             return (
               <div
                 key={cardId}
-                className="group rounded-3xl border border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden"
+                className="group rounded-2xl border border-neutral-200/90 bg-white hover:border-emerald-700/50 hover:shadow-lg transition-all duration-200 flex flex-col justify-between p-3.5"
               >
-                {/* Slab Visual & Badges */}
-                <div className="relative w-full aspect-[3/4] max-h-[280px] bg-[#fbfdfc] border-b border-neutral-100 flex items-center justify-center p-3 overflow-hidden">
-                  {/* Grade Badge */}
-                  <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 font-mono text-[10px]">
-                    <span className="px-2 py-0.5 rounded-lg bg-white/95 backdrop-blur-xs border border-neutral-200 shadow-2xs font-bold text-neutral-900">
-                      {comp} {cleanGrade}
-                    </span>
-                    <span className="text-neutral-500 bg-white/90 backdrop-blur-xs px-1.5 py-0.5 rounded-md border border-neutral-200/80 text-[9px]">
-                      #{card.psa_cert_number || "CERT"}
-                    </span>
-                  </div>
+                <div>
+                  {/* Top Badge Strip (ABOVE image canvas so NOTHING overlaps the slab) */}
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                      <span className="px-2 py-0.5 rounded-md font-bold bg-[#073525]/10 text-[#073525] border border-[#073525]/15">
+                        {comp} {cleanGrade}
+                      </span>
+                      <span className="text-neutral-400 font-mono text-[10px]">
+                        #{card.psa_cert_number || "CERT"}
+                      </span>
+                    </div>
 
-                  {/* Cash Only / Swaps Badge */}
-                  <div className="absolute top-3 right-3 z-10">
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-2xs ${
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
                         card.allow_barter
-                          ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                          : "bg-amber-50 text-amber-800 border border-amber-200"
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          : "bg-neutral-50 text-neutral-600 border-neutral-200"
                       }`}
                     >
-                      {card.allow_barter ? "Swaps Allowed" : "Cash Only"}
+                      {card.allow_barter ? "⇄ Swaps Allowed" : "Cash Only"}
                     </span>
                   </div>
 
-                  {/* High Quality Slab Image - Constrained & Centered */}
-                  <div className="w-full h-full flex items-center justify-center pt-6 pb-2 px-2 overflow-hidden">
+                  {/* Slab Canvas with Generous Margin & Breathing Room */}
+                  <div className="relative aspect-[3/4] w-full rounded-xl bg-[#fbfdfc] border border-neutral-100 flex items-center justify-center p-3.5 overflow-hidden mb-3 group-hover:border-neutral-200 transition">
                     <img
                       src={card.image_url}
                       alt={card.name}
                       loading="lazy"
-                      className="max-h-full max-w-full w-auto h-auto object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-300"
+                      className="max-h-full max-w-full w-auto h-auto object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-200"
                     />
                   </div>
-                </div>
 
-                {/* Card Info & Selling Agent */}
-                <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    {/* Selling Agent Pill */}
-                    <div className="flex items-center gap-2 p-1.5 rounded-xl bg-neutral-50 border border-neutral-100 text-[11px]">
-                      <div className="w-5 h-5 rounded-lg bg-[#073525] text-white flex items-center justify-center shrink-0">
-                        <Bot className="w-3 h-3" />
-                      </div>
-                      <div className="truncate flex-1">
-                        <span className="font-semibold text-neutral-900 block truncate">
-                          {vault?.name || "Merchant Agent"}
-                        </span>
-                      </div>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                  {/* Selling Agent Pill */}
+                  <div className="flex items-center gap-2 p-1.5 rounded-xl bg-neutral-50 border border-neutral-100 text-[11px] mb-2">
+                    <div className="w-5 h-5 rounded-lg bg-[#073525] text-white flex items-center justify-center shrink-0">
+                      <Bot className="w-3 h-3" />
                     </div>
-
-                    <h3 className="font-bold text-sm text-neutral-900 line-clamp-2 leading-snug" title={card.name}>
-                      {card.name}
-                    </h3>
+                    <div className="truncate flex-1">
+                      <span className="font-semibold text-neutral-900 block truncate">
+                        {vault?.name || "Merchant Agent"}
+                      </span>
+                    </div>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
                   </div>
 
+                  {/* Card Title */}
+                  <h3 className="font-bold text-xs text-neutral-900 line-clamp-2 leading-snug min-h-[32px]" title={card.name}>
+                    {card.name}
+                  </h3>
+                </div>
+
+                {/* Bottom Section: Pricing & Actions */}
+                <div className="mt-3 pt-2.5 border-t border-neutral-100 space-y-3">
                   {/* Pricing Overview */}
-                  <div className="pt-2 border-t border-neutral-100 flex items-end justify-between">
+                  <div className="flex items-end justify-between">
                     <div>
                       <span className="text-[10px] uppercase font-mono text-neutral-400 block tracking-wider">
                         Asking Price
                       </span>
-                      <div className="font-mono font-bold text-lg text-neutral-900">
+                      <div className="font-mono font-bold text-base text-neutral-900 leading-tight">
                         ${asking.toLocaleString()} <span className="text-xs font-normal text-neutral-400">USDC</span>
                       </div>
                     </div>
@@ -282,18 +279,18 @@ export default function AgentManagedListingsCatalog() {
                       <span className="text-[10px] uppercase font-mono text-neutral-400 block tracking-wider">
                         Oracle Est.
                       </span>
-                      <div className="font-mono text-xs text-neutral-500">
+                      <div className="font-mono text-xs text-neutral-500 font-semibold">
                         ${oracleVal.toLocaleString()} USDC
                       </div>
                     </div>
                   </div>
 
                   {/* Actions: Negotiate with Agent vs Buy Now */}
-                  <div className="pt-1 flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setNegotiatingCard(card)}
-                      className="flex-1 py-2 px-3 rounded-xl bg-[#073525] hover:bg-[#0b4d37] text-white text-xs font-semibold shadow-xs transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                      className="flex-1 py-1.5 px-3 rounded-xl bg-[#073525] hover:bg-[#0b4d37] text-white text-xs font-semibold shadow-xs transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
                       <span>Negotiate</span>
@@ -303,7 +300,7 @@ export default function AgentManagedListingsCatalog() {
                       type="button"
                       onClick={() => handleBuyNow(card)}
                       disabled={isBuyingNow}
-                      className="py-2 px-3 rounded-xl bg-white hover:bg-neutral-100 border border-neutral-200 text-neutral-800 text-xs font-semibold transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                      className="py-1.5 px-3 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-800 text-xs font-semibold transition active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
                       Buy Now
                     </button>
