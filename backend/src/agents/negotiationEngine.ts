@@ -587,7 +587,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                     ],
                     response_format: { type: "json_object" },
                     temperature: 0.7,
-                    max_tokens: 2000
+                    max_tokens: 250
                 },
                 {
                     headers: {
@@ -596,7 +596,7 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                         "X-Title": "Colliq NEAR Track 10",
                         "Content-Type": "application/json"
                     },
-                    timeout: 20000
+                    timeout: 4500
                 }
             );
 
@@ -659,6 +659,9 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
 
             if (cash > agent.max_spend_per_trade_usdc) {
                 cash = agent.max_spend_per_trade_usdc;
+            }
+            if (cash > treasury) {
+                cash = Math.max(0, Math.floor(treasury - 1));
             }
 
             return {

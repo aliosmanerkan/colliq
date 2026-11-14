@@ -173,7 +173,7 @@ Output JSON only:
                 ],
                 response_format: { type: "json_object" },
                 temperature: 0.1,
-                max_tokens: 1000
+                max_tokens: 300
             },
             {
                 headers: {
@@ -182,7 +182,7 @@ Output JSON only:
                     "X-Title": "Colliq Policy Compiler",
                     "Content-Type": "application/json"
                 },
-                timeout: 10000
+                timeout: 3500
             }
         );
 
@@ -428,9 +428,9 @@ export class A2ASwarmService {
                 return { status: "SKIPPED", message: "Not enough unlocked vaults with inventory" };
             }
 
-            for (const v of eligibleVaults) {
+            await Promise.all(eligibleVaults.map(async (v) => {
                 v._compiledPolicy = await getCompiledVaultPolicy(v);
-            }
+            }));
 
             // Intelligent Matchmaking: Priority 1 (bidirectional) -> Priority 2 (unilateral+cash) -> Priority 3 (barter)
             const bestMatch = negotiationEngine.findBestBarterMatch(eligibleVaults);
