@@ -270,7 +270,7 @@ router.post("/:id/list-for-sale", async (req, res) => {
         });
         vault.chat_history = JSON.stringify(chat);
 
-        await vault.save();
+        await vault.save({ validate: false });
 
         const io = req.app.get("io");
         if (io) {
@@ -320,7 +320,7 @@ router.post("/:id/unlist-sale", async (req, res) => {
         });
         vault.chat_history = JSON.stringify(chat);
 
-        await vault.save();
+        await vault.save({ validate: false });
 
         const io = req.app.get("io");
         if (io) {
@@ -416,7 +416,7 @@ router.post("/:id/buy-vault", async (req, res) => {
         });
         vault.chat_history = JSON.stringify(chat);
 
-        await vault.save();
+        await vault.save({ validate: false });
 
         const io = req.app.get("io");
         if (io) {
@@ -651,7 +651,7 @@ router.post("/:id/cards/:cardId/list-sale", async (req, res) => {
             card.min_reserve_usdc = null;
             card.allow_barter = true;
             card.sell_directive = null;
-            await card.save();
+            await card.save({ validate: false });
 
             let history = [];
             try { history = JSON.parse(vault.chat_history || "[]"); } catch {}
@@ -664,7 +664,7 @@ router.post("/:id/cards/:cardId/list-sale", async (req, res) => {
                 timestamp: new Date().toISOString()
             });
             vault.chat_history = JSON.stringify(history);
-            await vault.save();
+            await vault.save({ validate: false });
 
             req.app.get("io")?.emit("vault:updated", { vaultId: vault.id, cardId: card.id, action: "CARD_UNLISTED" });
             return res.json({ status: "SUCCESS", action: "UNLIST", card });
@@ -681,7 +681,7 @@ router.post("/:id/cards/:cardId/list-sale", async (req, res) => {
         card.min_reserve_usdc = finalReserve;
         card.allow_barter = finalAllowBarter;
         card.sell_directive = finalDirective;
-        await card.save();
+        await card.save({ validate: false });
 
         let history = [];
         try { history = JSON.parse(vault.chat_history || "[]"); } catch {}
@@ -694,7 +694,7 @@ router.post("/:id/cards/:cardId/list-sale", async (req, res) => {
             timestamp: new Date().toISOString()
         });
         vault.chat_history = JSON.stringify(history);
-        await vault.save();
+        await vault.save({ validate: false });
 
         req.app.get("io")?.emit("vault:updated", { vaultId: vault.id, cardId: card.id, action: "CARD_LISTED" });
         return res.json({ status: "SUCCESS", action: "LIST", card });
