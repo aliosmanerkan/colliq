@@ -75,7 +75,7 @@ router.get("/history", async (req, res) => {
     try {
         const trades = await db.trade.findAll({
             order: [["createdAt", "DESC"]],
-            limit: 20
+            limit: 100
         });
         res.json({ trades });
     } catch (err) {

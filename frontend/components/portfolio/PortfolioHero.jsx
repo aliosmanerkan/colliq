@@ -1,16 +1,25 @@
 "use client";
 
+import { useMemo } from "react";
 import { Plus, Wallet, ShieldCheck, ArrowUpRight, TrendingUp } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
 export default function PortfolioHero() {
   const { openMint, vaults, cards, connectedAccount } = useApp();
 
-  const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
-  const userVaults = vaults.filter((v) => (v.owner_account || "").toLowerCase() === userAccount);
+  const currentAccount = (connectedAccount || "").toLowerCase().trim();
+  const activeUserAccounts = useMemo(() => {
+    const list = [];
+    if (currentAccount) list.push(currentAccount);
+    list.push("asklepion.testnet");
+    list.push("alierkan.testnet");
+    return Array.from(new Set(list));
+  }, [currentAccount]);
+
+  const userVaults = vaults.filter((v) => activeUserAccounts.includes((v.owner_account || "").toLowerCase()));
   const userVaultIds = userVaults.map((v) => v.id);
   const userCards = cards.filter(
-    (c) => (c.vault_id && userVaultIds.includes(c.vault_id)) || (c.owner_account || "").toLowerCase() === userAccount
+    (c) => (c.vault_id && userVaultIds.includes(c.vault_id)) || activeUserAccounts.includes((c.owner_account || "").toLowerCase())
   );
 
   const liquidCash = userVaults.reduce((sum, v) => sum + Number(v.usdc_balance || 0), 0);

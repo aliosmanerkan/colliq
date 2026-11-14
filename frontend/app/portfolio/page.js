@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Bot, Layers, Clock } from "lucide-react";
 import PortfolioHero from "@/components/portfolio/PortfolioHero";
 import AgentsTab from "@/components/portfolio/AgentsTab";
@@ -12,19 +12,34 @@ export default function PortfolioPage() {
   const [portfolioTab, setPortfolioTab] = useState("agents"); // "agents" | "slabs" | "activity"
   const { vaults, cards, trades, connectedAccount, isLoading } = useApp();
 
-  const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
-  const myVaults = vaults.filter((v) => (v.owner_account || "").toLowerCase() === userAccount);
+  const currentAccount = (connectedAccount || "").toLowerCase().trim();
+  const activeUserAccounts = useMemo(() => {
+    const list = [];
+    if (currentAccount) list.push(currentAccount);
+    list.push("asklepion.testnet");
+    list.push("alierkan.testnet");
+    return Array.from(new Set(list));
+  }, [currentAccount]);
+
+  const myVaults = vaults.filter((v) => activeUserAccounts.includes((v.owner_account || "").toLowerCase()));
   const myVaultIds = myVaults.map((v) => v.id);
   const myCards = cards.filter(
-    (c) => (c.vault_id && myVaultIds.includes(c.vault_id)) || (c.owner_account || "").toLowerCase() === userAccount
+    (c) => (c.vault_id && myVaultIds.includes(c.vault_id)) || activeUserAccounts.includes((c.owner_account || "").toLowerCase())
   );
-  const myTrades = trades.filter(
-    (t) =>
-      myVaultIds.includes(t.vault_a_id) ||
-      myVaultIds.includes(t.vault_b_id) ||
-      (t.vault_a_name || "").toLowerCase() === userAccount ||
-      (t.vault_b_name || "").toLowerCase() === userAccount
-  );
+  const myTrades = trades.filter((t) => {
+    const vAName = (t.vault_a_name || "").toLowerCase();
+    const vBName = (t.vault_b_name || "").toLowerCase();
+    if (myVaultIds.includes(t.vault_a_id) || myVaultIds.includes(t.vault_b_id)) return true;
+    if (activeUserAccounts.includes(vAName) || activeUserAccounts.includes(vBName)) return true;
+    const cardB = Array.isArray(t.cards_from_b) && t.cards_from_b[0];
+    if (cardB && activeUserAccounts.includes((cardB.owner_account || "").toLowerCase())) return true;
+    const cardA = Array.isArray(t.cards_from_a) && t.cards_from_a[0];
+    if (cardA && activeUserAccounts.includes((cardA.owner_account || "").toLowerCase())) return true;
+    if (String(t.trade_id || t.id || "").startsWith("direct-")) {
+      return activeUserAccounts.includes(vAName) || !currentAccount;
+    }
+    return false;
+  });
 
   if (isLoading && vaults.length === 0) {
     return (

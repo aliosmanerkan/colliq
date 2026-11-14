@@ -46,22 +46,44 @@ export default function ActivityTab() {
   const [expandedTradeId, setExpandedTradeId] = useState(null);
   const [filter, setFilter] = useState("all"); // "all" | "barter" | "snipes" | "direct"
 
-  const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
+  const currentAccount = (connectedAccount || "").toLowerCase().trim();
+  const activeUserAccounts = useMemo(() => {
+    const list = [];
+    if (currentAccount) list.push(currentAccount);
+    list.push("asklepion.testnet");
+    list.push("alierkan.testnet");
+    return Array.from(new Set(list));
+  }, [currentAccount]);
+
+  const userAccount = currentAccount || "asklepion.testnet";
+
   const userVaultIds = useMemo(() => {
     return vaults
-      .filter((v) => (v.owner_account || "").toLowerCase() === userAccount)
+      .filter((v) => activeUserAccounts.includes((v.owner_account || "").toLowerCase()))
       .map((v) => v.id);
-  }, [vaults, userAccount]);
+  }, [vaults, activeUserAccounts]);
 
   // Include direct personal wallet purchases in addition to agent vault trades
   const myTrades = useMemo(() => {
-    return trades.filter((t) => 
-      userVaultIds.includes(t.vault_a_id) || 
-      userVaultIds.includes(t.vault_b_id) ||
-      (t.vault_a_name || "").toLowerCase() === userAccount ||
-      (t.vault_b_name || "").toLowerCase() === userAccount
-    );
-  }, [trades, userVaultIds, userAccount]);
+    return trades.filter((t) => {
+      const vAName = (t.vault_a_name || "").toLowerCase();
+      const vBName = (t.vault_b_name || "").toLowerCase();
+
+      if (userVaultIds.includes(t.vault_a_id) || userVaultIds.includes(t.vault_b_id)) return true;
+      if (activeUserAccounts.includes(vAName) || activeUserAccounts.includes(vBName)) return true;
+
+      const cardB = Array.isArray(t.cards_from_b) && t.cards_from_b[0];
+      if (cardB && activeUserAccounts.includes((cardB.owner_account || "").toLowerCase())) return true;
+      const cardA = Array.isArray(t.cards_from_a) && t.cards_from_a[0];
+      if (cardA && activeUserAccounts.includes((cardA.owner_account || "").toLowerCase())) return true;
+
+      if (String(t.trade_id || t.id || "").startsWith("direct-")) {
+        return activeUserAccounts.includes(vAName) || !currentAccount;
+      }
+
+      return false;
+    });
+  }, [trades, userVaultIds, activeUserAccounts, currentAccount]);
 
   // Vault counterparty name normalization (hides vendor internals)
   const formatVaultName = (name) => {

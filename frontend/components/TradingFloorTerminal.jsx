@@ -70,9 +70,16 @@ export default function TradingFloorTerminal({
     return name;
   };
 
+  const isDirectBuy = (trade) => {
+    if (!trade) return false;
+    const tid = String(trade.trade_id || trade.id || "");
+    return tid.startsWith("direct-");
+  };
+
   const isMarketSnipe = (trade) => {
     if (!trade) return false;
     const tid = String(trade.trade_id || trade.id || "");
+    if (tid.startsWith("direct-")) return false;
     const vB = (trade.vault_b_name || "").toLowerCase();
     return (
       tid.startsWith("snipe-") ||
@@ -135,12 +142,13 @@ export default function TradingFloorTerminal({
   // Filtered tape list
   const filteredTrades = useMemo(() => {
     return allTrades.filter((t) => {
+      const isDirect = isDirectBuy(t);
       const isSnipe = isMarketSnipe(t);
       const isAcq = isAcquisition(t);
       const isDeclined = t.status === "REJECTED_GUARDRAIL";
 
-      if (tapeFilter === "trades") return !isSnipe && !isAcq && !isDeclined;
-      if (tapeFilter === "purchases") return (isSnipe || isAcq) && !isDeclined;
+      if (tapeFilter === "trades") return !isSnipe && !isAcq && !isDirect && !isDeclined;
+      if (tapeFilter === "purchases") return (isSnipe || isAcq || isDirect) && !isDeclined;
       if (tapeFilter === "declined") return isDeclined;
       return true;
     });
@@ -780,6 +788,7 @@ export default function TradingFloorTerminal({
               filteredTrades.map((t) => {
                 const isSelected =
                   (t.id || t.trade_id) === (activeTrade?.id || activeTrade?.trade_id);
+                const tIsDirect = isDirectBuy(t);
                 const tIsSnipe = isMarketSnipe(t);
                 const tIsAcq = isAcquisition(t);
                 const tIsDeclined = t.status === "REJECTED_GUARDRAIL";
@@ -805,7 +814,7 @@ export default function TradingFloorTerminal({
                   >
                     {/* Left: Visual Slab Thumbnail(s) */}
                     <div className="shrink-0 flex items-center">
-                      {tIsSnipe ? (
+                      {tIsDirect || tIsSnipe ? (
                         <div className="w-9 h-12 rounded bg-slate-50 border border-slate-200 object-contain p-0.5 overflow-hidden flex items-center justify-center">
                           {tCardB?.image_url ? (
                             <img
@@ -873,7 +882,14 @@ export default function TradingFloorTerminal({
                     <div className="min-w-0 flex-1 space-y-0.5">
                       {/* Top Line */}
                       <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 truncate">
-                        {tIsSnipe ? (
+                        {tIsDirect ? (
+                          <>
+                            <span className="text-[10px] font-mono bg-emerald-700 text-white px-1.5 py-0.2 rounded font-semibold">
+                              DIRECT BUY
+                            </span>
+                            <span className="truncate">{t.vault_a_name}</span>
+                          </>
+                        ) : tIsSnipe ? (
                           <>
                             <span className="text-[10px] font-mono bg-slate-900 text-white px-1.5 py-0.2 rounded font-semibold">
                               PURCHASE
@@ -901,7 +917,7 @@ export default function TradingFloorTerminal({
 
                       {/* Middle Line: Card Names */}
                       <div className="text-[11px] text-slate-600 truncate">
-                        {tIsSnipe
+                        {tIsDirect || tIsSnipe
                           ? tCardB?.name || "Graded Card"
                           : tIsAcq
                           ? `Vault Acquired (${t.cards_from_a?.length || 0} cards)`

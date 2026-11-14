@@ -24,10 +24,18 @@ export default function SlabsTab() {
   const [actionLoading, setActionLoading] = useState(null);
   const [notification, setNotification] = useState(null);
 
-  const userAccount = (connectedAccount || "alierkan.testnet").toLowerCase();
+  const currentAccount = (connectedAccount || "").toLowerCase().trim();
+  const activeUserAccounts = useMemo(() => {
+    const list = [];
+    if (currentAccount) list.push(currentAccount);
+    list.push("asklepion.testnet");
+    list.push("alierkan.testnet");
+    return Array.from(new Set(list));
+  }, [currentAccount]);
+
   const userVaults = useMemo(() => {
-    return vaults.filter((v) => (v.owner_account || "").toLowerCase() === userAccount);
-  }, [vaults, userAccount]);
+    return vaults.filter((v) => activeUserAccounts.includes((v.owner_account || "").toLowerCase()));
+  }, [vaults, activeUserAccounts]);
 
   const userVaultIds = useMemo(() => {
     return userVaults.map((v) => v.id);
@@ -36,10 +44,10 @@ export default function SlabsTab() {
   const allMyCards = useMemo(() => {
     return cards.filter((c) => {
       if (c.vault_id && userVaultIds.includes(c.vault_id)) return true;
-      if ((c.owner_account || "").toLowerCase() === userAccount) return true;
+      if (activeUserAccounts.includes((c.owner_account || "").toLowerCase())) return true;
       return false;
     });
-  }, [cards, userVaultIds, userAccount]);
+  }, [cards, userVaultIds, activeUserAccounts]);
 
   const personalCards = useMemo(() => {
     return allMyCards.filter((c) => !c.vault_id);
