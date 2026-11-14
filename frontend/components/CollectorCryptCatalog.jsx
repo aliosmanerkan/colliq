@@ -628,364 +628,367 @@ export default function CollectorCryptCatalog({
 
       {/* SLAB INSPECTOR & ACQUISITION MODAL (SPLIT 2-COLUMN) */}
       {selectedCard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="relative w-full max-w-3xl rounded-[28px] bg-white border border-neutral-200 p-6 sm:p-8 shadow-2xl overflow-hidden text-neutral-900 animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-full max-w-2xl lg:max-w-3xl max-h-[92vh] sm:max-h-[88vh] rounded-[24px] sm:rounded-[28px] bg-white border border-neutral-200 shadow-2xl flex flex-col overflow-hidden text-neutral-900 animate-in zoom-in-95 duration-200 my-auto">
+            {/* Modal Header (Fixed at top) */}
+            <div className="flex items-center justify-between px-5 py-3.5 sm:px-6 sm:py-4 border-b border-neutral-100 shrink-0 bg-white">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                <h3 className="text-base font-bold text-neutral-900">Physical Slab Inspector</h3>
+                <h3 className="text-sm sm:text-base font-bold text-neutral-900">Physical Slab Inspector</h3>
               </div>
               <button
                 onClick={() => {
                   if (!purchaseLoading) setSelectedCard(null);
                 }}
                 disabled={purchaseLoading}
-                className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition disabled:opacity-40 cursor-pointer"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition disabled:opacity-40 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
 
-            {purchaseResult ? (
-              /* Success State */
-              <div className="space-y-4 animate-in zoom-in-95 duration-200">
-                <div className="p-6 rounded-2xl bg-[#f8faf9] border border-emerald-300 text-emerald-950 text-xs space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-sm text-emerald-900">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                    <span>Slab Successfully Acquired!</span>
-                  </div>
-
-                  <p className="text-neutral-700 leading-relaxed font-sans text-xs">
-                    <strong className="text-neutral-900">{selectedCard.name}</strong> has been transferred into{" "}
-                    {purchaseResult.destinationType === "vault" ? (
-                      <span className="font-semibold text-[#073525]">{purchaseResult.targetVault}</span>
-                    ) : (
-                      <span className="font-semibold text-[#073525]">your personal wallet ({connectedAccount || "alierkan.testnet"})</span>
-                    )}.
-                  </p>
-
-                  <div className="p-4 rounded-xl bg-white border border-neutral-200 font-mono text-[11px] text-neutral-600 space-y-1.5 mt-2">
-                    <div className="flex items-center justify-between">
-                      <span>Certification:</span>
-                      <span className="text-neutral-900 font-bold">{selectedCard.grade || "PSA 10"} • #{selectedCard.certNumber}</span>
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
+              {purchaseResult ? (
+                /* Success State */
+                <div className="space-y-4 animate-in zoom-in-95 duration-200">
+                  <div className="p-5 sm:p-6 rounded-2xl bg-[#f8faf9] border border-emerald-300 text-emerald-950 text-xs space-y-3">
+                    <div className="flex items-center gap-2 font-bold text-sm text-emerald-900">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <span>Slab Successfully Acquired!</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span>Solana Custody Mint:</span>
-                      <span className="text-neutral-900 font-bold truncate max-w-[220px]">{selectedCard.id}</span>
-                    </div>
-                    {purchaseResult.near_intent?.intent_id && (
-                      <div className="flex items-center justify-between">
-                        <span>NEAR Intent ID:</span>
-                        <span className="text-emerald-700 font-bold truncate max-w-[220px]">{purchaseResult.near_intent.intent_id}</span>
-                      </div>
-                    )}
-                    {purchaseResult.solana_holding_address && (
-                      <div className="flex items-center justify-between">
-                        <span>Derived MPC Vault:</span>
-                        <span className="text-neutral-900 font-bold truncate max-w-[220px]">{purchaseResult.solana_holding_address}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span>Transaction Reference:</span>
-                      {purchaseResult.txHash && !purchaseResult.txHash.startsWith("0x") && !purchaseResult.txHash.startsWith("near:") ? (
-                        <a
-                          href={`https://testnet.nearblocks.io/txns/${purchaseResult.txHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-emerald-700 hover:underline flex items-center gap-1 font-bold truncate max-w-[220px]"
-                        >
-                          <span>{purchaseResult.txHash}</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+
+                    <p className="text-neutral-700 leading-relaxed font-sans text-xs">
+                      <strong className="text-neutral-900">{selectedCard.name}</strong> has been transferred into{" "}
+                      {purchaseResult.destinationType === "vault" ? (
+                        <span className="font-semibold text-[#073525]">{purchaseResult.targetVault}</span>
                       ) : (
-                        <span className="text-neutral-900 font-bold truncate max-w-[220px]">{purchaseResult.txHash}</span>
+                        <span className="font-semibold text-[#073525]">your personal wallet ({connectedAccount || "alierkan.testnet"})</span>
+                      )}.
+                    </p>
+
+                    <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-neutral-200 font-mono text-[11px] text-neutral-600 space-y-1.5 mt-2">
+                      <div className="flex items-center justify-between">
+                        <span>Certification:</span>
+                        <span className="text-neutral-900 font-bold">{selectedCard.grade || "PSA 10"} • #{selectedCard.certNumber}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Solana Custody Mint:</span>
+                        <span className="text-neutral-900 font-bold truncate max-w-[220px]">{selectedCard.id}</span>
+                      </div>
+                      {purchaseResult.near_intent?.intent_id && (
+                        <div className="flex items-center justify-between">
+                          <span>NEAR Intent ID:</span>
+                          <span className="text-emerald-700 font-bold truncate max-w-[220px]">{purchaseResult.near_intent.intent_id}</span>
+                        </div>
                       )}
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setSelectedCard(null);
-                    setPurchaseResult(null);
-                    router.push("/portfolio");
-                  }}
-                  className="w-full py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition active:scale-95 shadow-sm cursor-pointer"
-                >
-                  Done & View in Portfolio
-                </button>
-              </div>
-            ) : (
-              /* 2-Column Inspector & Purchase Form */
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                {/* Left Column: Slab Visuals & Flip View */}
-                <div className="flex flex-col items-center">
-                  <div className="relative aspect-[3/4] w-full max-w-[280px] rounded-2xl bg-[#fbfdfc] border border-neutral-200 flex items-center justify-center p-3 shadow-inner">
-                    <img
-                      src={activeImageView === "back" && selectedCard.backImageUrl ? selectedCard.backImageUrl : selectedCard.imageUrl}
-                      alt={selectedCard.name}
-                      className="w-full h-full object-contain filter drop-shadow-[0_8px_20px_rgba(0,0,0,0.14)]"
-                    />
-                  </div>
-
-                  {/* Flip Slab Toggle */}
-                  {selectedCard.backImageUrl && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setActiveImageView("front")}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
-                          activeImageView === "front"
-                            ? "bg-[#073525] text-white"
-                            : "bg-neutral-100 text-neutral-600 hover:text-neutral-900"
-                        }`}
-                      >
-                        Front View
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveImageView("back")}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                          activeImageView === "back"
-                            ? "bg-[#073525] text-white"
-                            : "bg-neutral-100 text-neutral-600 hover:text-neutral-900"
-                        }`}
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        <span>Back View</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Right Column: Slab Metadata & Delivery */}
-                <div className="space-y-4">
-                  {purchaseError && (
-                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
-                      {purchaseError}
-                    </div>
-                  )}
-
-                  {/* Slab Header Info */}
-                  <div>
-                    <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-neutral-100 border border-neutral-200 text-[11px] font-mono font-bold text-neutral-800 mb-2">
-                      <span>{selectedCard.grade || "PSA 10"}</span>
-                      <span className="text-neutral-400">•</span>
-                      <span>{selectedCard.category || "TCG"}</span>
-                      {selectedCard.year && <span>• {selectedCard.year}</span>}
-                    </div>
-                    <h4 className="text-sm font-bold text-neutral-900 leading-snug">
-                      {selectedCard.name}
-                    </h4>
-                  </div>
-
-                  {/* On-Chain & Custody Metadata Table */}
-                  <div className="p-3.5 rounded-xl bg-[#f8faf9] border border-neutral-200/80 font-mono text-xs space-y-2">
-                    <div className="flex items-center justify-between text-neutral-600">
-                      <span>Cert Number:</span>
-                      <span className="text-neutral-900 font-semibold">#{selectedCard.certNumber}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-neutral-600">
-                      <span>Physical Custody:</span>
-                      <span className="text-neutral-900 font-semibold truncate max-w-[170px]" title={selectedCard.vaultLocation}>
-                        {selectedCard.vault || "PWCC / Brink's"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-neutral-600">
-                      <span>Solana Mint:</span>
-                      <a
-                        href={`https://solscan.io/token/${selectedCard.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[#073525] hover:underline flex items-center gap-1 font-semibold"
-                      >
-                        <span>{selectedCard.id.slice(0, 4)}...{selectedCard.id.slice(-4)}</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                    <div className="flex items-center justify-between text-neutral-600 pt-1 border-t border-neutral-200/60">
-                      <span>Valuation / Price:</span>
-                      <span className="text-sm font-bold text-neutral-900">
-                        ${Number(selectedCard.costUsd || selectedCard.insuredUsd || 50).toLocaleString()} USDC
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Delivery Target Selector */}
-                  <div className="space-y-2 pt-1">
-                    <label className="text-[11px] font-bold text-neutral-700 uppercase tracking-wider block">
-                      Deliver Slab To:
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setDestination("personal")}
-                        className={`p-2.5 rounded-xl border text-xs text-left transition flex items-center gap-2 cursor-pointer ${
-                          destination === "personal"
-                            ? "border-[#073525] bg-[#f8faf9] ring-1 ring-[#073525]"
-                            : "border-neutral-200 hover:border-neutral-300 bg-white"
-                        }`}
-                      >
-                        <Wallet className="w-4 h-4 text-neutral-600 shrink-0" />
-                        <div>
-                          <div className="font-semibold text-neutral-900">Personal Wallet</div>
-                          <div className="text-[10px] text-neutral-500">Hold on NEAR</div>
+                      {purchaseResult.solana_holding_address && (
+                        <div className="flex items-center justify-between">
+                          <span>Derived MPC Vault:</span>
+                          <span className="text-neutral-900 font-bold truncate max-w-[220px]">{purchaseResult.solana_holding_address}</span>
                         </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setDestination("vault")}
-                        className={`p-2.5 rounded-xl border text-xs text-left transition flex items-center gap-2 cursor-pointer ${
-                          destination === "vault"
-                            ? "border-[#073525] bg-[#f8faf9] ring-1 ring-[#073525]"
-                            : "border-neutral-200 hover:border-neutral-300 bg-white"
-                        }`}
-                      >
-                        <Bot className="w-4 h-4 text-[#073525] shrink-0" />
-                        <div>
-                          <div className="font-semibold text-neutral-900">AI Agent Vault</div>
-                          <div className="text-[10px] text-neutral-500">Autonomous Trading</div>
-                        </div>
-                      </button>
-                    </div>
-
-                    {/* Target Vault Dropdown */}
-                    {destination === "vault" && (
-                      <div className="pt-2 space-y-2">
-                        {myVaults.length === 0 ? (
-                          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between">
-                            <span>No active agent vaults found for your account.</span>
-                            <button
-                              type="button"
-                              onClick={onOpenMint}
-                              className="font-bold underline hover:text-amber-950 cursor-pointer"
-                            >
-                              Mint Vault
-                            </button>
-                          </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span>Transaction Reference:</span>
+                        {purchaseResult.txHash && !purchaseResult.txHash.startsWith("0x") && !purchaseResult.txHash.startsWith("near:") ? (
+                          <a
+                            href={`https://testnet.nearblocks.io/txns/${purchaseResult.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-700 hover:underline flex items-center gap-1 font-bold truncate max-w-[220px]"
+                          >
+                            <span>{purchaseResult.txHash}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
                         ) : (
-                          <>
-                            <select
-                              value={targetVaultId}
-                              onChange={(e) => setTargetVaultId(e.target.value)}
-                              className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs font-medium text-neutral-900 focus:outline-none focus:border-[#073525]"
-                            >
-                              {myVaults.map((v) => (
-                                <option key={v.id} value={v.id}>
-                                  {v.name} (@{v.sub_account}) • ${Number(v.usdc_balance || 0).toFixed(0)} USDC
-                                </option>
-                              ))}
-                            </select>
-
-                            {(() => {
-                              const sVault = myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0];
-                              const cardCost = Number(selectedCard.costUsd || selectedCard.insuredUsd || 50);
-                              if (!sVault) return null;
-                              if (Number(sVault.usdc_balance || 0) < cardCost) {
-                                return (
-                                  <div className="text-[11px] font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2.5">
-                                    Insufficient Treasury: Vault holds ${Number(sVault.usdc_balance || 0).toFixed(2)} USDC (needs ${cardCost.toFixed(2)} USDC).
-                                  </div>
-                                );
-                              }
-                              if (Number(sVault.usdc_balance || 0) < cardCost * 1.34) {
-                                return (
-                                  <div className="text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
-                                    Low Treasury Buffer: Remaining funds will dip below the 25% safety reserve.
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
-                          </>
+                          <span className="text-neutral-900 font-bold truncate max-w-[220px]">{purchaseResult.txHash}</span>
                         )}
                       </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedCard(null);
+                      setPurchaseResult(null);
+                      router.push("/portfolio");
+                    }}
+                    className="w-full py-2.5 sm:py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold transition active:scale-95 shadow-sm cursor-pointer"
+                  >
+                    Done & View in Portfolio
+                  </button>
+                </div>
+              ) : (
+                /* 2-Column Inspector & Purchase Form */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6 items-start">
+                  {/* Left Column: Slab Visuals & Flip View */}
+                  <div className="flex flex-col items-center justify-start md:sticky md:top-0">
+                    <div className="relative w-full max-w-[190px] sm:max-w-[220px] md:max-w-[240px] aspect-[3/4] max-h-[250px] sm:max-h-[280px] md:max-h-[310px] rounded-2xl bg-[#fbfdfc] border border-neutral-200 flex items-center justify-center p-2.5 sm:p-3 shadow-inner">
+                      <img
+                        src={activeImageView === "back" && selectedCard.backImageUrl ? selectedCard.backImageUrl : selectedCard.imageUrl}
+                        alt={selectedCard.name}
+                        className="w-full h-full object-contain filter drop-shadow-[0_6px_16px_rgba(0,0,0,0.12)]"
+                      />
+                    </div>
+
+                    {/* Flip Slab Toggle */}
+                    {selectedCard.backImageUrl && (
+                      <div className="mt-2.5 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setActiveImageView("front")}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer ${
+                            activeImageView === "front"
+                              ? "bg-[#073525] text-white"
+                              : "bg-neutral-100 text-neutral-600 hover:text-neutral-900"
+                          }`}
+                        >
+                          Front View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveImageView("back")}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                            activeImageView === "back"
+                              ? "bg-[#073525] text-white"
+                              : "bg-neutral-100 text-neutral-600 hover:text-neutral-900"
+                          }`}
+                        >
+                          <RotateCcw className="w-2.5 h-2.5" />
+                          <span>Back View</span>
+                        </button>
+                      </div>
                     )}
                   </div>
 
-                  {/* Payment Method Notice (For Personal Wallet) */}
-                  {destination === "personal" && (
-                    <div className="space-y-1.5 pt-1">
-                      <label className="text-[11px] font-bold text-neutral-700 uppercase tracking-wider block">
-                        Payment Currency:
-                      </label>
-                      <div className="p-2.5 rounded-xl border border-[#073525] bg-[#f8faf9] text-[#073525] text-xs font-semibold flex items-center justify-between">
-                        <span>NEAR Testnet Wallet</span>
-                        <span className="font-mono text-xs font-bold text-slate-800">
-                          {usdToNear(selectedCard.costUsd || selectedCard.insuredUsd || 50)} NEAR
+                  {/* Right Column: Slab Metadata & Delivery */}
+                  <div className="space-y-3 sm:space-y-3.5">
+                    {purchaseError && (
+                      <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
+                        {purchaseError}
+                      </div>
+                    )}
+
+                    {/* Slab Header Info */}
+                    <div>
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-neutral-100 border border-neutral-200 text-[10px] font-mono font-bold text-neutral-800 mb-1.5">
+                        <span>{selectedCard.grade || "PSA 10"}</span>
+                        <span className="text-neutral-400">•</span>
+                        <span>{selectedCard.category || "TCG"}</span>
+                        {selectedCard.year && <span>• {selectedCard.year}</span>}
+                      </div>
+                      <h4 className="text-xs sm:text-sm font-bold text-neutral-900 leading-snug line-clamp-2">
+                        {selectedCard.name}
+                      </h4>
+                    </div>
+
+                    {/* On-Chain & Custody Metadata Table */}
+                    <div className="p-3 rounded-xl bg-[#f8faf9] border border-neutral-200/80 font-mono text-[11px] space-y-1.5">
+                      <div className="flex items-center justify-between text-neutral-600">
+                        <span>Cert Number:</span>
+                        <span className="text-neutral-900 font-semibold">#{selectedCard.certNumber}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-neutral-600">
+                        <span>Physical Custody:</span>
+                        <span className="text-neutral-900 font-semibold truncate max-w-[170px]" title={selectedCard.vaultLocation}>
+                          {selectedCard.vault || "PWCC / Brink's"}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-500">
-                        Executed via Meteor Wallet. Physical slab custody mapped to your NEAR account.
-                      </p>
+                      <div className="flex items-center justify-between text-neutral-600">
+                        <span>Solana Mint:</span>
+                        <a
+                          href={`https://solscan.io/token/${selectedCard.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[#073525] hover:underline flex items-center gap-1 font-semibold"
+                        >
+                          <span>{selectedCard.id.slice(0, 4)}...{selectedCard.id.slice(-4)}</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      </div>
+                      <div className="flex items-center justify-between text-neutral-600 pt-1 border-t border-neutral-200/60">
+                        <span>Valuation / Price:</span>
+                        <span className="text-xs sm:text-sm font-bold text-neutral-900">
+                          ${Number(selectedCard.costUsd || selectedCard.insuredUsd || 50).toLocaleString()} USDC
+                        </span>
+                      </div>
                     </div>
-                  )}
 
-                  {/* NEAR Intents Cross-Chain Settlement Route Preview Box */}
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 font-mono text-[11px] space-y-1.5 text-slate-600">
-                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      <span>INTENT STANDARD</span>
-                      <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">
-                        NEP-413 Cross-Chain Swap
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-400">GIVE (NEAR):</span>
-                      <span className="text-slate-800 font-semibold">
-                        {destination === "vault"
-                          ? `$${Number(selectedCard.costUsd || selectedCard.insuredUsd || 50).toFixed(2)} USDC (from @${(myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0])?.sub_account || "vault"})`
-                          : `${usdToNear(selectedCard.costUsd || selectedCard.insuredUsd || 50)} NEAR ($${Number(selectedCard.costUsd || selectedCard.insuredUsd || 50).toFixed(2)} eqv.)`}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400">SOLVER ROUTE:</span>
-                      <span className="text-slate-800 font-medium">rwa-solver.colliq.testnet (NEAR ➔ Solana)</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400">RECEIVE (MPC):</span>
-                      <span className="text-slate-800 font-medium">Solana pNFT #{selectedCard.certNumber} ➔ NEAR Custody</span>
-                    </div>
-                  </div>
+                    {/* Delivery Target Selector */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-neutral-600 uppercase tracking-wider block">
+                        Deliver Slab To:
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setDestination("personal")}
+                          className={`p-2 rounded-xl border text-xs text-left transition flex items-center gap-2 cursor-pointer ${
+                            destination === "personal"
+                              ? "border-[#073525] bg-[#f8faf9] ring-1 ring-[#073525]"
+                              : "border-neutral-200 hover:border-neutral-300 bg-white"
+                          }`}
+                        >
+                          <Wallet className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
+                          <div>
+                            <div className="font-semibold text-xs text-neutral-900">Personal Wallet</div>
+                            <div className="text-[9px] sm:text-[10px] text-neutral-500">Hold on NEAR</div>
+                          </div>
+                        </button>
 
-                  {/* Purchase Action Button */}
-                  <div className="pt-2">
-                    <button
-                      onClick={handleConfirmPurchase}
-                      disabled={
-                        purchaseLoading ||
-                        (destination === "vault" &&
-                          (myVaults.length === 0 ||
-                            Number((myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0])?.usdc_balance || 0) <
-                              Number(selectedCard.costUsd || selectedCard.insuredUsd || 50)))
-                      }
-                      className="w-full py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
-                    >
-                      {purchaseLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>
-                            {purchaseStep === "awaiting_wallet"
-                              ? "Confirm in NEAR Wallet..."
-                              : "Executing Atomic Settlement..."}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span>
-                            {destination === "vault"
-                              ? `Acquire into ${(myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0])?.name || "Agent Vault"}`
-                              : `Buy Slab with NEAR Wallet`}
-                          </span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </>
+                        <button
+                          type="button"
+                          onClick={() => setDestination("vault")}
+                          className={`p-2 rounded-xl border text-xs text-left transition flex items-center gap-2 cursor-pointer ${
+                            destination === "vault"
+                              ? "border-[#073525] bg-[#f8faf9] ring-1 ring-[#073525]"
+                              : "border-neutral-200 hover:border-neutral-300 bg-white"
+                          }`}
+                        >
+                          <Bot className="w-3.5 h-3.5 text-[#073525] shrink-0" />
+                          <div>
+                            <div className="font-semibold text-xs text-neutral-900">AI Agent Vault</div>
+                            <div className="text-[9px] sm:text-[10px] text-neutral-500">Autonomous Trading</div>
+                          </div>
+                        </button>
+                      </div>
+
+                      {/* Target Vault Dropdown */}
+                      {destination === "vault" && (
+                        <div className="pt-1 space-y-1.5">
+                          {myVaults.length === 0 ? (
+                            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 flex items-center justify-between">
+                              <span>No active agent vaults found.</span>
+                              <button
+                                type="button"
+                                onClick={onOpenMint}
+                                className="font-bold underline hover:text-amber-950 cursor-pointer"
+                              >
+                                Mint Vault
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <select
+                                value={targetVaultId}
+                                onChange={(e) => setTargetVaultId(e.target.value)}
+                                className="w-full p-2 rounded-xl border border-neutral-200 bg-white text-xs font-medium text-neutral-900 focus:outline-none focus:border-[#073525]"
+                              >
+                                {myVaults.map((v) => (
+                                  <option key={v.id} value={v.id}>
+                                    {v.name} (@{v.sub_account}) • ${Number(v.usdc_balance || 0).toFixed(0)} USDC
+                                  </option>
+                                ))}
+                              </select>
+
+                              {(() => {
+                                const sVault = myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0];
+                                const cardCost = Number(selectedCard.costUsd || selectedCard.insuredUsd || 50);
+                                if (!sVault) return null;
+                                if (Number(sVault.usdc_balance || 0) < cardCost) {
+                                  return (
+                                    <div className="text-[10px] font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2">
+                                      Insufficient Treasury: Vault holds ${Number(sVault.usdc_balance || 0).toFixed(2)} USDC (needs ${cardCost.toFixed(2)} USDC).
+                                    </div>
+                                  );
+                                }
+                                if (Number(sVault.usdc_balance || 0) < cardCost * 1.34) {
+                                  return (
+                                    <div className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                                      Low Treasury Buffer: Remaining funds will dip below the 25% safety reserve.
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </>
+                          )}
+                        </div>
                       )}
-                    </button>
+                    </div>
+
+                    {/* Payment Method Notice (For Personal Wallet) */}
+                    {destination === "personal" && (
+                      <div className="space-y-1 pt-0.5">
+                        <label className="text-[10px] font-bold text-neutral-600 uppercase tracking-wider block">
+                          Payment Currency:
+                        </label>
+                        <div className="p-2 rounded-xl border border-[#073525] bg-[#f8faf9] text-[#073525] text-xs font-semibold flex items-center justify-between">
+                          <span>NEAR Testnet Wallet</span>
+                          <span className="font-mono text-xs font-bold text-slate-800">
+                            {usdToNear(selectedCard.costUsd || selectedCard.insuredUsd || 50)} NEAR
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-slate-500">
+                          Executed via Meteor Wallet. Physical slab custody mapped to your NEAR account.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* NEAR Intents Cross-Chain Settlement Route Preview Box */}
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 font-mono text-[10px] space-y-1 text-slate-600">
+                      <div className="flex items-center justify-between font-bold text-slate-500 uppercase tracking-wider">
+                        <span>INTENT STANDARD</span>
+                        <span className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200 font-semibold">
+                          NEP-413 Cross-Chain Swap
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400">GIVE:</span>
+                        <span className="text-slate-800 font-semibold truncate max-w-[200px]">
+                          {destination === "vault"
+                            ? `$${Number(selectedCard.costUsd || selectedCard.insuredUsd || 50).toFixed(2)} USDC`
+                            : `${usdToNear(selectedCard.costUsd || selectedCard.insuredUsd || 50)} NEAR ($${Number(selectedCard.costUsd || selectedCard.insuredUsd || 50).toFixed(2)})`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">SOLVER:</span>
+                        <span className="text-slate-800 font-medium">rwa-solver.colliq.testnet</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">RECEIVE:</span>
+                        <span className="text-slate-800 font-medium">Solana pNFT #{selectedCard.certNumber} ➔ NEAR</span>
+                      </div>
+                    </div>
+
+                    {/* Purchase Action Button */}
+                    <div className="pt-1">
+                      <button
+                        onClick={handleConfirmPurchase}
+                        disabled={
+                          purchaseLoading ||
+                          (destination === "vault" &&
+                            (myVaults.length === 0 ||
+                              Number((myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0])?.usdc_balance || 0) <
+                                Number(selectedCard.costUsd || selectedCard.insuredUsd || 50)))
+                        }
+                        className="w-full py-2.5 sm:py-3 rounded-full bg-[#073525] hover:bg-[#0a4531] text-white text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+                      >
+                        {purchaseLoading ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>
+                              {purchaseStep === "awaiting_wallet"
+                                ? "Confirm in NEAR Wallet..."
+                                : "Executing Atomic Settlement..."}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span>
+                              {destination === "vault"
+                                ? `Acquire into ${(myVaults.find((v) => String(v.id) === String(targetVaultId)) || myVaults[0])?.name || "Agent Vault"}`
+                                : `Buy Slab with NEAR Wallet`}
+                            </span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
