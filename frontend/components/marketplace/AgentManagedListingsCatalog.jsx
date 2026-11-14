@@ -211,34 +211,39 @@ export default function AgentManagedListingsCatalog() {
                 className="group rounded-3xl border border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden"
               >
                 {/* Slab Visual & Badges */}
-                <div className="relative p-5 bg-[#fbfdfc] border-b border-neutral-100 flex items-center justify-center min-h-[240px]">
+                <div className="relative w-full aspect-[3/4] max-h-[280px] bg-[#fbfdfc] border-b border-neutral-100 flex items-center justify-center p-3 overflow-hidden">
                   {/* Grade Badge */}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5 font-mono text-[10px]">
-                    <span className="px-2 py-0.5 rounded-lg bg-white border border-neutral-200 shadow-xs font-bold text-neutral-900">
+                  <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 font-mono text-[10px]">
+                    <span className="px-2 py-0.5 rounded-lg bg-white/95 backdrop-blur-xs border border-neutral-200 shadow-2xs font-bold text-neutral-900">
                       {comp} {cleanGrade}
                     </span>
-                    <span className="text-neutral-400">#{card.psa_cert_number || "CERT"}</span>
+                    <span className="text-neutral-500 bg-white/90 backdrop-blur-xs px-1.5 py-0.5 rounded-md border border-neutral-200/80 text-[9px]">
+                      #{card.psa_cert_number || "CERT"}
+                    </span>
                   </div>
 
                   {/* Cash Only / Swaps Badge */}
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 z-10">
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-2xs ${
                         card.allow_barter
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-amber-100 text-amber-800"
+                          ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                          : "bg-amber-50 text-amber-800 border border-amber-200"
                       }`}
                     >
                       {card.allow_barter ? "Swaps Allowed" : "Cash Only"}
                     </span>
                   </div>
 
-                  {/* High Quality Slab Image */}
-                  <img
-                    src={card.image_url}
-                    alt={card.name}
-                    className="max-h-48 w-auto object-contain filter drop-shadow-md group-hover:scale-105 transition-transform duration-300"
-                  />
+                  {/* High Quality Slab Image - Constrained & Centered */}
+                  <div className="w-full h-full flex items-center justify-center pt-6 pb-2 px-2 overflow-hidden">
+                    <img
+                      src={card.image_url}
+                      alt={card.name}
+                      loading="lazy"
+                      className="max-h-full max-w-full w-auto h-auto object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
                 </div>
 
                 {/* Card Info & Selling Agent */}
