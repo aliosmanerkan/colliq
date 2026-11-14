@@ -96,6 +96,25 @@ io.on("connection", (socket) => {
 db.sequelize.sync({ alter: true })
     .then(async () => {
         console.log("🗄️ Database synchronized successfully.");
+
+        // Synchronize and repair all PostgreSQL sequences to avoid primary key ID collisions
+        try {
+            const tables = [
+                { table: "rwa_cards", seq: "rwa_cards_id_seq" },
+                { table: "trade_histories", seq: "trade_histories_id_seq" },
+                { table: "merchant_vaults", seq: "merchant_vaults_id_seq" },
+                { table: "users", seq: "users_id_seq" }
+            ];
+            for (const item of tables) {
+                await db.sequelize.query(`
+                    SELECT setval('${item.seq}', COALESCE((SELECT MAX(id) FROM "${item.table}"), 0) + 1, false);
+                `);
+            }
+            console.log("🔄 PostgreSQL primary key sequences safely synchronized to MAX(id) + 1.");
+        } catch (seqErr) {
+            console.warn("Sequence synchronization notice:", seqErr.message);
+        }
+
         await seedInitialVaultsAndCards();
 
         // One-time sanitization of legacy 0x... hashes in trades table to Base58 NEAR format
