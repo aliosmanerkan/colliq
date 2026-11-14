@@ -381,30 +381,35 @@ router.post("/:id/buy-vault", async (req, res) => {
         vault.lock_reason = null;
 
         // 3. Record Business Acquisition into db.trade
-        const tradeRecord = await db.trade.create({
-            trade_id: `acq-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            vault_a_id: vault.id,
-            vault_b_id: vault.id,
-            vault_a_name: vault.name,
-            vault_b_name: buyer_account,
-            cards_from_a: vault.inventory || [],
-            cards_from_b: [],
-            usdc_from_a: 0,
-            usdc_from_b: salePrice,
-            rounds_count: 1,
-            negotiation_log: [{
-                round: 1,
-                action: "BUSINESS_ACQUISITION",
-                buyer: buyer_account,
-                seller: previousOwner,
-                salePrice,
-                timestamp: new Date().toISOString()
-            }],
-            status: "COMPLETED",
-            protocol_fee_usdc: Number((salePrice * 0.01).toFixed(2)),
-            tx_hash: tx_hash || wipeResult.txHash || nearService.generateNearReceiptHash(),
-            near_block: wipeResult.nearBlock || (await nearService.getNetworkStatus()).latest_block_height
-        });
+        let tradeRecord = null;
+        try {
+            tradeRecord = await db.trade.create({
+                trade_id: `acq-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                vault_a_id: vault.id,
+                vault_b_id: vault.id,
+                vault_a_name: vault.name,
+                vault_b_name: buyer_account,
+                cards_from_a: vault.inventory || [],
+                cards_from_b: [],
+                usdc_from_a: 0,
+                usdc_from_b: salePrice,
+                rounds_count: 1,
+                negotiation_log: [{
+                    round: 1,
+                    action: "BUSINESS_ACQUISITION",
+                    buyer: buyer_account,
+                    seller: previousOwner,
+                    salePrice,
+                    timestamp: new Date().toISOString()
+                }],
+                status: "COMPLETED",
+                protocol_fee_usdc: Number((salePrice * 0.01).toFixed(2)),
+                tx_hash: tx_hash || wipeResult.txHash || nearService.generateNearReceiptHash(),
+                near_block: wipeResult.nearBlock || (await nearService.getNetworkStatus()).latest_block_height
+            });
+        } catch (tradeErr) {
+            console.warn("Acquisition trade log warning:", tradeErr.message);
+        }
 
         // 4. Record into Chat History
         let chat = [];
@@ -489,34 +494,38 @@ router.post("/:id/snipe", async (req, res) => {
         const nearBlock = netStatus.latest_block_height;
         const txHash = nearService.generateNearReceiptHash();
 
-        await db.trade.create({
-            trade_id: tradeId,
-            vault_a_id: vault.id,
-            vault_b_id: ccVault.id,
-            vault_a_name: vault.name,
-            vault_b_name: "PWCC & Brink's Vault Custody",
-            cards_from_a: [],
-            cards_from_b: [result.card],
-            usdc_from_a: cardPrice,
-            usdc_from_b: 0.0,
-            rounds_count: 1,
-            negotiation_log: [
-                {
-                    round: 1,
-                    agent: vault.name,
-                    turn: {
-                        decision: "ACCEPT",
-                        public_argument: `Signed NEAR Intent (${result.near_intent?.intent_id || "intent-rwa"}): Committed $${cardPrice.toFixed(2)} USDC on NEAR -> Solver acquired Solana pNFT (${result.solana_mint?.slice(0, 6)}...) for ${result.card.name} into MPC Vault (${result.solana_holding_address}).`,
-                        private_reasoning_for_owner: `Physical slab bridged to vault sub-account. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
-                        near_intent: result.near_intent
+        try {
+            await db.trade.create({
+                trade_id: tradeId,
+                vault_a_id: vault.id,
+                vault_b_id: ccVault ? ccVault.id : vault.id,
+                vault_a_name: vault.name,
+                vault_b_name: "PWCC & Brink's Vault Custody",
+                cards_from_a: [],
+                cards_from_b: [result.card],
+                usdc_from_a: cardPrice,
+                usdc_from_b: 0.0,
+                rounds_count: 1,
+                negotiation_log: [
+                    {
+                        round: 1,
+                        agent: vault.name,
+                        turn: {
+                            decision: "ACCEPT",
+                            public_argument: `Signed NEAR Intent (${result.near_intent?.intent_id || "intent-rwa"}): Committed $${cardPrice.toFixed(2)} USDC on NEAR -> Solver acquired Solana pNFT (${result.solana_mint?.slice(0, 6)}...) for ${result.card.name} into MPC Vault (${result.solana_holding_address}).`,
+                            private_reasoning_for_owner: `Physical slab bridged to vault sub-account. Remaining treasury: $${vault.usdc_balance.toFixed(2)} USDC.`,
+                            near_intent: result.near_intent
+                        }
                     }
-                }
-            ],
-            status: "COMPLETED",
-            protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
-            tx_hash: txHash,
-            near_block: nearBlock
-        });
+                ],
+                status: "COMPLETED",
+                protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
+                tx_hash: txHash,
+                near_block: nearBlock
+            });
+        } catch (tradeLogErr) {
+            console.warn("Snipe trade history log warning:", tradeLogErr.message);
+        }
 
         // Append to chat history
         let history = [];

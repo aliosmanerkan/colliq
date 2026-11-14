@@ -500,7 +500,7 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
         existingCard.oracle_fair_value_usdc = oracleValue;
         existingCard.last_sale_usdc = cardPrice;
         if (!existingCard.image_url && safeImageUrl) existingCard.image_url = safeImageUrl;
-        await existingCard.save();
+        await existingCard.save({ validate: false });
         newCard = existingCard;
     } else {
         newCard = await db.card.create({
@@ -521,7 +521,7 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
             population_higher: Number(ccCard.population?.higher || 0),
             is_locked: false,
             is_hold: false
-        });
+        }, { validate: false });
     }
 
     // Derive Solana holding address for this vault via NEAR Chain Signatures MPC

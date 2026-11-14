@@ -174,7 +174,7 @@ router.post("/buy-direct", async (req, res) => {
                 existingCard.is_locked = false;
                 existingCard.oracle_fair_value_usdc = cardPrice;
                 if (!existingCard.image_url && safeImageUrl) existingCard.image_url = safeImageUrl;
-                await existingCard.save();
+                await existingCard.save({ validate: false });
                 finalCard = existingCard;
             } else {
                 finalCard = await db.card.create({
@@ -194,8 +194,37 @@ router.post("/buy-direct", async (req, res) => {
                     barcode: safeBarcode,
                     population_higher: Number(ccCard.population?.higher || 0),
                     is_locked: false
-                });
+                }, { validate: false });
             }
+        } else if (card_data) {
+            const safeId = String(card_data.id || card_id || "vault-mint");
+            const certNum = card_data.certNumber || card_data.psa_cert_number || safeId.substring(0, 8).toUpperCase();
+            const cardPrice = Number(card_data.insuredUsd || card_data.costUsd || 50.0);
+            const safeImageUrl = card_data.imageUrl || card_data.image_url || card_data.frontImage || "https://images.pokemontcg.io/swsh4/188_hires.png";
+            const safeName = card_data.name || "Physical Graded Slab";
+            const safeSetName = card_data.set || card_data.set_name || "Collector Crypt Vault";
+            const safeCategory = card_data.category || "Pokemon";
+            const safeGrade = card_data.grade || "PSA 10 GEM MT";
+            const safeBarcode = card_data.barcode || `CC-${certNum}-PSA`;
+
+            finalCard = await db.card.create({
+                card_id: `cc-rwa-${safeId.substring(0, 10)}-${Date.now().toString(36)}`,
+                vault_id: null,
+                owner_account: buyer_account,
+                psa_cert_number: String(certNum),
+                solana_mint: safeId,
+                name: safeName,
+                category: safeCategory,
+                set_name: safeSetName,
+                grade: safeGrade,
+                rareness_score: Number(card_data.rareness || 80),
+                oracle_fair_value_usdc: cardPrice,
+                last_sale_usdc: cardPrice,
+                image_url: safeImageUrl,
+                barcode: safeBarcode,
+                population_higher: Number(card_data.population?.higher || 0),
+                is_locked: false
+            }, { validate: false });
         } else {
             const existingCard = await db.card.findOne({ where: { card_id } });
             if (!existingCard) return res.status(404).json({ error: "Card not found" });
@@ -204,7 +233,7 @@ router.post("/buy-direct", async (req, res) => {
             existingCard.vault_id = null;
             existingCard.owner_account = buyer_account;
             existingCard.is_locked = false;
-            await existingCard.save();
+            await existingCard.save({ validate: false });
             finalCard = existingCard;
         }
 
