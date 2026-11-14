@@ -73,12 +73,14 @@ router.post("/trigger-sniper", async (req, res) => {
 // GET recent trade history & negotiation transcripts
 router.get("/history", async (req, res) => {
     try {
+        const limit = req.query.limit ? Math.min(500, Math.max(10, parseInt(req.query.limit))) : 250;
         const trades = await db.trade.findAll({
-            order: [["createdAt", "DESC"]],
-            limit: 100
+            order: [["createdAt", "DESC"], ["id", "DESC"]],
+            limit
         });
         res.json({ trades });
     } catch (err) {
+        console.error("Trade history fetch error:", err);
         res.status(500).json({ error: err.message });
     }
 });

@@ -148,16 +148,27 @@ db.sequelize.sync({ alter: true })
             });
 
             const existingTrades = await db.trade.findAll();
-            const existingTradeKeys = new Set(existingTrades.map(t => {
-                const cardB = Array.isArray(t.cards_from_b) && t.cards_from_b[0];
-                return cardB ? (cardB.card_id || cardB.id) : null;
-            }).filter(Boolean));
+            const existingTradeKeys = new Set();
+            for (const t of existingTrades) {
+                const bList = Array.isArray(t.cards_from_b) ? t.cards_from_b : [];
+                const aList = Array.isArray(t.cards_from_a) ? t.cards_from_a : [];
+                for (const item of [...bList, ...aList]) {
+                    if (item?.card_id) existingTradeKeys.add(String(item.card_id));
+                    if (item?.id) existingTradeKeys.add(String(item.id));
+                    if (item?.solana_mint) existingTradeKeys.add(String(item.solana_mint));
+                }
+            }
 
             for (const c of directCards) {
-                const cKey = c.card_id || c.id;
-                if (!existingTradeKeys.has(cKey)) {
+                const cKey = String(c.card_id || c.id || c.solana_mint);
+                const hasMatch = existingTradeKeys.has(String(c.card_id)) || existingTradeKeys.has(String(c.id)) || existingTradeKeys.has(String(c.solana_mint));
+                if (!hasMatch) {
                     const price = Number(c.oracle_fair_value_usdc || c.last_sale_usdc || 50);
                     const netStatus = await nearService.getNetworkStatus();
+                    const cardData = c.toJSON ? c.toJSON() : { ...c.dataValues };
+                    cardData.imageUrl = cardData.image_url || cardData.imageUrl;
+                    cardData.frontImage = cardData.image_url;
+
                     await db.trade.create({
                         trade_id: `direct-backfill-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
                         vault_a_id: null,
@@ -165,7 +176,7 @@ db.sequelize.sync({ alter: true })
                         vault_a_name: c.owner_account,
                         vault_b_name: "PWCC & Brink's Vault Custody",
                         cards_from_a: [],
-                        cards_from_b: [c.toJSON ? c.toJSON() : c],
+                        cards_from_b: [cardData],
                         usdc_from_a: price,
                         usdc_from_b: 0.0,
                         rounds_count: 1,
@@ -182,7 +193,7 @@ db.sequelize.sync({ alter: true })
                         protocol_fee_usdc: Math.round(price * 0.005 * 100) / 100,
                         tx_hash: nearService.generateNearReceiptHash(),
                         near_block: netStatus.latest_block_height
-                    });
+                    }, { validate: false });
                     console.log(`📦 Retroactively restored trade history record for ${c.name} (${c.owner_account})`);
                 }
             }

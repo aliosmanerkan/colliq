@@ -91,10 +91,63 @@ router.post("/collector-crypt/buy", async (req, res) => {
             owner_account || "alierkan.testnet", 
             card_data
         );
-        res.json(result);
+
+        // Record trade history in database
+        const cardPrice = Number(result.card.oracle_fair_value_usdc || result.card.last_sale_usdc || 50);
+        let ccVault = await getOrCreateCollectorCryptVault();
+        const tradeId = `snipe-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        const netStatus = await nearService.getNetworkStatus();
+        const txHash = nearService.generateNearReceiptHash();
+
+        let trade = null;
+        try {
+            trade = await db.trade.create({
+                trade_id: tradeId,
+                vault_a_id: result.vault?.id || Number(vault_id),
+                vault_b_id: ccVault ? ccVault.id : null,
+                vault_a_name: result.vault?.name || `Vault #${vault_id}`,
+                vault_b_name: "PWCC & Brink's Vault Custody",
+                cards_from_a: [],
+                cards_from_b: [result.card.toJSON ? result.card.toJSON() : result.card],
+                usdc_from_a: cardPrice,
+                usdc_from_b: 0.0,
+                rounds_count: 1,
+                negotiation_log: [{
+                    round: 1,
+                    agent: result.vault?.name || `Vault #${vault_id}`,
+                    turn: {
+                        decision: "ACCEPT",
+                        public_argument: `Acquired ${result.card.name} into vault inventory.`,
+                        near_intent: result.near_intent
+                    }
+                }],
+                status: "COMPLETED",
+                protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
+                tx_hash: txHash,
+                near_block: netStatus.latest_block_height
+            }, { validate: false });
+        } catch (e) {
+            console.warn("Collector-crypt buy trade log warning:", e.message);
+        }
+
+        const io = req.app.get("io");
+        if (io) {
+            if (trade) {
+                io.emit("a2a_trade_settled", { trade });
+            }
+            io.emit("market_snipe", {
+                vault: result.vault,
+                card: result.card,
+                price: cardPrice,
+                tx_hash: txHash
+            });
+        }
+
+        res.json({ ...result, trade });
     } catch (err) {
         console.error("Buy card error:", err);
-        res.status(400).json({ error: err.message });
+        const errorDetail = err.errors?.map(e => e.message).join(", ") || err.message;
+        res.status(400).json({ error: errorDetail });
     }
 });
 
@@ -112,10 +165,63 @@ router.post("/collector-crypt/bridge", async (req, res) => {
             owner_account || "alierkan.testnet", 
             card_data
         );
-        res.json(result);
+
+        // Record trade history in database
+        const cardPrice = Number(result.card.oracle_fair_value_usdc || result.card.last_sale_usdc || 50);
+        let ccVault = await getOrCreateCollectorCryptVault();
+        const tradeId = `bridge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        const netStatus = await nearService.getNetworkStatus();
+        const txHash = nearService.generateNearReceiptHash();
+
+        let trade = null;
+        try {
+            trade = await db.trade.create({
+                trade_id: tradeId,
+                vault_a_id: result.vault?.id || Number(vault_id),
+                vault_b_id: ccVault ? ccVault.id : null,
+                vault_a_name: result.vault?.name || `Vault #${vault_id}`,
+                vault_b_name: "PWCC & Brink's Vault Custody",
+                cards_from_a: [],
+                cards_from_b: [result.card.toJSON ? result.card.toJSON() : result.card],
+                usdc_from_a: cardPrice,
+                usdc_from_b: 0.0,
+                rounds_count: 1,
+                negotiation_log: [{
+                    round: 1,
+                    agent: result.vault?.name || `Vault #${vault_id}`,
+                    turn: {
+                        decision: "ACCEPT",
+                        public_argument: `Bridged ${result.card.name} into vault inventory.`,
+                        near_intent: result.near_intent
+                    }
+                }],
+                status: "COMPLETED",
+                protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
+                tx_hash: txHash,
+                near_block: netStatus.latest_block_height
+            }, { validate: false });
+        } catch (e) {
+            console.warn("Collector-crypt bridge trade log warning:", e.message);
+        }
+
+        const io = req.app.get("io");
+        if (io) {
+            if (trade) {
+                io.emit("a2a_trade_settled", { trade });
+            }
+            io.emit("market_snipe", {
+                vault: result.vault,
+                card: result.card,
+                price: cardPrice,
+                tx_hash: txHash
+            });
+        }
+
+        res.json({ ...result, trade });
     } catch (err) {
         console.error("Bridge card error:", err);
-        res.status(400).json({ error: err.message });
+        const errorDetail = err.errors?.map(e => e.message).join(", ") || err.message;
+        res.status(400).json({ error: errorDetail });
     }
 });
 
@@ -253,75 +359,71 @@ router.post("/buy-direct", async (req, res) => {
 
         let ccVault = await getOrCreateCollectorCryptVault();
         const buyerVault = await db.vault.findOne({ where: { owner_account: buyer_account } });
-        const anyVault = await db.vault.findOne({ order: [["id", "ASC"]] });
-        const systemVault = ccVault || anyVault;
-        const systemVaultId = systemVault ? systemVault.id : null;
-        const vaultAId = buyerVault ? buyerVault.id : systemVaultId;
-        const vaultBId = systemVaultId;
+        const vaultAId = buyerVault ? buyerVault.id : null;
+        const vaultBId = ccVault ? ccVault.id : null;
 
         const tradeId = `direct-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-        try {
-            await db.trade.create({
-                trade_id: tradeId,
-                vault_a_id: vaultAId,
-                vault_b_id: vaultBId,
-                vault_a_name: buyer_account,
-                vault_b_name: "PWCC & Brink's Vault Custody",
-                cards_from_a: [],
-                cards_from_b: [finalCard.toJSON ? finalCard.toJSON() : finalCard],
-                usdc_from_a: cardPrice,
-                usdc_from_b: 0.0,
-                rounds_count: 1,
-                negotiation_log: [
-                    {
-                        round: 1,
-                        agent: buyer_account,
-                        turn: {
-                            decision: "ACCEPT",
-                            public_argument: `Direct user acquisition: Secured ${finalCard.name} (${finalCard.grade || "PSA 10"}) via NEAR Intent (${nearIntent.intent_id}).`,
-                            private_reasoning_for_owner: `Signed NEP-413 Cross-Chain Swap. Payment settled via ${payment_method || "NEAR"}${near_amount ? ` (${near_amount} NEAR)` : ""}. Custody: Brink's / PWCC.`,
-                            near_intent: nearIntent
-                        }
+        
+        const cardSnapshot = {
+            id: finalCard.id,
+            card_id: finalCard.card_id,
+            name: finalCard.name,
+            category: finalCard.category || "Pokemon",
+            set_name: finalCard.set_name || "Collector Crypt Vault",
+            grade: finalCard.grade || "PSA 10 GEM MT",
+            rareness_score: Number(finalCard.rareness_score || 80),
+            oracle_fair_value_usdc: cardPrice,
+            last_sale_usdc: cardPrice,
+            image_url: finalCard.image_url,
+            imageUrl: finalCard.image_url,
+            frontImage: finalCard.image_url,
+            barcode: finalCard.barcode,
+            psa_cert_number: finalCard.psa_cert_number,
+            solana_mint: finalCard.solana_mint,
+            owner_account: buyer_account,
+            vault_id: null
+        };
+
+        const tradePayload = {
+            trade_id: tradeId,
+            vault_a_id: vaultAId,
+            vault_b_id: vaultBId,
+            vault_a_name: buyer_account,
+            vault_b_name: "PWCC & Brink's Vault Custody",
+            cards_from_a: [],
+            cards_from_b: [cardSnapshot],
+            usdc_from_a: cardPrice,
+            usdc_from_b: 0.0,
+            rounds_count: 1,
+            negotiation_log: [
+                {
+                    round: 1,
+                    agent: buyer_account,
+                    turn: {
+                        decision: "ACCEPT",
+                        public_argument: `Direct user acquisition: Secured ${finalCard.name} (${finalCard.grade || "PSA 10"}) via NEAR Intent (${nearIntent.intent_id}).`,
+                        private_reasoning_for_owner: `Signed NEP-413 Cross-Chain Swap. Payment settled via ${payment_method || "NEAR"}${near_amount ? ` (${near_amount} NEAR)` : ""}. Custody: Brink's / PWCC.`,
+                        near_intent: nearIntent
                     }
-                ],
-                status: "COMPLETED",
-                protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
-                tx_hash: settledTxHash,
-                near_block: networkInfo.latest_block_height
-            });
+                }
+            ],
+            status: "COMPLETED",
+            protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
+            tx_hash: settledTxHash,
+            near_block: networkInfo.latest_block_height
+        };
+
+        let createdTrade = null;
+        try {
+            createdTrade = await db.trade.create(tradePayload, { validate: false });
         } catch (logErr) {
-            console.warn("Primary trade log failed, retrying with null foreign keys:", logErr.message);
+            console.warn("Primary direct buy trade log warning:", logErr.message);
             try {
-                await db.trade.create({
-                    trade_id: tradeId,
-                    vault_a_id: null,
-                    vault_b_id: null,
-                    vault_a_name: buyer_account,
-                    vault_b_name: "PWCC & Brink's Vault Custody",
-                    cards_from_a: [],
-                    cards_from_b: [finalCard.toJSON ? finalCard.toJSON() : finalCard],
-                    usdc_from_a: cardPrice,
-                    usdc_from_b: 0.0,
-                    rounds_count: 1,
-                    negotiation_log: [
-                        {
-                            round: 1,
-                            agent: buyer_account,
-                            turn: {
-                                decision: "ACCEPT",
-                                public_argument: `Direct user acquisition: Secured ${finalCard.name} (${finalCard.grade || "PSA 10"}) via NEAR Intent (${nearIntent.intent_id}).`,
-                                private_reasoning_for_owner: `Signed NEP-413 Cross-Chain Swap. Payment settled via ${payment_method || "NEAR"}${near_amount ? ` (${near_amount} NEAR)` : ""}. Custody: Brink's / PWCC.`,
-                                near_intent: nearIntent
-                            }
-                        }
-                    ],
-                    status: "COMPLETED",
-                    protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
-                    tx_hash: settledTxHash,
-                    near_block: networkInfo.latest_block_height
-                });
+                tradePayload.vault_a_id = null;
+                tradePayload.vault_b_id = null;
+                createdTrade = await db.trade.create(tradePayload, { validate: false });
             } catch (retryErr) {
-                console.error("Critical trade history creation failure:", retryErr.message);
+                console.error("Critical direct buy trade history failure:", retryErr.message);
             }
         }
 
@@ -340,12 +442,21 @@ router.post("/buy-direct", async (req, res) => {
                 tradeId,
                 txHash: settledTxHash
             });
+            if (createdTrade) {
+                io.emit("a2a_trade_settled", {
+                    trade: createdTrade,
+                    buyer: buyer_account,
+                    seller: "PWCC & Brink's Vault Custody",
+                    txHash: settledTxHash
+                });
+            }
         }
 
         res.json({
             status: "SUCCESS_BOUGHT",
             message: `Card successfully purchased directly by ${buyer_account} with ${payment_method || "NEAR"}`,
             card: finalCard,
+            trade: createdTrade,
             tx_hash: settledTxHash,
             payment_method: payment_method || "NEAR",
             near_amount: near_amount || null,
@@ -356,7 +467,8 @@ router.post("/buy-direct", async (req, res) => {
         });
     } catch (err) {
         console.error("Direct buy error:", err);
-        res.status(400).json({ error: err.message });
+        const errorDetail = err.errors?.map(e => e.message).join(", ") || err.message;
+        res.status(400).json({ error: errorDetail });
     }
 });
 

@@ -365,7 +365,7 @@ export default function CollectorCryptCatalog({
       if (onCardBridged) onCardBridged();
     } catch (err) {
       console.error("Purchase error:", err);
-      setPurchaseError(err.message || "Purchase could not be completed. Please try again.");
+      setPurchaseError(err.response?.data?.error || err.message || "Purchase could not be completed. Please try again.");
       setPurchaseStep("idle");
     } finally {
       setPurchaseLoading(false);

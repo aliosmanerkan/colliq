@@ -137,20 +137,30 @@ router.post("/mint", async (req, res) => {
         const count = await db.vault.count();
         const nextId = count + 1;
 
-        // Generate unique sub-account: <name-slug>-<unique-hash>.colliq.testnet
+        // Generate unique sub-account and vault_id: <name-slug>-<unique-hash>.colliq.testnet
         let subAccount = nearService.generateSubAccount(name, custom_suffix);
-        let exists = await db.vault.findOne({ where: { sub_account: subAccount } });
+        let vaultUid = `v-${subAccount.split('.')[0]}`;
+        let exists = await db.vault.findOne({
+            where: db.Sequelize.or(
+                { sub_account: subAccount },
+                { vault_id: vaultUid }
+            )
+        });
         while (exists) {
             subAccount = nearService.generateSubAccount(name);
-            exists = await db.vault.findOne({ where: { sub_account: subAccount } });
+            vaultUid = `v-${subAccount.split('.')[0]}-${Math.random().toString(36).substring(2, 6)}`;
+            exists = await db.vault.findOne({
+                where: db.Sequelize.or(
+                    { sub_account: subAccount },
+                    { vault_id: vaultUid }
+                )
+            });
         }
 
         const keyPair = nearService.generateAgentFunctionCallKey(subAccount);
 
         const rulesArray = Array.isArray(custom_rules) ? custom_rules : [];
         const rulesJson = Array.isArray(custom_rules) ? JSON.stringify(custom_rules) : (typeof custom_rules === "string" ? custom_rules : "[]");
-
-        const vaultUid = `v-${subAccount.split('.')[0]}`;
 
         // Format an initial welcome message reflecting the specific custom rules
         const initialWelcomeMsg = {
@@ -165,8 +175,8 @@ router.post("/mint", async (req, res) => {
         const newVault = await db.vault.create({
             vault_id: vaultUid,
             sub_account: subAccount,
-            name,
-            owner_account,
+            name: (name || "Agent Vault").trim(),
+            owner_account: owner_account || "demo.testnet",
             usdc_balance: Number(usdc_deposit) || 500.0,
             strategy: strategy || "BALANCED_TRADER",
             tier: "ROOKIE",
@@ -177,7 +187,7 @@ router.post("/mint", async (req, res) => {
             chat_history: JSON.stringify([initialWelcomeMsg]),
             access_key_public: keyPair.publicKey,
             bio: bio || "Newly minted Autonomous Merchant Vault."
-        });
+        }, { validate: false });
 
         // Autonomous Inception Scan & Inaugural Market Snipe
         let inauguralSnipe = null;
@@ -196,7 +206,10 @@ router.post("/mint", async (req, res) => {
         });
     } catch (err) {
         console.error("Mint error:", err);
-        res.status(500).json({ error: err.message });
+        const detailedError = Array.isArray(err.errors) && err.errors.length > 0
+            ? err.errors.map(e => `${e.path}: ${e.message}`).join(", ")
+            : (err.original?.detail || err.message || "Failed to mint vault");
+        res.status(500).json({ error: detailedError });
     }
 });
 

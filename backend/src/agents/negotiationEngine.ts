@@ -288,6 +288,7 @@ export class A2ANegotiationEngine {
         const netSpread = Math.round(theirVal - myVal);
         const absSpread = Math.abs(netSpread);
         const maxSpend = agent.max_spend_per_trade_usdc || 350;
+        const treasury = Number(agent.usdc_balance || 0);
 
         // Mandate check: Does their offered card match my directives / compiled policy?
         if (theirCard && (agent.custom_rules || agent._compiledPolicy)) {
@@ -308,8 +309,8 @@ export class A2ANegotiationEngine {
         // ----------------------------------------------------
         if (turnNumber === 1) {
             if (netSpread > 0) {
-                // My card is cheaper: open with tactical discount (~80% of spread)
-                const openingCash = Math.min(Math.round(netSpread * 0.8), maxSpend);
+                // My card is cheaper: open with tactical discount (~80% of spread capped by treasury)
+                const openingCash = Math.min(Math.round(netSpread * 0.8), maxSpend, Math.max(0, Math.floor(treasury - 1)));
                 return {
                     decision: "COUNTER",
                     offer_usdc: openingCash,
@@ -372,24 +373,24 @@ export class A2ANegotiationEngine {
                 };
             } else if (netSpread > 0) {
                 // My card is CHEAPER (I must pay cash).
-                if (absSpread > maxSpend) {
+                if (absSpread > maxSpend || (absSpread * 0.9) > treasury) {
                     return {
                         decision: "REJECT",
                         offer_usdc: 0,
                         offer_cards: [],
                         request_cards: [],
-                        public_argument: `Cannot meet terms: Required cash top-up ($${absSpread} USDC) exceeds my owner's on-chain guardrail of $${maxSpend} USDC.`,
-                        private_reasoning_for_owner: `Guardrail tripped: required cash $${absSpread} > limit $${maxSpend}. Aborting deal.`
+                        public_argument: `Cannot meet terms: Required cash top-up ($${absSpread} USDC) exceeds ${absSpread > maxSpend ? `owner guardrail limit ($${maxSpend} USDC)` : `available treasury balance ($${treasury.toFixed(2)} USDC)`}.`,
+                        private_reasoning_for_owner: `Guardrail tripped: required cash $${absSpread} exceeds ${absSpread > maxSpend ? `max spend limit $${maxSpend}` : `treasury balance $${treasury.toFixed(2)}`}. Aborting deal.`
                     };
                 }
-                const agreedCash = Math.round(absSpread * 0.95);
+                const agreedCash = Math.min(Math.round(absSpread * 0.95), maxSpend, Math.max(0, Math.floor(treasury - 1)));
                 return {
                     decision: "COUNTER",
                     offer_usdc: agreedCash,
                     offer_cards: myCard ? [myCard.card_id] : [],
                     request_cards: theirCard ? [theirCard.card_id] : [],
                     public_argument: `Fair assessment. I agree to balance the spread by offering my ${myCard?.name} + $${agreedCash} USDC cash for your ${theirCard?.name}.`,
-                    private_reasoning_for_owner: `Valuation validated against Oracle ($${theirVal} vs $${myVal}). $${agreedCash} USDC outlay is approved under our $${maxSpend} limit.`
+                    private_reasoning_for_owner: `Valuation validated against Oracle ($${theirVal} vs $${myVal}). $${agreedCash} USDC outlay is approved under our $${maxSpend} limit and $${treasury.toFixed(2)} treasury.`
                 };
             } else {
                 // Parity
@@ -555,10 +556,10 @@ ${turnNumber > 1 && previousCashOffer > 0 ? `- Counterpart Previous Cash Offer: 
 ${turnNumber > 1 && counterpartyArgument ? `- Counterpart Last Argument: "${sanitizeUntrustedInput(counterpartyArgument)}"` : ""}
 ${transcriptText}
 ROUND OBJECTIVES:
-- Turn 1: Propose opening barter with ~80% spread cash sweetener if your card is cheaper ($${Math.round(netSpread * 0.8)} USDC), or 0 if your card is equal or more valuable.
-- Turn 2: Evaluate counterpart card against your mandates. If incompatible, REJECT. If compatible, counter at ~95% spread ($${Math.round(absSpread * 0.95)} USDC).
+- Turn 1: Propose opening barter with ~80% spread cash sweetener if your card is cheaper ($${Math.min(Math.round(netSpread * 0.8), Math.max(0, Math.floor(treasury - 1)))} USDC, NEVER exceed treasury $${treasury.toFixed(2)} USDC), or 0 if your card is equal or more valuable.
+- Turn 2: Evaluate counterpart card against your mandates. If incompatible, REJECT. If compatible, counter at ~95% spread ($${Math.min(Math.round(absSpread * 0.95), Math.max(0, Math.floor(treasury - 1)))} USDC). NEVER offer more than available treasury ($${treasury.toFixed(2)} USDC).
 - Turn 3: Evaluate counter-offer. If cash sweetener exceeds your guardrail limit ($${agent.max_spend_per_trade_usdc} USDC) or treasury ($${treasury.toFixed(2)} USDC), REJECT. Otherwise ACCEPT at compromise (~92% spread).
-- Turn 4: Final sign. If terms are balanced and fair, ACCEPT to execute atomic on-chain settlement, else REJECT.
+- Turn 4: Final sign. If terms are balanced and fair and cash outlay <= treasury ($${treasury.toFixed(2)} USDC), ACCEPT to execute atomic on-chain settlement, else REJECT.
 
 STYLE & COMMUNICATION RULES:
 - Speak naturally to the counterparty agent as a sharp, professional TCG portfolio manager. Zero robotic templates or generic AI clichés.
@@ -720,6 +721,17 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
 
                         // NEVER pair two vaults in Priority 2 or Priority 3 if the incoming card violates a vault's compiled policy
                         if (!matchForA || !matchForB) continue;
+
+                        // Strict Treasury & Spend Guardrail: Whichever agent has the cheaper card MUST be able to afford the cash sweetener
+                        if (valA < valB) {
+                            const buyerBalance = Number(vA.usdc_balance || 0);
+                            const buyerLimit = Number(vA.guardrail_max_spend_per_trade || 500);
+                            if (buyerBalance < (absSpread * 0.9) || absSpread > buyerLimit) continue;
+                        } else if (valB < valA) {
+                            const sellerBalance = Number(vB.usdc_balance || 0);
+                            const sellerLimit = Number(vB.guardrail_max_spend_per_trade || 500);
+                            if (sellerBalance < (absSpread * 0.9) || absSpread > sellerLimit) continue;
+                        }
 
                         const sameCategory = cA.category && cB.category && (norm(cA.category) === norm(cB.category));
 
