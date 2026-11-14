@@ -470,19 +470,26 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
     // Deduct USDC from vault treasury & update mathematical realized PnL
     vault.usdc_balance = Math.round((vault.usdc_balance - cardPrice) * 100) / 100;
     const spreadGain = Math.max(2, oracleValue - cardPrice);
-    vault.realized_pnl_usdc = Math.round(((Number(vault.realized_pnl_usdc) || 0) + spreadGain) * 100) / 100;
+    vault.net_pnl_usdc = Math.round(((Number(vault.net_pnl_usdc) || 0) + spreadGain) * 100) / 100;
+    vault.realized_pnl_usdc = vault.net_pnl_usdc;
     const navBase = Math.max(100, Number(vault.usdc_balance || 0) + oracleValue);
-    vault.pnl_percentage = Math.round(((vault.realized_pnl_usdc / navBase) * 100) * 10) / 10;
+    vault.pnl_percentage = Math.round(((vault.net_pnl_usdc / navBase) * 100) * 10) / 10;
     vault.total_trades = (vault.total_trades || 0) + 1;
     await vault.save();
 
     // PSA/CGC cert number and barcode
-    const certNum = ccCard.certNumber || ccCard.id.substring(0, 8).toUpperCase();
-    const barcode = `CC-${certNum}-${ccCard.gradingCompany || "PSA"}`;
+    const safeId = String(ccCard.id || ccCard.solana_mint || fallbackCardData?.id || cardId || "vault-mint");
+    const certNum = ccCard.certNumber || safeId.substring(0, 8).toUpperCase();
+    const barcode = ccCard.barcode || `CC-${certNum}-${ccCard.gradingCompany || "PSA"}`;
+    const safeImageUrl = ccCard.imageUrl || ccCard.image_url || ccCard.frontImage || ccCard.thumbnailUrl || fallbackCardData?.imageUrl || fallbackCardData?.image_url || fallbackCardData?.frontImage || "https://images.pokemontcg.io/swsh4/188_hires.png";
+    const safeName = ccCard.name || fallbackCardData?.name || "Physical Graded Slab";
+    const safeSetName = ccCard.set || (safeName.includes("PSA") ? safeName.split("PSA")[0]?.trim() : null) || fallbackCardData?.set || "Insured Vault Custody";
+    const safeCategory = ccCard.category || fallbackCardData?.category || "Pokemon";
+    const safeGrade = ccCard.grade || fallbackCardData?.grade || "PSA 10 GEM MT";
 
     // Check if card is already in the database
     let existingCard = await db.card.findOne({
-        where: db.Sequelize.or({ solana_mint: ccCard.id }, { card_id: ccCard.id })
+        where: db.Sequelize.or({ solana_mint: safeId }, { card_id: safeId })
     });
 
     let newCard;
@@ -492,25 +499,26 @@ export async function bridgeCollectorCryptCardToNearVault(cardId, vaultId, owner
         existingCard.is_locked = false;
         existingCard.oracle_fair_value_usdc = oracleValue;
         existingCard.last_sale_usdc = cardPrice;
+        if (!existingCard.image_url && safeImageUrl) existingCard.image_url = safeImageUrl;
         await existingCard.save();
         newCard = existingCard;
     } else {
         newCard = await db.card.create({
-            card_id: `cc-rwa-${ccCard.id.substring(0, 10)}-${Date.now().toString(36)}`,
+            card_id: `cc-rwa-${safeId.substring(0, 10)}-${Date.now().toString(36)}`,
             vault_id: vault.id,
             owner_account: vault.sub_account,
-            psa_cert_number: certNum,
-            solana_mint: ccCard.id,
-            name: ccCard.name,
-            category: ccCard.category || "Pokemon",
-            set_name: ccCard.set || ccCard.name.split("PSA")[0]?.trim() || "Insured Vault Custody",
-            grade: ccCard.grade || "PSA 10 GEM MT",
-            rareness_score: ccCard.rareness || 75,
+            psa_cert_number: String(certNum),
+            solana_mint: safeId,
+            name: safeName,
+            category: safeCategory,
+            set_name: safeSetName,
+            grade: safeGrade,
+            rareness_score: Number(ccCard.rareness || fallbackCardData?.rareness || 75),
             oracle_fair_value_usdc: oracleValue,
             last_sale_usdc: cardPrice,
-            image_url: ccCard.imageUrl,
+            image_url: safeImageUrl,
             barcode: barcode,
-            population_higher: ccCard.population?.higher || 0,
+            population_higher: Number(ccCard.population?.higher || 0),
             is_locked: false,
             is_hold: false
         });

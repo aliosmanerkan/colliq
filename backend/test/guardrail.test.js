@@ -64,3 +64,53 @@ test("AI Security: Policy Compiler enforces maximum spend and cash reserve const
   const satisfiesGrade = vaultPolicy.allowed_grades.includes(cardC.grade);
   assert.equal(satisfiesGrade, false, "Card with unapproved grade must be blocked");
 });
+
+test("AI Mandates: doesCardMatchDirectives strictly respects category whitelist, exclusions, and grade constraints", async () => {
+  const { doesCardMatchDirectives } = await import("../src/agents/negotiationEngine.ts");
+
+  const collectiqRules = [
+    "Sadece Pokémon kategorisinde işlem yap (Sports ve One Piece hariç)",
+    "Evaluate only PSA 10 & CGC Pristine slabs",
+    "Maintain at least $100 USDC cash buffer in treasury"
+  ];
+
+  const validPokemonCard = {
+    name: "2024 #059 Beldum PSA 10",
+    category: "Pokemon",
+    grade: "GEM-MT 10",
+    set_name: "Surging Sparks"
+  };
+
+  const excludedOnePieceCard = {
+    name: "2025 #021 Perona PSA 10",
+    category: "One Piece",
+    grade: "PSA GEM-MT 10",
+    set_name: "Paramount War"
+  };
+
+  const wrongGradePokemonCard = {
+    name: "2024 #203 Latios PSA 8",
+    category: "Pokemon",
+    grade: "NM-MT 8",
+    set_name: "Surging Sparks"
+  };
+
+  assert.equal(doesCardMatchDirectives(validPokemonCard, collectiqRules), true, "Eligible PSA 10 Pokemon must be accepted");
+  assert.equal(doesCardMatchDirectives(excludedOnePieceCard, collectiqRules), false, "One Piece card must be rejected due to explicit exclusion");
+  assert.equal(doesCardMatchDirectives(wrongGradePokemonCard, collectiqRules), false, "PSA 8 card must be rejected due to PSA 10 constraint");
+
+  const merttestSportsOnlyRules = [
+    "Sadece spor kartları (Sports) alınacak; Pokémon ve Anime kategorileri blacklist.",
+    "Tüm alımlar PSA 10 slab ve Brink's Vaulted custody şartına bağlı."
+  ];
+
+  const sportsCard = {
+    name: "2003 Topps Chrome LeBron James #111 PSA 10",
+    category: "Basketball",
+    grade: "PSA 10",
+    set_name: "Topps Chrome"
+  };
+
+  assert.equal(doesCardMatchDirectives(validPokemonCard, merttestSportsOnlyRules), false, "Pokemon must be rejected by sports-only blacklist");
+  assert.equal(doesCardMatchDirectives(sportsCard, merttestSportsOnlyRules), true, "Sports PSA 10 must be accepted by sports vault");
+});

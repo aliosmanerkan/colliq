@@ -154,10 +154,18 @@ router.post("/buy-direct", async (req, res) => {
 
         let finalCard;
         if (ccCard) {
-            const certNum = ccCard.certNumber || ccCard.id.substring(0, 8).toUpperCase();
-            const cardPrice = ccCard.insuredUsd || ccCard.costUsd || 50.0;
+            const safeId = String(ccCard.id || ccCard.solana_mint || card_data?.id || card_id || "vault-mint");
+            const certNum = ccCard.certNumber || safeId.substring(0, 8).toUpperCase();
+            const cardPrice = Number(ccCard.insuredUsd || ccCard.costUsd || card_data?.costUsd || card_data?.insuredUsd || 50.0);
+            const safeImageUrl = ccCard.imageUrl || ccCard.image_url || ccCard.frontImage || card_data?.imageUrl || card_data?.image_url || card_data?.frontImage || "https://images.pokemontcg.io/swsh4/188_hires.png";
+            const safeName = ccCard.name || card_data?.name || "Physical Graded Slab";
+            const safeSetName = ccCard.set || (safeName.includes("PSA") ? safeName.split("PSA")[0]?.trim() : null) || card_data?.set || "Collector Crypt Vault";
+            const safeCategory = ccCard.category || card_data?.category || "Pokemon";
+            const safeGrade = ccCard.grade || card_data?.grade || "PSA 10 GEM MT";
+            const safeBarcode = ccCard.barcode || `CC-${certNum}-${ccCard.gradingCompany || "PSA"}`;
+
             const existingCard = await db.card.findOne({
-                where: db.Sequelize.or({ solana_mint: ccCard.id }, { card_id: ccCard.id })
+                where: db.Sequelize.or({ solana_mint: safeId }, { card_id: safeId })
             });
 
             if (existingCard) {
@@ -165,25 +173,26 @@ router.post("/buy-direct", async (req, res) => {
                 existingCard.owner_account = buyer_account;
                 existingCard.is_locked = false;
                 existingCard.oracle_fair_value_usdc = cardPrice;
+                if (!existingCard.image_url && safeImageUrl) existingCard.image_url = safeImageUrl;
                 await existingCard.save();
                 finalCard = existingCard;
             } else {
                 finalCard = await db.card.create({
-                    card_id: `cc-rwa-${ccCard.id.substring(0, 10)}-${Date.now().toString(36)}`,
+                    card_id: `cc-rwa-${safeId.substring(0, 10)}-${Date.now().toString(36)}`,
                     vault_id: null,
                     owner_account: buyer_account,
-                    psa_cert_number: certNum,
-                    solana_mint: ccCard.id,
-                    name: ccCard.name,
-                    category: ccCard.category || "Pokemon",
-                    set_name: ccCard.set || ccCard.name.split("PSA")[0]?.trim() || "Collector Crypt Vault",
-                    grade: ccCard.grade || "PSA 10 GEM MT",
-                    rareness_score: ccCard.rareness || 80,
+                    psa_cert_number: String(certNum),
+                    solana_mint: safeId,
+                    name: safeName,
+                    category: safeCategory,
+                    set_name: safeSetName,
+                    grade: safeGrade,
+                    rareness_score: Number(ccCard.rareness || card_data?.rareness || 80),
                     oracle_fair_value_usdc: cardPrice,
-                    last_sale_usdc: ccCard.costUsd || cardPrice,
-                    image_url: ccCard.imageUrl,
-                    barcode: `CC-${certNum}-${ccCard.gradingCompany || "PSA"}`,
-                    population_higher: ccCard.population?.higher || 0,
+                    last_sale_usdc: Number(ccCard.costUsd || cardPrice),
+                    image_url: safeImageUrl,
+                    barcode: safeBarcode,
+                    population_higher: Number(ccCard.population?.higher || 0),
                     is_locked: false
                 });
             }

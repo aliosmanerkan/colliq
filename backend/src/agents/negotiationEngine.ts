@@ -62,6 +62,24 @@ export function sanitizeUntrustedInput(input: string): string {
 // MANDATE & INVENTORY HELPERS
 // ==========================================
 
+export const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+// Helper to extract exclusion clauses from rule strings
+function getExclusionClause(rNorm: string): string {
+    const exclusions: string[] = [];
+    const parenMatch = rNorm.match(/\(([^)]*(?:haric|hariç|disinda|dışında|except|excluding)[^)]*)\)/);
+    if (parenMatch) exclusions.push(parenMatch[1]);
+    const blMatch1 = rNorm.match(/([a-z0-9\s]+?)\s+(?:blacklist|kara liste|yasak)/);
+    if (blMatch1) exclusions.push(blMatch1[1]);
+    const blMatch2 = rNorm.match(/(?:blacklist|kara liste|yasak)\s*:?\s*([a-z0-9\s]+)/);
+    if (blMatch2) exclusions.push(blMatch2[1]);
+    const haricMatch = rNorm.match(/([a-z0-9\s]+?)\s+(?:haric|hariç|disinda|dışında)/);
+    if (haricMatch && !parenMatch) exclusions.push(haricMatch[1]);
+    const excMatch = rNorm.match(/(?:except|excluding)\s+([a-z0-9\s]+)/);
+    if (excMatch && !parenMatch) exclusions.push(excMatch[1]);
+    return exclusions.join(" ");
+}
+
 export function doesCardMatchDirectives(card: any, rulesJsonOrArray: any, compiledPolicy: any = null): boolean {
     if (!card) return false;
 
@@ -91,7 +109,7 @@ export function doesCardMatchDirectives(card: any, rulesJsonOrArray: any, compil
         return true;
     }
 
-    // 2. Fallback rule parsing without brittle word-splitting
+    // 2. Parse rules array
     let rules: string[] = [];
     try {
         rules = typeof rulesJsonOrArray === "string" ? JSON.parse(rulesJsonOrArray) : (rulesJsonOrArray || []);
@@ -99,32 +117,67 @@ export function doesCardMatchDirectives(card: any, rulesJsonOrArray: any, compil
         rules = [];
     }
 
-    const directiveRules = rules.filter(r => {
+    // Filter out purely financial, pricing, operational or custodial rules
+    const cardDirectives = rules.filter(r => {
         const t = norm(String(r));
-        return !t.startsWith("max spend") && !t.startsWith("strategy") && !t.startsWith("protected grail");
+        if (t.startsWith("max spend") || t.startsWith("strategy") || t.startsWith("protected grail") || t.startsWith("korumali") || t.startsWith("korumalı")) return false;
+        if (t.includes("cash buffer") || t.includes("tamponu") || t.includes("discount") || t.includes("marj") || t.includes("margin") || t.includes("custod") || t.includes("brink") || t.includes("appraisal") || t.includes("spread")) return false;
+        return true;
     });
 
-    if (directiveRules.length === 0) return true;
+    if (cardDirectives.length === 0) return true;
 
-    for (const rule of directiveRules) {
-        const rNorm = norm(String(rule));
-        // Check grade constraints
-        if (rNorm.includes("10") && !cardGrade.includes("10")) {
-            return false;
+    for (const rawRule of cardDirectives) {
+        const rNorm = norm(String(rawRule));
+
+        // A. Grade constraint check
+        const requires10 = (rNorm.includes("psa 10") || rNorm.includes("pristine") || rNorm.includes("gem mint 10") || rNorm.includes("10 slab") || (rNorm.includes("10") && (rNorm.includes("only") || rNorm.includes("yalnizca") || rNorm.includes("sadece"))));
+        if (requires10) {
+            const has10 = cardGrade.includes("10") || cardGrade.includes("pristine") || cardName.includes("psa 10") || cardName.includes("cgc 10");
+            if (!has10) return false;
         }
-        // Extract meaningful entities (strip generic words)
-        const cleanRule = rNorm.replace(/target|only|sadece|slabs|cards|per card|max|min|alınır|alinsin/gi, "").trim();
-        const words = cleanRule.split(/\s+/);
-        for (const kw of words) {
-            if (kw.length >= 4 && !["psa", "cgc", "bgs", "slab", "card", "tcg", "oyuncu", "veya", "kategorisi"].includes(kw)) {
-                if (combinedCardText.includes(kw)) {
-                    return true;
-                }
+
+        // B. Blacklist / Exclusions clause
+        const exclusionsText = getExclusionClause(rNorm);
+        if (exclusionsText) {
+            if (exclusionsText.includes("pokemon") && (cardCategory.includes("pokemon") || combinedCardText.includes("pokemon"))) {
+                return false;
+            }
+            if ((exclusionsText.includes("anime") || exclusionsText.includes("one piece")) && (cardCategory.includes("one piece") || combinedCardText.includes("one piece") || combinedCardText.includes("anime"))) {
+                return false;
+            }
+            if ((exclusionsText.includes("sports") || exclusionsText.includes("spor")) && ["sports", "basketball", "football", "baseball", "soccer"].includes(cardCategory)) {
+                return false;
+            }
+        }
+
+        // C. Positive Category Whitelist (from clause stripped of exclusions)
+        const positiveClause = rNorm.replace(/\([^)]*\)/g, "").replace(/([a-z0-9\s]+?)\s+(?:blacklist|kara liste|yasak)/g, "");
+        if (positiveClause.includes("sadece spor") || positiveClause.includes("sports only") || positiveClause.includes("only sports")) {
+            const isSports = ["sports", "basketball", "football", "baseball", "soccer"].includes(cardCategory);
+            if (!isSports) return false;
+        }
+        if (positiveClause.includes("sadece pokemon") || positiveClause.includes("pokemon only") || positiveClause.includes("only pokemon")) {
+            const isPokemon = cardCategory.includes("pokemon") || combinedCardText.includes("pokemon");
+            if (!isPokemon) return false;
+        }
+        if (positiveClause.includes("sadece one piece") || positiveClause.includes("one piece only")) {
+            const isOnePiece = cardCategory.includes("one piece") || combinedCardText.includes("one piece");
+            if (!isOnePiece) return false;
+        }
+
+        // D. Target Entities (e.g. Focus on Pikachu or Gengar)
+        if (positiveClause.includes("focus on") || positiveClause.includes("target:") || positiveClause.includes("target ")) {
+            const cleanTarget = positiveClause.replace(/focus\s+on|target:?|psa\s+10|slabs?|cards?|pokemon/gi, "").trim();
+            const targetWords = cleanTarget.split(/[\s,or\/]+/).filter(w => w.length >= 4);
+            if (targetWords.length > 0) {
+                const matchesTarget = targetWords.some(t => combinedCardText.includes(t));
+                if (!matchesTarget) return false;
             }
         }
     }
 
-    return false;
+    return true;
 }
 
 export function getTradeableCards(vault: any): any[] {
@@ -155,7 +208,7 @@ export function getTradeableCards(vault: any): any[] {
         return nonHoldCards;
     }
 
-    // 2. If multiple cards exist, prefer offering secondary cards (cards that do not match core collection goals)
+    // 2. If multiple cards exist, prefer offering secondary cards first, while retaining core cards in the pool
     const directiveRules = rules.filter(r => {
         const t = String(r).trim().toLowerCase();
         return !t.startsWith("max spend") && !t.startsWith("strategy") && !t.startsWith("protected") && !t.startsWith("korumalı");
@@ -163,8 +216,9 @@ export function getTradeableCards(vault: any): any[] {
 
     if (directiveRules.length > 0 || vault._compiledPolicy) {
         const secondaryCards = nonHoldCards.filter((c: any) => !doesCardMatchDirectives(c, directiveRules, vault._compiledPolicy));
+        const coreCards = nonHoldCards.filter((c: any) => doesCardMatchDirectives(c, directiveRules, vault._compiledPolicy));
         if (secondaryCards.length > 0) {
-            return secondaryCards;
+            return [...secondaryCards, ...coreCards];
         }
     }
 
@@ -667,19 +721,25 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
                         // NEVER pair two vaults in Priority 2 or Priority 3 if the incoming card violates a vault's compiled policy
                         if (!matchForA || !matchForB) continue;
 
-                        // Priority 1: Near parity / tight spread
-                        if (absSpread <= 50) {
+                        const sameCategory = cA.category && cB.category && (norm(cA.category) === norm(cB.category));
+
+                        // Priority 1: Same category + tight valuation spread (cleanest barter consensus)
+                        if (sameCategory && absSpread <= 40) {
                             candidates.push({ vaultA: vA, vaultB: vB, cardA: cA, cardB: cB, priority: 1, spread: absSpread });
                         }
-                        // Priority 2: Unilateral fit with cash sweetener
-                        else if (valA < valB && vA.usdc_balance >= absSpread && absSpread <= (vA.guardrail_max_spend_per_trade || 500)) {
+                        // Priority 2: General near parity / tight spread
+                        else if (absSpread <= 50) {
                             candidates.push({ vaultA: vA, vaultB: vB, cardA: cA, cardB: cB, priority: 2, spread: absSpread });
-                        } else if (valB < valA && vB.usdc_balance >= absSpread && absSpread <= (vB.guardrail_max_spend_per_trade || 500)) {
-                            candidates.push({ vaultA: vB, vaultB: vA, cardA: cB, cardB: cA, priority: 2, spread: absSpread });
                         }
-                        // Priority 3: General barter within budget limits
-                        else if (absSpread <= Math.min(vA.guardrail_max_spend_per_trade || 500, vB.guardrail_max_spend_per_trade || 500)) {
+                        // Priority 3: Unilateral fit with cash sweetener
+                        else if (valA < valB && vA.usdc_balance >= absSpread && absSpread <= (vA.guardrail_max_spend_per_trade || 500)) {
                             candidates.push({ vaultA: vA, vaultB: vB, cardA: cA, cardB: cB, priority: 3, spread: absSpread });
+                        } else if (valB < valA && vB.usdc_balance >= absSpread && absSpread <= (vB.guardrail_max_spend_per_trade || 500)) {
+                            candidates.push({ vaultA: vB, vaultB: vA, cardA: cB, cardB: cA, priority: 3, spread: absSpread });
+                        }
+                        // Priority 4: General barter within budget limits
+                        else if (absSpread <= Math.min(vA.guardrail_max_spend_per_trade || 500, vB.guardrail_max_spend_per_trade || 500)) {
+                            candidates.push({ vaultA: vA, vaultB: vB, cardA: cA, cardB: cB, priority: 4, spread: absSpread });
                         }
                     }
                 }

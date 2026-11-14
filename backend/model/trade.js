@@ -21,7 +21,7 @@ export default (sequelize) => {
                 defaultValue: "COMPLETED" // COMPLETED, REJECTED_GUARDRAIL, CANCELLED
             },
             protocol_fee_usdc: { type: DataTypes.FLOAT, defaultValue: 0.0 }, // 0.5% fee
-            tx_hash: { type: DataTypes.STRING, allowNull: false },
+            tx_hash: { type: DataTypes.STRING, defaultValue: "near:simulated_receipt_settlement" },
             near_block: { type: DataTypes.INTEGER, defaultValue: 118492031 },
         },
         {
