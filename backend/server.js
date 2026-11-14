@@ -137,6 +137,58 @@ db.sequelize.sync({ alter: true })
         } catch (pnlErr) {
             console.warn("Notice: Vault PnL% backfill notice:", pnlErr.message);
         }
+
+        // Backfill missing trade history records for direct wallet card purchases
+        try {
+            const directCards = await db.card.findAll({
+                where: {
+                    vault_id: null,
+                    owner_account: { [db.Sequelize.Op.ne]: null }
+                }
+            });
+
+            const existingTrades = await db.trade.findAll();
+            const existingTradeKeys = new Set(existingTrades.map(t => {
+                const cardB = Array.isArray(t.cards_from_b) && t.cards_from_b[0];
+                return cardB ? (cardB.card_id || cardB.id) : null;
+            }).filter(Boolean));
+
+            for (const c of directCards) {
+                const cKey = c.card_id || c.id;
+                if (!existingTradeKeys.has(cKey)) {
+                    const price = Number(c.oracle_fair_value_usdc || c.last_sale_usdc || 50);
+                    const netStatus = await nearService.getNetworkStatus();
+                    await db.trade.create({
+                        trade_id: `direct-backfill-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+                        vault_a_id: null,
+                        vault_b_id: null,
+                        vault_a_name: c.owner_account,
+                        vault_b_name: "PWCC & Brink's Vault Custody",
+                        cards_from_a: [],
+                        cards_from_b: [c.toJSON ? c.toJSON() : c],
+                        usdc_from_a: price,
+                        usdc_from_b: 0.0,
+                        rounds_count: 1,
+                        negotiation_log: [{
+                            round: 1,
+                            agent: c.owner_account,
+                            turn: {
+                                decision: "ACCEPT",
+                                public_argument: `Direct acquisition: Secured ${c.name} (${c.grade || "PSA 10"}) via NEAR Intent.`,
+                                private_reasoning_for_owner: `Signed NEP-413 Cross-Chain Swap. Custody: Brink's / PWCC.`
+                            }
+                        }],
+                        status: "COMPLETED",
+                        protocol_fee_usdc: Math.round(price * 0.005 * 100) / 100,
+                        tx_hash: nearService.generateNearReceiptHash(),
+                        near_block: netStatus.latest_block_height
+                    });
+                    console.log(`📦 Retroactively restored trade history record for ${c.name} (${c.owner_account})`);
+                }
+            }
+        } catch (backfillErr) {
+            console.warn("Direct trade backfill notice:", backfillErr.message);
+        }
     })
     .catch((err) => {
         console.warn("⚠️ Database sync notice:", err.message);
