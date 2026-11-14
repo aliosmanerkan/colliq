@@ -688,13 +688,32 @@ You MUST respond with valid JSON only. Zero markdown code fences. Zero text outs
 
         if (candidates.length === 0) return null;
 
-        // Sort by priority ascending (1 highest), then spread ascending (tightest spread first)
-        candidates.sort((a, b) => {
-            if (a.priority !== b.priority) return a.priority - b.priority;
-            return a.spread - b.spread;
-        });
+        // Group by best priority tier (Priority 1 = tightest parity, Priority 2 = unilateral with cash)
+        const bestPriority = Math.min(...candidates.map(c => c.priority));
+        const topPriorityCandidates = candidates.filter(c => c.priority === bestPriority);
 
-        return candidates[0];
+        // Sort top priority candidates by spread ascending
+        topPriorityCandidates.sort((a, b) => a.spread - b.spread);
+
+        // Take candidates within an attractive spread window (+35 USDC of tightest spread)
+        const minSpread = topPriorityCandidates[0].spread;
+        const bestPool = topPriorityCandidates.filter(c => c.spread <= minSpread + 35);
+        const poolToUse = bestPool.length > 0 ? bestPool : topPriorityCandidates;
+
+        // Group by distinct vault pairs so different agent vaults get selected on consecutive triggers
+        const pairMap = new Map<string, MatchCandidate[]>();
+        for (const cand of poolToUse) {
+            const pairKey = [String(cand.vaultA.id || cand.vaultA.vault_id), String(cand.vaultB.id || cand.vaultB.vault_id)].sort().join("_");
+            if (!pairMap.has(pairKey)) {
+                pairMap.set(pairKey, []);
+            }
+            pairMap.get(pairKey)!.push(cand);
+        }
+
+        // Randomly pick one of the available distinct vault pairs for lively trading floor diversity
+        const distinctPairs = Array.from(pairMap.values());
+        const chosenPairCards = distinctPairs[Math.floor(Math.random() * distinctPairs.length)];
+        return chosenPairCards[Math.floor(Math.random() * chosenPairCards.length)] || candidates[0];
     }
 
     // Orchestrates 4-turn A2A barter session
