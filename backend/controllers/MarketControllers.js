@@ -253,9 +253,11 @@ router.post("/buy-direct", async (req, res) => {
 
         let ccVault = await getOrCreateCollectorCryptVault();
         const buyerVault = await db.vault.findOne({ where: { owner_account: buyer_account } });
-        const fallbackVaultId = ccVault?.id || 1;
-        const vaultAId = buyerVault ? buyerVault.id : fallbackVaultId;
-        const vaultBId = ccVault ? ccVault.id : fallbackVaultId;
+        const anyVault = await db.vault.findOne({ order: [["id", "ASC"]] });
+        const systemVault = ccVault || anyVault;
+        const systemVaultId = systemVault ? systemVault.id : null;
+        const vaultAId = buyerVault ? buyerVault.id : systemVaultId;
+        const vaultBId = systemVaultId;
 
         const tradeId = `direct-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
         try {
@@ -288,7 +290,39 @@ router.post("/buy-direct", async (req, res) => {
                 near_block: networkInfo.latest_block_height
             });
         } catch (logErr) {
-            console.warn("Trade log notice:", logErr.message);
+            console.warn("Primary trade log failed, retrying with null foreign keys:", logErr.message);
+            try {
+                await db.trade.create({
+                    trade_id: tradeId,
+                    vault_a_id: null,
+                    vault_b_id: null,
+                    vault_a_name: buyer_account,
+                    vault_b_name: "PWCC & Brink's Vault Custody",
+                    cards_from_a: [],
+                    cards_from_b: [finalCard.toJSON ? finalCard.toJSON() : finalCard],
+                    usdc_from_a: cardPrice,
+                    usdc_from_b: 0.0,
+                    rounds_count: 1,
+                    negotiation_log: [
+                        {
+                            round: 1,
+                            agent: buyer_account,
+                            turn: {
+                                decision: "ACCEPT",
+                                public_argument: `Direct user acquisition: Secured ${finalCard.name} (${finalCard.grade || "PSA 10"}) via NEAR Intent (${nearIntent.intent_id}).`,
+                                private_reasoning_for_owner: `Signed NEP-413 Cross-Chain Swap. Payment settled via ${payment_method || "NEAR"}${near_amount ? ` (${near_amount} NEAR)` : ""}. Custody: Brink's / PWCC.`,
+                                near_intent: nearIntent
+                            }
+                        }
+                    ],
+                    status: "COMPLETED",
+                    protocol_fee_usdc: Math.round(cardPrice * 0.005 * 100) / 100,
+                    tx_hash: settledTxHash,
+                    near_block: networkInfo.latest_block_height
+                });
+            } catch (retryErr) {
+                console.error("Critical trade history creation failure:", retryErr.message);
+            }
         }
 
         const io = req.app.get("io");
@@ -695,7 +729,8 @@ router.post("/cards/:cardId/settle-agent-sale", async (req, res) => {
         await card.save({ validate: false });
 
         const buyerVault = await db.vault.findOne({ where: { owner_account: buyer_account } });
-        const fallbackVaultId = vault?.id || 1;
+        const anyVault = await db.vault.findOne({ order: [["id", "ASC"]] });
+        const fallbackVaultId = vault?.id || anyVault?.id || null;
         const vaultAId = vault ? vault.id : fallbackVaultId;
         const vaultBId = buyerVault ? buyerVault.id : fallbackVaultId;
         const finalTxHash = tx_hash || nearService.generateNearReceiptHash();
@@ -729,7 +764,37 @@ router.post("/cards/:cardId/settle-agent-sale", async (req, res) => {
                 near_block: (await nearService.getNetworkStatus()).latest_block_height
             });
         } catch (tradeErr) {
-            console.error("Agent sale trade ledger warning:", tradeErr.message);
+            console.warn("Primary agent sale trade ledger failed, retrying with null foreign keys:", tradeErr.message);
+            try {
+                trade = await db.trade.create({
+                    trade_id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                    vault_a_id: null,
+                    vault_b_id: null,
+                    vault_a_name: vault ? vault.name : "Merchant Vault",
+                    vault_b_name: buyer_account,
+                    cards_from_a: [card.toJSON ? card.toJSON() : card],
+                    cards_from_b: [],
+                    usdc_from_a: 0,
+                    usdc_from_b: salePrice,
+                    rounds_count: 1,
+                    negotiation_log: [{
+                        round: 1,
+                        action: "AUTONOMOUS_CARD_SALE",
+                        buyer: buyer_account,
+                        seller: vault?.sub_account || "merchant.colliq.testnet",
+                        agreedPrice: salePrice,
+                        reserveFloor,
+                        realizedProfit,
+                        timestamp: new Date().toISOString()
+                    }],
+                    status: "COMPLETED",
+                    protocol_fee_usdc: Number((salePrice * 0.01).toFixed(2)),
+                    tx_hash: finalTxHash,
+                    near_block: (await nearService.getNetworkStatus()).latest_block_height
+                });
+            } catch (retryErr) {
+                console.error("Critical agent sale trade ledger failure:", retryErr.message);
+            }
         }
 
         const io = req.app.get("io");
